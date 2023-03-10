@@ -2,7 +2,6 @@ import psycopg2
 import json
 import os
 import fnmatch
-import getpass
 
 
 
