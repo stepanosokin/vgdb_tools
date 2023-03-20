@@ -15,6 +15,15 @@ def process_vgjson(filepath, conn):
                 elif item['type'] == 'well_attribute' and 'id' in item.keys():
                     update_well_attr_link(item, filepath.replace('vgdb.vgjson', ''), conn)
                     print('well_attr', item['id'], filepath.replace('vgdb.vgjson', ''))
+                elif all([item['type'] == 'license_block_processed', 'name' in item.keys(), 'file' in item.keys()]):
+                    update_license_processed_link(item, filepath.replace('vgdb.vgjson', ''), conn)
+                    print('license_block_processed', item['name'], filepath.replace('vgdb.vgjson', '') + '\\' + item['file'])
+
+
+def update_license_processed_link(item, link, conn):
+    cur = conn.cursor()
+    link = link + "\\" + item["file"]
+    cur.execute(f"""update culture.license_blocks_procesed_info set link = '{link}' where name = '{item["name"]}';""")
 
 
 def update_seismic_link(item, link, conn):
