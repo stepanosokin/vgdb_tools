@@ -2,15 +2,27 @@
 [
     {
         "type": "link",
-        "value": "D:/PROG/QGIS/vgdb_tools/test_robot"
+        "value": "//192.168.117.2/GeoSharing/_NVG_/База_данных_экспресс-анализ"
     },
     {
         "type": "link",
-        "value": "//192.168.117.2/GeoSharing/_NVG_/База_данных_экспресс-анализ/Входящая_информация/2023/ХМАО/НордОст-Гео/__Inbox__/2023-02-16_PetrelProject/2023-02-16_PetrelProject"
+        "value": "//192.168.117.2/Geosharing/_NVG_/База_данных_свои_участки"
     },
     {
         "type": "link",
-        "value": "//192.168.117.2/Geosharing/_NVG_/База_данных_свои_участки/Новосулеймановский+Нововязовский/__Inbox__"
+        "value": "//192.168.117.2/GeoSharing/FUNDENERGY/TYUMEN/Ниливойский ЛУ/Обработка/3D/1.14_Окончательные_кубы_временной миграции"
+    },
+    {
+        "type": "link",
+        "value": "//192.168.117.2/GeoSharing/KAZAKHSTAN/МолдирМунай/__Inbox__"
+    },
+    {
+        "type": "link",
+        "value": "//192.168.117.2/GeoSharing/KAZAKHSTAN/Култук/__Inbox__"
+    },
+    {
+        "type": "link",
+        "value": "//192.168.117.2/GeoSharing/_NVG_/_Final-slides_"
     }
 ]
 }

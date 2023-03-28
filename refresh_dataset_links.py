@@ -22,7 +22,7 @@ def process_vgjson(filepath, conn):
 
 def update_license_processed_link(item, link, conn):
     cur = conn.cursor()
-    link = link + "\\" + item["file"]
+    link = link + item["file"]
     cur.execute(f"""update culture.license_blocks_procesed_info set link = '{link}' where name = '{item["name"]}';""")
 
 
@@ -63,4 +63,5 @@ def update_links(links_vgjson_path, vgdb_pass):
 # p = getpass.getpass()
 # print('Password entered:', p)
 
-update_links('links.vgjson', input('vgdb password: '))
+update_links('links_selected.vgjson', input('vgdb password: '))
+#update_links('links.vgjson', input('vgdb password: '))
