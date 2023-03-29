@@ -30,8 +30,9 @@ with open('data/Auctions2023.csv', newline='') as f:
     cur_feature = ogr.Feature(feature_def)
 
     for row in dictReader:
-        cur_fields = dict(zip(row.keys(), row.values()))
+
         if row['block_n'] == cur_block:
+            cur_fields = row
             if row['ring_n'] == cur_ring:
                 lon = float(row['pulk42_l_deg']) + float(row['pulk42_l_min']) / 60 + float(row['pulk42_l_sec']) / 3600
                 lat = float(row['pulk42_b_deg']) + float(row['pulk42_b_min']) / 60 + float(row['pulk42_b_sec']) / 3600
@@ -52,8 +53,10 @@ with open('data/Auctions2023.csv', newline='') as f:
             cur_block_geom.AddGeometry(cur_pol_geom)
             cur_feature.SetGeometry(cur_block_geom)
             for field in list(out_fields):
-                cur_feature.SetField(field, row[field])
+                cur_feature.SetField(field, cur_fields[field])
             out_layer.CreateFeature(cur_feature)
+            print(cur_fields['AUCTION_INFO'], cur_fields['name_ru'])
+            cur_fields = row
             cur_block = row['block_n']
             cur_ring = row['ring_n']
             cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
@@ -63,6 +66,7 @@ with open('data/Auctions2023.csv', newline='') as f:
             lon = float(row['pulk42_l_deg']) + float(row['pulk42_l_min']) / 60 + float(row['pulk42_l_sec']) / 3600
             lat = float(row['pulk42_b_deg']) + float(row['pulk42_b_min']) / 60 + float(row['pulk42_b_sec']) / 3600
             cur_ring_geom.AddPoint(lon, lat)
+
 
     cur_ring_geom.CloseRings()
     cur_pol_geom.AddGeometry(cur_ring_geom)
