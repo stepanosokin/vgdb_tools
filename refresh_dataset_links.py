@@ -63,5 +63,5 @@ def update_links(links_vgjson_path, vgdb_pass):
 # p = getpass.getpass()
 # print('Password entered:', p)
 
-update_links('links_selected.vgjson', input('vgdb password: '))
-#update_links('links.vgjson', input('vgdb password: '))
+# update_links('links_selected.vgjson', input('vgdb password: '))
+update_links('links.vgjson', input('vgdb password: '))
