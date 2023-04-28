@@ -17,14 +17,44 @@ def rus_month_genitive_to_nominative(i_string):
 
 
 def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc'):
+    '''
+    This function downloads license blocks auctions announcement data from www.rosnedra.gov.ru website
+    and saves it to the hierarchy of folders.
+    The idea is that www.rosnedra.gov.ru has the search engine, which accepts a search string and
+    gives a list of results, among which you can find pages with official orders about license blocks auctions
+    announcements and data attached to it. This data is usually a pdf with scanned order text and excel spreadsheet
+    with license blocks coordinates and attributes. Search result is a list of links to document pages, which,
+    in case this is an order, may contain links to the desired pdf and excel. If you give the appropriate search
+    string to the engine, e.g. 'Об утверждении Перечня участков недр', than the result will mostly contain desired docs,
+    but not guaranteed. This function is an attempt to filter, structurize and download the data about license auction
+    announcements for the given period of time.
+    :param start: this is the start <datetime> threshold from which to start the search/download.
+    :param end: this is the end <datetime> threshold until which to start the search/download.
+    The default values for start and end parameters are 1st January 2023 and current date respectively,
+    but you can chenge it according to your need.
+    :param search_string: this is the search string given to the rosnedra search engine. The default value
+    'Об утверждении Перечня участков недр' is OK for most cases of searching the license auction announcements orders.
+    :param folder: this a relative path to the folder where to save the result. The result will contain a number
+    of folders and a logfile with error reports.
+    :return:
+    This function returns nothing, but it saves the results to the <folder> location. the results are:
+    1. a number of folders with names like NN_YYYYMMDD, where NN is a number of the search result, and YYYYMMDD is a
+    date of the Rosnedra order. Each folder contains: pdf with scanned order text, excel with license info,
+    result_name.txt file with the full name of the document and result_url.txt file with an url of the source page;
+    2. logfile.txt with reports about failed to parse pages from the search result. This logfile is filled cumulatively,
+    so if you make several attempts, no lines are deleted from it.
+    '''
+    # get the current working directory of the script
     current_directory = os.getcwd()
+    # define the datetime format for the logfile
     logdateformat = '%Y-%m-%d %H:%M:%S'
+    # create a pthname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
-    # log_file = os.path.join(log_file, "logfile.txt")
-    open(log_file, 'w', encoding='utf-8').close()
+    # open the logfile
     with open(log_file, 'a', encoding='utf-8') as logf:
-
+        # start a requests session
         with requests.Session() as s:
+            # create url string for the main search request
             url = 'https://www.rosnedra.gov.ru/index.fcgi'
             params = {
                 'page': 'search',
@@ -38,25 +68,38 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                 'Connection': 'keep-alive',
                 'DNT': '1'
             }
+            # try to retreive the result from the search engine
             try:
+                # make get request to the service
                 search_result = s.get(url, params=params, headers=headers, verify=False)
+                # i is a number of tries to retrieve a result
                 i = 1
+                # while the service returns anything other than 200 (OK):
                 while search_result.status_code != 200:
+                    # make one more try
                     search_result = s.get(url, params=params, headers=headers, verify=False)
                     i += 1
+                    # until 100 attempts
                     if i > 100:
                         break
             except:
-                #print('Initial request to www.rosnedra.gov.ru failed, please check your params')
+                # if something went wrong, write a line to ligfile
                 logf.write(f"{datetime.now().strftime(logdateformat)} Initial request to www.rosnedra.gov.ru failed, please check your params\n")
-            #print(search_result.text)
 
+            # create a beutifulsoup from the first search results page
             first_soup = BeautifulSoup(search_result.text, 'html.parser')
+            # find the Pager element, which contains the number of pages with search results, and convert it to a list
             pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
+            # convert page numbers to text
             pages = [p.text for p in pages if p.text != '']
+            # if there are any pages with the results
             if len(pages) > 0:
+                # create a variable for counting the search results
                 search_result_number = 1
+                # loop through all search result page numbers
                 for page in pages:
+                    # for each page number, create an url, params (see the 'part' parameter) and try to make get request,
+                    # including error handling
                     url = 'https://www.rosnedra.gov.ru/index.fcgi'
                     params={
                         'page': 'search',
@@ -80,29 +123,28 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             if i > 100:
                                 break
                     except:
-                        #print(f'Request to www.rosnedra.gov.ru search results page {page} failed, please check your params')
                         logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. Request to www.rosnedra.gov.ru search results page {url} failed, please check your params\n")
 
+                    # create a beautifulsoup from the current search results page
                     cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
+                    # find all search-result-item tags and put them to the list
                     for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
+                        # set the locale to russian to be able to work with the item's date
                         locale.setlocale(locale.LC_TIME, locale='ru_RU')
+                        # loop through search-result-link-info-item tags
                         for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
+                            # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
                             if 'Дата' in search_result_link_info_item.text:
+                                # use a custom function to put the month name to nominative form
                                 item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
+                                # extract the datestamp of the document
                                 item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
 
+                        # check if the datestamp matches the given time period
                         if start <= item_date <= end:
-                            #filename = f"{folder}{str(search_result_number)}_{item_date.strftime('%Y%m%d')}/result_url.txt"
-
-                            # final_directory = os.path.join(current_directory, f"{folder}{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
-                            # if os.path.exists(final_directory):
-                            #     shutil.rmtree(final_directory, ignore_errors=True)
-                            ###os.makedirs(final_directory)
-
+                            # find the search-result-link tag inside the current search-result-item and extract url from it
                             url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
-                            # name = search_result_item.find(attrs={'class': 'search-result-link'}).text
-                            # with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
-                            #     f.write(f"{name}\n\n{url}")
+                            # make a standard process of requesting a page for the current search-result-item
                             try:
                                 item_page_result = s.get(url)
                                 i = 1
@@ -113,10 +155,14 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                         logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params\n")
                                         break
                             except:
-                                #print(f'Request to {url} failed, please check your params')
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params\n")
+                            # create a beautifulsoup from search-result-item's webpage
                             cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
+                            # find a content tag inside the page. It contents the links to the downloadable files.
                             cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                            # find all h1 tags to obtain the full document name and check if it contains the
+                            # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
+                            # order, not some other trash
                             cur_h1_tags = cur_item_page_result_soup.find_all('h1')
                             is_order = False
                             if cur_h1_tags:
@@ -124,22 +170,31 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     if 'Приказ Роснедр от' in h1_tag.text:
                                         is_order = True
 
+                            # if we know that we've found an order and if it contains Content elements
                             if cur_content_tags and is_order:
+                                # then we create a new folder to store the current results
                                 final_directory = os.path.join(current_directory, folder)
                                 final_directory = os.path.join(final_directory, f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
+                                # if it already exists, delete it
                                 if os.path.exists(final_directory):
                                     shutil.rmtree(final_directory, ignore_errors=True)
+                                # create a new folder
                                 os.makedirs(final_directory)
+                                # extract the full name of a hyperlink and store it to the result_name.txt file.
+                                # store url to the result_url.txt file.
                                 name = search_result_item.find(attrs={'class': 'search-result-link'}).text
                                 with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
                                     f.write(f"{url}")
                                 with open(f"{final_directory}\\result_name.txt", 'w', encoding='utf-8') as f:
                                     f.write(f"{name}")
 
-
+                                # find all </a> tags inside the Content element and loop through them
                                 for item_doc_tag in cur_content_tags.find_all('a'):
+                                    # create a full url string from the current </a>
                                     curl = f"https://www.rosnedra.gov.ru{item_doc_tag['href']}"
+                                    # extract a name of the document from the hyperlink text
                                     cname = item_doc_tag.text
+                                    # standard process of downloading a file by the link and logging the errors.
                                     try:
                                         dresult = s.get(curl)
                                         i = 1
@@ -151,15 +206,16 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params\n")
                                                 break
                                     except:
-                                        #print(f'Request to download resource {curl} failed, please check your params')
                                         logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params\n")
+                                    # if something has been downloaded
                                     if dresult.status_code == 200:
+                                        # create a new file using cname and the file extension from the curl
                                         with open(f"{final_directory}\\{cname}.{curl.split('.')[-1]}", 'wb') as f:
                                             f.write(dresult.content)
                                             pass
                             else:
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
-
+                            # iterate the search result number
                             search_result_number += 1
 
 
@@ -203,8 +259,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
             block_id = 0
             ring_id = 0
             cur_ring = ogr.Geometry(ogr.wkbLinearRing)
-            # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-            cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+
+            cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+            # cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
 
             field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
@@ -338,7 +395,8 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
 def clear_folder(folder):
     for root, dirs, files in os.walk(folder):
         for f in files:
-            os.unlink(os.path.join(root, f))
+            if f != 'logfile.txt':
+                os.unlink(os.path.join(root, f))
         for d in dirs:
             shutil.rmtree(os.path.join(root, d))
 
@@ -353,7 +411,7 @@ with open('.pggdal', encoding='utf-8') as gdalf:
     gdalpgcs = gdalf.read().replace('\n', '')
 
 
-# download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
+# download_orders(start=startdt - timedelta(days=10), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
 
 # parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
 
