@@ -234,8 +234,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
     if os.path.exists(gpkg_path):
         gdriver.DeleteDataSource(gpkg_path)
     gdatasource = gdriver.CreateDataSource(gpkg_path)
-    # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
-    out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
+    out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
+    # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
     field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date']
     field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate]
     for f_name, f_type in zip(field_names, field_types):
@@ -260,8 +260,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
             ring_id = 0
             cur_ring = ogr.Geometry(ogr.wkbLinearRing)
 
-            cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-            # cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+            # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+            # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
+            cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
 
             field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
@@ -302,6 +303,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                     if ring_id > 0:
                         if cur_ring.GetPointCount() > 2:
                             cur_ring.CloseRings()
+                            # cur_block_part_geom.AddGeometry(cur_ring)
+                            # cur_block_geom.AddGeometry(cur_block_part_geom)
                             cur_block_geom.AddGeometry(cur_ring)
                     ring_id += 1
                     cur_ring = ogr.Geometry(ogr.wkbLinearRing)
@@ -310,6 +313,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                     if block_id > 0:
                         if cur_ring.GetPointCount() > 2:
                             cur_ring.CloseRings()
+                            # cur_block_part_geom.AddGeometry(cur_ring)
+                            # cur_block_geom.AddGeometry(cur_block_part_geom)
                             cur_block_geom.AddGeometry(cur_ring)
                         cur_block_geom.CloseRings()
                         cur_block_geom.Transform(transform_gsk_to_wgs)
@@ -335,8 +340,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         curl,
                         datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
                     ]
-                    # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
                     cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+                    # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
+                    # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
                     ring_id = 1
 
                 y_d = df.iloc[nrow, excel_col_nums['y_d']]
@@ -358,7 +364,10 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
             if block_id > 0:
                 if cur_ring.GetPointCount() > 2:
                     cur_ring.CloseRings()
+                    # cur_block_part_geom.AddGeometry(cur_ring)
+                    # cur_block_geom.AddGeometry(cur_block_part_geom)
                     cur_block_geom.AddGeometry(cur_ring)
+                # cur_block_part_geom.CloseRings()
                 cur_block_geom.CloseRings()
                 cur_block_geom.Transform(transform_gsk_to_wgs)
                 feature = ogr.Feature(featureDefn)
@@ -413,7 +422,7 @@ with open('.pggdal', encoding='utf-8') as gdalf:
 
 # download_orders(start=startdt - timedelta(days=10), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
 
-# parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
+parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
 
 # update_synology_table(gdalpgcs, folder='rosnedra_auc')
 
