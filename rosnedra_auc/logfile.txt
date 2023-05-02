@@ -1,0 +1,2 @@
+2023-04-28 12:53:41 Result #20_20230404. Attempt to parse items page https://rosnedra.gov.ru/article/15224.html failed, please check the page content
+2023-04-28 12:54:11 Result #41_20230202. Attempt to parse items page https://rosnedra.gov.ru/article/15078.html failed, please check the page content
