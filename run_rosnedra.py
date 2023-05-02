@@ -16,4 +16,4 @@ download_orders(start=startdt, end=datetime.now(), search_string='Об утве�
 
 parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
 
-# update_synology_table(gdalpgcs, folder='rosnedra_auc')
+update_synology_table(gdalpgcs, folder='rosnedra_auc')
