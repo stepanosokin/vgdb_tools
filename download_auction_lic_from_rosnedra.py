@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 import locale
-import os, fnmatch, shutil
+import os, fnmatch, shutil, platform
 import pandas as pd
 from osgeo import ogr, osr, gdal
 import psycopg2
@@ -136,8 +136,10 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
                             if 'Дата' in search_result_link_info_item.text:
                                 # use a custom function to put the month name to nominative form
-                                # item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
-                                item_date = search_result_link_info_item.text.lower()
+                                if platform.system() == 'Windows':
+                                    item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
+                                else:
+                                    item_date = search_result_link_info_item.text.lower()
                                 # extract the datestamp of the document
                                 item_date = item_date.replace(u'\xa0', u' ')
                                 item_date = item_date.replace('  ', ' ')
