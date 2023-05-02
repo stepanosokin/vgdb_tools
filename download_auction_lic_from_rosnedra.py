@@ -130,7 +130,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                     # find all search-result-item tags and put them to the list
                     for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
                         # set the locale to russian to be able to work with the item's date
-                        locale.setlocale(locale.LC_TIME, locale='ru_RU')
+                        locale.setlocale(locale.LC_ALL, locale='ru_RU')
                         # loop through search-result-link-info-item tags
                         for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
                             # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
