@@ -242,7 +242,6 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
         out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
     featureDefn = out_layer.GetLayerDefn()
 
-
     # block_id = 0
     # ring_id = 0
     for path, dirs, files in os.walk(os.path.abspath(directory)):
@@ -410,23 +409,25 @@ def clear_folder(folder):
             shutil.rmtree(os.path.join(root, d))
 
 
-with open('.pgdsn', encoding='utf-8') as dsnf:
-    dsn = dsnf.read().replace('\n', '')
-
-with psycopg2.connect(dsn) as pgconn:
-    startdt = get_latest_order_date_from_synology(pgconn) + timedelta(days=1)
-
-with open('.pggdal', encoding='utf-8') as gdalf:
-    gdalpgcs = gdalf.read().replace('\n', '')
-
-
-# download_orders(start=startdt - timedelta(days=10), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
-
-parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
-
+# with open('.pgdsn', encoding='utf-8') as dsnf:
+#     dsn = dsnf.read().replace('\n', '')
+#
+# with psycopg2.connect(dsn) as pgconn:
+#     startdt = get_latest_order_date_from_synology(pgconn) + timedelta(days=1)
+#
+# with open('.pggdal', encoding='utf-8') as gdalf:
+#     gdalpgcs = gdalf.read().replace('\n', '')
+#
+#
+# clear_folder('rosnedra_auc')
+#
+# download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
+#
+# parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
+#
 # update_synology_table(gdalpgcs, folder='rosnedra_auc')
 
-# clear_folder('rosnedra_auc')
+
 
 
 
