@@ -1,0 +1,4 @@
+export PATH=$PATH:/home/user/miniconda3/bin
+conda activate vgdb_env
+cd /home/user/vgdb_tools/vgdb_tools
+python run_rosnedra.py
