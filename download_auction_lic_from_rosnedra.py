@@ -138,7 +138,11 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 # use a custom function to put the month name to nominative form
                                 item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
                                 # extract the datestamp of the document
-                                item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
+                                item_date = item_date.replace(u'\xa0', u' ')
+                                item_date = item_date.replace('  ', ' ')
+                                item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
+                                pass
+                                # item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
 
                         # check if the datestamp matches the given time period
                         if start <= item_date <= end:
