@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+# import time
+# from zoneinfo import ZoneInfo
 import requests
 from bs4 import BeautifulSoup
 import locale
@@ -6,6 +8,9 @@ import os, fnmatch, shutil, platform
 import pandas as pd
 from osgeo import ogr, osr, gdal
 import psycopg2
+import json
+# from timezonefinder import TimezoneFinder
+# from tzdata import *
 
 
 def rus_month_genitive_to_nominative(i_string):
@@ -176,6 +181,10 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 for h1_tag in cur_h1_tags:
                                     if 'Приказ Роснедр от' in h1_tag.text:
                                         is_order = True
+                                        announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
+                                        ord_i = announcement.find('Приказ Роснедр от')
+                                        order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
+
 
                             # if we know that we've found an order and if it contains Content elements
                             if cur_content_tags and is_order:
@@ -187,9 +196,16 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     shutil.rmtree(final_directory, ignore_errors=True)
                                 # create a new folder
                                 os.makedirs(final_directory)
+
+                                metadata_dict = {}
+                                metadata_dict['url'] = url
+                                metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
+
                                 # extract the full name of a hyperlink and store it to the result_name.txt file.
                                 # store url to the result_url.txt file.
                                 name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                                metadata_dict['name'] = name
+                                metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
                                 with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
                                     f.write(f"{url}")
                                 with open(f"{final_directory}\\result_name.txt", 'w', encoding='utf-8') as f:
@@ -220,6 +236,42 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                         with open(f"{final_directory}\\{cname}.{curl.split('.')[-1]}", 'wb') as f:
                                             f.write(dresult.content)
                                             pass
+                                for item_doc_p_tag in cur_content_tags.find_all('p'):
+                                    if 'последнийсрокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
+                                        deadlinestr = item_doc_p_tag.text
+                                        deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
+                                        if platform.system() == 'Windows':
+                                            deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
+                                        else:
+                                            deadlinestr = deadlinestr.lower()
+                                        try:
+                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.')
+                                        except:
+                                            try:
+                                                deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.)')
+                                            except:
+                                                try:
+                                                    deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.')
+                                                except:
+                                                    try:
+                                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)')
+                                                    except:
+                                                        try:
+                                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.')
+                                                            pass
+                                                        except:
+                                                            try:
+                                                                deadline = datetime.strptime(deadlinestr.title(),'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)')
+                                                            except:
+                                                                deadline = datetime(1970, 1, 1)
+                                                                logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content\n")
+                                        metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
+                                        with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
+                                            df.write(deadline.strftime('%Y-%m-%d %H:$M'))
+                                with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
+                                    json.dump(metadata_dict, outfile, ensure_ascii=False)
+
+
                             else:
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
                             # iterate the search result number
@@ -243,16 +295,19 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
     gdatasource = gdriver.CreateDataSource(gpkg_path)
     out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
     # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
-    field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date']
-    field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate]
+    field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date', 'announce_date', 'appl_deadline']
+    field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate, ogr.OFTDate]
     for f_name, f_type in zip(field_names, field_types):
         out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
     featureDefn = out_layer.GetLayerDefn()
 
     # block_id = 0
     # ring_id = 0
+
     for path, dirs, files in os.walk(os.path.abspath(directory)):
         for filename in fnmatch.filter(files, '*.xls*'):
+            with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
+                meta_dict = json.load(jf)
             with open(os.path.join(path, 'result_url.txt')) as uf:
                 curl = uf.read().replace('\n', '')
             with open(os.path.join(path, 'result_name.txt')) as sf:
@@ -273,6 +328,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
             field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
             excel_col_nums.update(dict(zip(field_names, field_cols)))
+
+            # tf = TimezoneFinder()
 
             for nrow in range(nrows):
 
@@ -327,12 +384,33 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         feature = ogr.Feature(featureDefn)
                         feature.SetGeometry(cur_block_geom)
 
+
+
                         for f_name, f_val in zip(field_names, field_vals):
-                            feature.SetField(f_name, f_val)
+                            if f_name == 'appl_deadline' and f_val:
+                                # tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(),
+                                #                     lat=cur_block_geom.Centroid().GetY())
+                                # f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
+                                # f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
+                                # tzinfo = ZoneInfo(tz)
+                                # os.environ['TZ'] = tz
+                                # time.tzset()
+                                # windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
+                                # os.environ['TZ'] = windows_timezone
+                                # os.system(f"tzutil /s \"{windows_timezone}\"")
+                                feature.SetField(f_name, f_val)
+                            else:
+                                feature.SetField(f_name, f_val)
                         out_layer.CreateFeature(feature)
 
                     block_id += 1
 
+                    # if meta_dict.get('deadline') != None:
+                    #     deadlinedt = datetime.strptime(meta_dict.get('deadline'), '%Y-%m-%d %H:%M')
+                    #     pass
+                    # else:
+                    #     deadlinedt = meta_dict.get('deadline')
+                    #     pass
                     field_vals = [
                         df.iloc[nrow, excel_col_nums['resource_type']],
                         df.iloc[nrow, excel_col_nums['name']],
@@ -342,9 +420,14 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         df.iloc[nrow, excel_col_nums['usage_type']],
                         df.iloc[nrow, excel_col_nums['lend_type']],
                         df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
-                        csource,
-                        curl,
-                        datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
+                        # csource,
+                        meta_dict['name'],
+                        # curl,
+                        meta_dict['url'],
+                        # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
+                        meta_dict['order_date'],
+                        meta_dict['announce_date'],
+                        meta_dict.get('deadline')
                     ]
                     cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
                     # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
@@ -378,7 +461,21 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                 cur_block_geom.Transform(transform_gsk_to_wgs)
                 feature = ogr.Feature(featureDefn)
                 feature.SetGeometry(cur_block_geom)
+
                 for f_name, f_val in zip(field_names, field_vals):
+                    if f_name == 'appl_deadline' and f_val:
+                    #     tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(), lat=cur_block_geom.Centroid().GetY())
+                    #     f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
+                    #     f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
+                    #     tzinfo = ZoneInfo(tz)
+                    #     # os.environ['TZ'] = tz
+                    #     # time.tzset()
+                    #     windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
+                    #     os.environ['TZ'] = windows_timezone
+                    #     os.system(f"tzutil /s \"{windows_timezone}\"")
+                    #     print('hi')
+                        feature.SetField(f_name, f_val)
+                        pass
                     feature.SetField(f_name, f_val)
                 out_layer.CreateFeature(feature)
 
@@ -386,9 +483,10 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
 
 def get_latest_order_date_from_synology(pgconn):
     with pgconn.cursor() as cur:
-        cur.execute("SELECT max(order_date) as latest_order_date FROM rosnedra.license_blocks_rosnedra_orders")
+        cur.execute("SELECT max(announce_date) as latest_order_date FROM rosnedra.license_blocks_rosnedra_orders")
         ldate = cur.fetchall()[0][0]
-        return datetime(ldate.year, ldate.month, ldate.day)
+        ldatetime = datetime(ldate.year, ldate.month, ldate.day)
+        return ldatetime
 
 
 def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg'):
@@ -428,8 +526,9 @@ def clear_folder(folder):
 #
 # clear_folder('rosnedra_auc')
 #
+# # # startdt = datetime(2023, 1, 1)
 # download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
-#
+# #
 # parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
 #
 # update_synology_table(gdalpgcs, folder='rosnedra_auc')
