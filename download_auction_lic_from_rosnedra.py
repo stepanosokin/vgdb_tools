@@ -97,8 +97,12 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
             pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
             # convert page numbers to text
             pages = [p.text for p in pages if p.text != '']
-            # if there are any pages with the results
+            # start the downloaded results counter
             results_downloaded = 0
+            # get the current system's locale
+            cur_locale = locale.getlocale()
+
+            # if there are any pages with the results
             if len(pages) > 0:
                 # create a variable for counting the search results
                 search_result_number = 1
@@ -278,6 +282,9 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
                             # iterate the search result number
                             search_result_number += 1
+            # return the locale settings to the initial state
+            locale.setlocale(locale.LC_ALL, locale=f'{cur_locale[0]}.{cur_locale[1]}')
+            # write log message about results downloaded count
             logf.write(f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from "
                        f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. "
                        f"{results_downloaded} results downloaded.\n")
