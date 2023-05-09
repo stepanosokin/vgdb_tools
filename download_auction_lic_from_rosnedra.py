@@ -98,6 +98,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
             # convert page numbers to text
             pages = [p.text for p in pages if p.text != '']
             # if there are any pages with the results
+            results_downloaded = 0
             if len(pages) > 0:
                 # create a variable for counting the search results
                 search_result_number = 1
@@ -196,6 +197,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     shutil.rmtree(final_directory, ignore_errors=True)
                                 # create a new folder
                                 os.makedirs(final_directory)
+                                results_downloaded += 1
 
                                 metadata_dict = {}
                                 metadata_dict['url'] = url
@@ -276,209 +278,220 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
                             # iterate the search result number
                             search_result_number += 1
+            logf.write(f"{datetime.now().strftime(logdateformat)} download_orders run successfully. {results_downloaded} results downloaded.\n")
 
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg'):
 
     current_directory = os.getcwd()
     directory = os.path.join(current_directory, folder)
-    gpkg_path = os.path.join(directory, gpkg)
+    # define the datetime format for the logfile
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    # create a pthname for the logfile
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf:
 
-    gsk2011_crs = osr.SpatialReference()
-    gsk2011_crs.ImportFromProj4('+proj=longlat +ellps=GSK2011 +towgs84=0.013,-0.092,-0.03,-0.001738,0.003559,-0.004263,0.00739999994614493 +no_defs +type=crs')
-    wgs84_crs = osr.SpatialReference()
-    wgs84_crs.ImportFromProj4('+proj=longlat +datum=WGS84 +no_defs')
-    transform_gsk_to_wgs = osr.CoordinateTransformation(gsk2011_crs, wgs84_crs)
-    gdriver = ogr.GetDriverByName('GPKG')
-    if os.path.exists(gpkg_path):
-        gdriver.DeleteDataSource(gpkg_path)
-    gdatasource = gdriver.CreateDataSource(gpkg_path)
-    out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
-    # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
-    field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date', 'announce_date', 'appl_deadline']
-    field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate, ogr.OFTDate]
-    for f_name, f_type in zip(field_names, field_types):
-        out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
-    featureDefn = out_layer.GetLayerDefn()
+        gpkg_path = os.path.join(directory, gpkg)
 
-    # block_id = 0
-    # ring_id = 0
+        gsk2011_crs = osr.SpatialReference()
+        gsk2011_crs.ImportFromProj4('+proj=longlat +ellps=GSK2011 +towgs84=0.013,-0.092,-0.03,-0.001738,0.003559,-0.004263,0.00739999994614493 +no_defs +type=crs')
+        wgs84_crs = osr.SpatialReference()
+        wgs84_crs.ImportFromProj4('+proj=longlat +datum=WGS84 +no_defs')
+        transform_gsk_to_wgs = osr.CoordinateTransformation(gsk2011_crs, wgs84_crs)
+        gdriver = ogr.GetDriverByName('GPKG')
+        if os.path.exists(gpkg_path):
+            gdriver.DeleteDataSource(gpkg_path)
+        gdatasource = gdriver.CreateDataSource(gpkg_path)
+        out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
+        # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
+        field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date', 'announce_date', 'appl_deadline']
+        field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate, ogr.OFTDate]
+        for f_name, f_type in zip(field_names, field_types):
+            out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
+        featureDefn = out_layer.GetLayerDefn()
 
-    for path, dirs, files in os.walk(os.path.abspath(directory)):
-        for filename in fnmatch.filter(files, '*.xls*'):
-            with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
-                meta_dict = json.load(jf)
-            with open(os.path.join(path, 'result_url.txt')) as uf:
-                curl = uf.read().replace('\n', '')
-            with open(os.path.join(path, 'result_name.txt')) as sf:
-                csource = sf.read().replace('\n', '')
-            excel_file = os.path.join(path, filename)
+        # block_id = 0
+        # ring_id = 0
 
-            df = pd.read_excel(excel_file)
+        blocks_parsed = 0
 
-            nrows, ncols = df.shape
-            block_id = 0
-            ring_id = 0
-            cur_ring = ogr.Geometry(ogr.wkbLinearRing)
+        for path, dirs, files in os.walk(os.path.abspath(directory)):
+            for filename in fnmatch.filter(files, '*.xls*'):
+                with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
+                    meta_dict = json.load(jf)
+                with open(os.path.join(path, 'result_url.txt')) as uf:
+                    curl = uf.read().replace('\n', '')
+                with open(os.path.join(path, 'result_name.txt')) as sf:
+                    csource = sf.read().replace('\n', '')
+                excel_file = os.path.join(path, filename)
 
-            # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-            # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
-            cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+                df = pd.read_excel(excel_file)
 
-            field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
-            excel_col_nums.update(dict(zip(field_names, field_cols)))
+                nrows, ncols = df.shape
+                block_id = 0
+                ring_id = 0
+                cur_ring = ogr.Geometry(ogr.wkbLinearRing)
 
-            # tf = TimezoneFinder()
+                # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+                # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
+                cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
 
-            for nrow in range(nrows):
+                field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
+                excel_col_nums.update(dict(zip(field_names, field_cols)))
 
-                for ncol in range(ncols):
-                    if 'град' in str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '') \
-                            and 'мин' in str(df.iloc[nrow, ncol + 1]).replace(' ', '').replace('\n', '') \
-                            and excel_col_nums['y_d'] == 0:
-                        excel_col_nums['y_d'] = ncol
-                        excel_col_nums['y_m'] = ncol + 1
-                        excel_col_nums['y_s'] = ncol + 2
-                        excel_col_nums['x_d'] = ncol + 3
-                        excel_col_nums['x_m'] = ncol + 4
-                        excel_col_nums['x_s'] = ncol + 5
-                        excel_col_nums['point_num'] = ncol - 1
-                        excel_col_nums['area_km'] = ncol - 2
-                    if str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '').lower() == 'видполезногоископаемого' and excel_col_nums['resource_type'] == 0:
-                        excel_col_nums['resource_type'] = ncol
-                    if 'наименованиеучастканедр' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['name'] == 0:
-                        excel_col_nums['name'] = ncol
-                    if 'ресурсы' in str(df.iloc[nrow, ncol]).replace('\n', '').lower() and excel_col_nums['reserves_predicted_resources'] == 0:
-                        excel_col_nums['reserves_predicted_resources'] = ncol
-                    if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
-                        excel_col_nums['exp_protocol'] = ncol
-                    if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
-                        excel_col_nums['usage_type'] = ncol
-                    if 'формапредоставленияучастканедрвпользоание' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
-                        excel_col_nums['lend_type'] = ncol
-                    if 'планируемыесрокипроведения' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['planned_terms_conditions'] == 0:
-                        excel_col_nums['planned_terms_conditions'] = ncol
+                # tf = TimezoneFinder()
 
-                point_n = df.iloc[nrow, excel_col_nums['point_num']]
-                y_d = df.iloc[nrow, excel_col_nums['y_d']]
-                if str(point_n) == '1' or (cur_ring.GetPointCount() > 2 and not str(y_d).isdigit()):
-                    if ring_id > 0:
-                        if cur_ring.GetPointCount() > 2:
-                            cur_ring.CloseRings()
-                            # cur_block_part_geom.AddGeometry(cur_ring)
-                            # cur_block_geom.AddGeometry(cur_block_part_geom)
-                            cur_block_geom.AddGeometry(cur_ring)
-                    ring_id += 1
-                    cur_ring = ogr.Geometry(ogr.wkbLinearRing)
-                if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                    #block_id = df.iloc[nrow, 0]
-                    if block_id > 0:
-                        if cur_ring.GetPointCount() > 2:
-                            cur_ring.CloseRings()
-                            # cur_block_part_geom.AddGeometry(cur_ring)
-                            # cur_block_geom.AddGeometry(cur_block_part_geom)
-                            cur_block_geom.AddGeometry(cur_ring)
-                        cur_block_geom.CloseRings()
-                        cur_block_geom.Transform(transform_gsk_to_wgs)
-                        feature = ogr.Feature(featureDefn)
-                        feature.SetGeometry(cur_block_geom)
+                for nrow in range(nrows):
+
+                    for ncol in range(ncols):
+                        if 'град' in str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '') \
+                                and 'мин' in str(df.iloc[nrow, ncol + 1]).replace(' ', '').replace('\n', '') \
+                                and excel_col_nums['y_d'] == 0:
+                            excel_col_nums['y_d'] = ncol
+                            excel_col_nums['y_m'] = ncol + 1
+                            excel_col_nums['y_s'] = ncol + 2
+                            excel_col_nums['x_d'] = ncol + 3
+                            excel_col_nums['x_m'] = ncol + 4
+                            excel_col_nums['x_s'] = ncol + 5
+                            excel_col_nums['point_num'] = ncol - 1
+                            excel_col_nums['area_km'] = ncol - 2
+                        if str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '').lower() == 'видполезногоископаемого' and excel_col_nums['resource_type'] == 0:
+                            excel_col_nums['resource_type'] = ncol
+                        if 'наименованиеучастканедр' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['name'] == 0:
+                            excel_col_nums['name'] = ncol
+                        if 'ресурсы' in str(df.iloc[nrow, ncol]).replace('\n', '').lower() and excel_col_nums['reserves_predicted_resources'] == 0:
+                            excel_col_nums['reserves_predicted_resources'] = ncol
+                        if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
+                            excel_col_nums['exp_protocol'] = ncol
+                        if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
+                            excel_col_nums['usage_type'] = ncol
+                        if 'формапредоставленияучастканедрвпользоание' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
+                            excel_col_nums['lend_type'] = ncol
+                        if 'планируемыесрокипроведения' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['planned_terms_conditions'] == 0:
+                            excel_col_nums['planned_terms_conditions'] = ncol
+
+                    point_n = df.iloc[nrow, excel_col_nums['point_num']]
+                    y_d = df.iloc[nrow, excel_col_nums['y_d']]
+                    if str(point_n) == '1' or (cur_ring.GetPointCount() > 2 and not str(y_d).isdigit()):
+                        if ring_id > 0:
+                            if cur_ring.GetPointCount() > 2:
+                                cur_ring.CloseRings()
+                                # cur_block_part_geom.AddGeometry(cur_ring)
+                                # cur_block_geom.AddGeometry(cur_block_part_geom)
+                                cur_block_geom.AddGeometry(cur_ring)
+                        ring_id += 1
+                        cur_ring = ogr.Geometry(ogr.wkbLinearRing)
+                    if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                        #block_id = df.iloc[nrow, 0]
+                        if block_id > 0:
+                            if cur_ring.GetPointCount() > 2:
+                                cur_ring.CloseRings()
+                                # cur_block_part_geom.AddGeometry(cur_ring)
+                                # cur_block_geom.AddGeometry(cur_block_part_geom)
+                                cur_block_geom.AddGeometry(cur_ring)
+                            cur_block_geom.CloseRings()
+                            cur_block_geom.Transform(transform_gsk_to_wgs)
+                            feature = ogr.Feature(featureDefn)
+                            feature.SetGeometry(cur_block_geom)
 
 
 
-                        for f_name, f_val in zip(field_names, field_vals):
-                            if f_name == 'appl_deadline' and f_val:
-                                # tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(),
-                                #                     lat=cur_block_geom.Centroid().GetY())
-                                # f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
-                                # f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
-                                # tzinfo = ZoneInfo(tz)
-                                # os.environ['TZ'] = tz
-                                # time.tzset()
-                                # windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
-                                # os.environ['TZ'] = windows_timezone
-                                # os.system(f"tzutil /s \"{windows_timezone}\"")
-                                feature.SetField(f_name, f_val)
-                            else:
-                                feature.SetField(f_name, f_val)
-                        out_layer.CreateFeature(feature)
+                            for f_name, f_val in zip(field_names, field_vals):
+                                if f_name == 'appl_deadline' and f_val:
+                                    # tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(),
+                                    #                     lat=cur_block_geom.Centroid().GetY())
+                                    # f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
+                                    # f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
+                                    # tzinfo = ZoneInfo(tz)
+                                    # os.environ['TZ'] = tz
+                                    # time.tzset()
+                                    # windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
+                                    # os.environ['TZ'] = windows_timezone
+                                    # os.system(f"tzutil /s \"{windows_timezone}\"")
+                                    feature.SetField(f_name, f_val)
+                                else:
+                                    feature.SetField(f_name, f_val)
+                            blocks_parsed += 1
+                            out_layer.CreateFeature(feature)
 
-                    block_id += 1
+                        block_id += 1
 
-                    # if meta_dict.get('deadline') != None:
-                    #     deadlinedt = datetime.strptime(meta_dict.get('deadline'), '%Y-%m-%d %H:%M')
-                    #     pass
-                    # else:
-                    #     deadlinedt = meta_dict.get('deadline')
-                    #     pass
-                    field_vals = [
-                        df.iloc[nrow, excel_col_nums['resource_type']],
-                        df.iloc[nrow, excel_col_nums['name']],
-                        float(str(df.iloc[nrow, excel_col_nums['area_km']]).replace(',', '.')),
-                        df.iloc[nrow, excel_col_nums['reserves_predicted_resources']],
-                        df.iloc[nrow, excel_col_nums['exp_protocol']],
-                        df.iloc[nrow, excel_col_nums['usage_type']],
-                        df.iloc[nrow, excel_col_nums['lend_type']],
-                        df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
-                        # csource,
-                        meta_dict['name'],
-                        # curl,
-                        meta_dict['url'],
-                        # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
-                        meta_dict['order_date'],
-                        meta_dict['announce_date'],
-                        meta_dict.get('deadline')
-                    ]
-                    cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
-                    # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
-                    # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-                    ring_id = 1
+                        # if meta_dict.get('deadline') != None:
+                        #     deadlinedt = datetime.strptime(meta_dict.get('deadline'), '%Y-%m-%d %H:%M')
+                        #     pass
+                        # else:
+                        #     deadlinedt = meta_dict.get('deadline')
+                        #     pass
+                        field_vals = [
+                            df.iloc[nrow, excel_col_nums['resource_type']],
+                            df.iloc[nrow, excel_col_nums['name']],
+                            float(str(df.iloc[nrow, excel_col_nums['area_km']]).replace(',', '.')),
+                            df.iloc[nrow, excel_col_nums['reserves_predicted_resources']],
+                            df.iloc[nrow, excel_col_nums['exp_protocol']],
+                            df.iloc[nrow, excel_col_nums['usage_type']],
+                            df.iloc[nrow, excel_col_nums['lend_type']],
+                            df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
+                            # csource,
+                            meta_dict['name'],
+                            # curl,
+                            meta_dict['url'],
+                            # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
+                            meta_dict['order_date'],
+                            meta_dict['announce_date'],
+                            meta_dict.get('deadline')
+                        ]
+                        cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+                        # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
+                        # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
+                        ring_id = 1
 
-                y_d = df.iloc[nrow, excel_col_nums['y_d']]
-                y_m = df.iloc[nrow, excel_col_nums['y_m']]
-                y_s = df.iloc[nrow, excel_col_nums['y_s']]
-                x_d = df.iloc[nrow, excel_col_nums['x_d']]
-                x_m = df.iloc[nrow, excel_col_nums['x_m']]
-                x_s = df.iloc[nrow, excel_col_nums['x_s']]
-                if str(y_s).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                    # print(filename, f"[block id: {block_id}] [ring id: {ring_id}]" , *df.iloc[nrow, 4:11])
-                    y = float(str(df.iloc[nrow, excel_col_nums['y_d']]).replace(',', '.')) + \
-                        float(str(df.iloc[nrow, excel_col_nums['y_m']]).replace(',', '.')) / 60 + \
-                        float(str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '.')) / 3600
-                    x = float(str(df.iloc[nrow, excel_col_nums['x_d']]).replace(',', '.')) + \
-                        float(str(df.iloc[nrow, excel_col_nums['x_m']]).replace(',', '.')) / 60 + \
-                        float(str(df.iloc[nrow, excel_col_nums['x_s']]).replace(',', '.')) / 3600
-                    # print(x, y)
-                    cur_ring.AddPoint(x, y)
-            if block_id > 0:
-                if cur_ring.GetPointCount() > 2:
-                    cur_ring.CloseRings()
-                    # cur_block_part_geom.AddGeometry(cur_ring)
-                    # cur_block_geom.AddGeometry(cur_block_part_geom)
-                    cur_block_geom.AddGeometry(cur_ring)
-                # cur_block_part_geom.CloseRings()
-                cur_block_geom.CloseRings()
-                cur_block_geom.Transform(transform_gsk_to_wgs)
-                feature = ogr.Feature(featureDefn)
-                feature.SetGeometry(cur_block_geom)
+                    y_d = df.iloc[nrow, excel_col_nums['y_d']]
+                    y_m = df.iloc[nrow, excel_col_nums['y_m']]
+                    y_s = df.iloc[nrow, excel_col_nums['y_s']]
+                    x_d = df.iloc[nrow, excel_col_nums['x_d']]
+                    x_m = df.iloc[nrow, excel_col_nums['x_m']]
+                    x_s = df.iloc[nrow, excel_col_nums['x_s']]
+                    if str(y_s).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                        # print(filename, f"[block id: {block_id}] [ring id: {ring_id}]" , *df.iloc[nrow, 4:11])
+                        y = float(str(df.iloc[nrow, excel_col_nums['y_d']]).replace(',', '.')) + \
+                            float(str(df.iloc[nrow, excel_col_nums['y_m']]).replace(',', '.')) / 60 + \
+                            float(str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '.')) / 3600
+                        x = float(str(df.iloc[nrow, excel_col_nums['x_d']]).replace(',', '.')) + \
+                            float(str(df.iloc[nrow, excel_col_nums['x_m']]).replace(',', '.')) / 60 + \
+                            float(str(df.iloc[nrow, excel_col_nums['x_s']]).replace(',', '.')) / 3600
+                        # print(x, y)
+                        cur_ring.AddPoint(x, y)
+                if block_id > 0:
+                    if cur_ring.GetPointCount() > 2:
+                        cur_ring.CloseRings()
+                        # cur_block_part_geom.AddGeometry(cur_ring)
+                        # cur_block_geom.AddGeometry(cur_block_part_geom)
+                        cur_block_geom.AddGeometry(cur_ring)
+                    # cur_block_part_geom.CloseRings()
+                    cur_block_geom.CloseRings()
+                    cur_block_geom.Transform(transform_gsk_to_wgs)
+                    feature = ogr.Feature(featureDefn)
+                    feature.SetGeometry(cur_block_geom)
 
-                for f_name, f_val in zip(field_names, field_vals):
-                    if f_name == 'appl_deadline' and f_val:
-                    #     tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(), lat=cur_block_geom.Centroid().GetY())
-                    #     f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
-                    #     f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
-                    #     tzinfo = ZoneInfo(tz)
-                    #     # os.environ['TZ'] = tz
-                    #     # time.tzset()
-                    #     windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
-                    #     os.environ['TZ'] = windows_timezone
-                    #     os.system(f"tzutil /s \"{windows_timezone}\"")
-                    #     print('hi')
+                    for f_name, f_val in zip(field_names, field_vals):
+                        if f_name == 'appl_deadline' and f_val:
+                        #     tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(), lat=cur_block_geom.Centroid().GetY())
+                        #     f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
+                        #     f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
+                        #     tzinfo = ZoneInfo(tz)
+                        #     # os.environ['TZ'] = tz
+                        #     # time.tzset()
+                        #     windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
+                        #     os.environ['TZ'] = windows_timezone
+                        #     os.system(f"tzutil /s \"{windows_timezone}\"")
+                        #     print('hi')
+                            feature.SetField(f_name, f_val)
+                            pass
                         feature.SetField(f_name, f_val)
-                        pass
-                    feature.SetField(f_name, f_val)
-                out_layer.CreateFeature(feature)
-
+                    blocks_parsed += 1
+                    out_layer.CreateFeature(feature)
+        logf.write(f"{datetime.now().strftime(logdateformat)} parse_blocks_from_orders run successfully. {blocks_parsed} blocks parsed.\n")
 
 
 def get_latest_order_date_from_synology(pgconn):
