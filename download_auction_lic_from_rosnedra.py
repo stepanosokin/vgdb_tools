@@ -99,8 +99,6 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
             pages = [p.text for p in pages if p.text != '']
             # start the downloaded results counter
             results_downloaded = 0
-            # get the current system's locale
-            cur_locale = locale.getlocale()
 
             # if there are any pages with the results
             if len(pages) > 0:
@@ -283,7 +281,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             # iterate the search result number
                             search_result_number += 1
             # return the locale settings to the initial state
-            locale.setlocale(locale.LC_ALL, locale=f'{cur_locale[0]}.{cur_locale[1]}')
+            locale.setlocale(locale.LC_ALL, locale='')
             # write log message about results downloaded count
             logf.write(f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from "
                        f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. "
