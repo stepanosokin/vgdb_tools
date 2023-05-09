@@ -278,7 +278,9 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
                             # iterate the search result number
                             search_result_number += 1
-            logf.write(f"{datetime.now().strftime(logdateformat)} download_orders run successfully. {results_downloaded} results downloaded.\n")
+            logf.write(f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from "
+                       f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. "
+                       f"{results_downloaded} results downloaded.\n")
 
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg'):
@@ -491,7 +493,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         feature.SetField(f_name, f_val)
                     blocks_parsed += 1
                     out_layer.CreateFeature(feature)
-        logf.write(f"{datetime.now().strftime(logdateformat)} parse_blocks_from_orders run successfully. {blocks_parsed} blocks parsed.\n")
+        logf.write(f"{datetime.now().strftime(logdateformat)} downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed.\n")
 
 
 def get_latest_order_date_from_synology(pgconn):
@@ -503,19 +505,32 @@ def get_latest_order_date_from_synology(pgconn):
 
 
 def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg'):
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326)
-    sourcepath = os.path.join(folder, gpkg)
-    sourceds = gdal.OpenEx(sourcepath, gdal.OF_VECTOR)
-    myoptions = gdal.VectorTranslateOptions(
-        layerName='rosnedra.license_blocks_rosnedra_orders',
-        format='PostgreSQL',
-        accessMode='append',
-        dstSRS=srs,
-        layers=['license_blocks_rosnedra_orders'],
-        geometryType='MULTIPOLYGON'
-    )
-    gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
+    current_directory = os.getcwd()
+    directory = os.path.join(current_directory, folder)
+    # define the datetime format for the logfile
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    # create a pthname for the logfile
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf:
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        sourcepath = os.path.join(folder, gpkg)
+        sourceds = gdal.OpenEx(sourcepath, gdal.OF_VECTOR)
+        myoptions = gdal.VectorTranslateOptions(
+            layerName='rosnedra.license_blocks_rosnedra_orders',
+            format='PostgreSQL',
+            accessMode='append',
+            dstSRS=srs,
+            layers=['license_blocks_rosnedra_orders'],
+            geometryType='MULTIPOLYGON'
+        )
+        try:
+            gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
+            logf.write(f"{datetime.now().strftime(logdateformat)} Synology table rosnedra.license_blocks_rosnedra_orders "
+                       f"updated successfully.\n")
+        except:
+            logf.write(f"{datetime.now().strftime(logdateformat)} Synology table rosnedra.license_blocks_rosnedra_orders "
+                       f"update FAILED.\n")
 
 
 def clear_folder(folder):
