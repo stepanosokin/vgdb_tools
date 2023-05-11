@@ -210,9 +210,11 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 name = search_result_item.find(attrs={'class': 'search-result-link'}).text
                                 metadata_dict['name'] = name
                                 metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
-                                with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
+                                # with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
+                                with open(os.path.join(final_directory, 'result_url.txt'), 'w', encoding='utf-8') as f:
                                     f.write(f"{url}")
-                                with open(f"{final_directory}\\result_name.txt", 'w', encoding='utf-8') as f:
+                                # with open(f"{final_directory}\\result_name.txt", 'w', encoding='utf-8') as f:
+                                with open(os.path.join(final_directory, 'result_name.txt'), 'w', encoding='utf-8') as f:
                                     f.write(f"{name}")
 
                                 # find all </a> tags inside the Content element and loop through them
@@ -237,7 +239,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     # if something has been downloaded
                                     if dresult.status_code == 200:
                                         # create a new file using cname and the file extension from the curl
-                                        with open(f"{final_directory}\\{cname}.{curl.split('.')[-1]}", 'wb') as f:
+                                        # with open(f"{final_directory}\\{cname}.{curl.split('.')[-1]}", 'wb') as f:
+                                        with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
                                             f.write(dresult.content)
                                             pass
                                 for item_doc_p_tag in cur_content_tags.find_all('p'):
