@@ -210,12 +210,6 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 name = search_result_item.find(attrs={'class': 'search-result-link'}).text
                                 metadata_dict['name'] = name
                                 metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
-                                # with open(f"{final_directory}\\result_url.txt", 'w', encoding='utf-8') as f:
-                                with open(os.path.join(final_directory, 'result_url.txt'), 'w', encoding='utf-8') as f:
-                                    f.write(f"{url}")
-                                # with open(f"{final_directory}\\result_name.txt", 'w', encoding='utf-8') as f:
-                                with open(os.path.join(final_directory, 'result_name.txt'), 'w', encoding='utf-8') as f:
-                                    f.write(f"{name}")
 
                                 # find all </a> tags inside the Content element and loop through them
                                 for item_doc_tag in cur_content_tags.find_all('a'):
@@ -239,7 +233,6 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     # if something has been downloaded
                                     if dresult.status_code == 200:
                                         # create a new file using cname and the file extension from the curl
-                                        # with open(f"{final_directory}\\{cname}.{curl.split('.')[-1]}", 'wb') as f:
                                         with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
                                             f.write(dresult.content)
                                             pass
@@ -277,8 +270,6 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                             df.write(deadline.strftime('%Y-%m-%d %H:$M'))
                                 with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
                                     json.dump(metadata_dict, outfile, ensure_ascii=False)
-
-
                             else:
                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
                             # iterate the search result number
@@ -320,32 +311,19 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
             out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
         featureDefn = out_layer.GetLayerDefn()
 
-        # block_id = 0
-        # ring_id = 0
-
         blocks_parsed = 0
 
         for path, dirs, files in os.walk(os.path.abspath(directory)):
             for filename in fnmatch.filter(files, '*.xls*'):
                 with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
                     meta_dict = json.load(jf)
-                with open(os.path.join(path, 'result_url.txt')) as uf:
-                    curl = uf.read().replace('\n', '')
-                with open(os.path.join(path, 'result_name.txt')) as sf:
-                    csource = sf.read().replace('\n', '')
                 excel_file = os.path.join(path, filename)
-
                 df = pd.read_excel(excel_file)
-
                 nrows, ncols = df.shape
                 block_id = 0
                 ring_id = 0
                 cur_ring = ogr.Geometry(ogr.wkbLinearRing)
-
-                # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
-                # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
                 cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
-
                 field_cols = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 excel_col_nums = {'block_num': 0, 'point_num': 0, 'y_d': 0, 'y_m': 0, 'y_s': 0, 'x_d': 0, 'x_m': 0, 'x_s': 0}
                 excel_col_nums.update(dict(zip(field_names, field_cols)))
@@ -387,18 +365,13 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         if ring_id > 0:
                             if cur_ring.GetPointCount() > 2:
                                 cur_ring.CloseRings()
-                                # cur_block_part_geom.AddGeometry(cur_ring)
-                                # cur_block_geom.AddGeometry(cur_block_part_geom)
                                 cur_block_geom.AddGeometry(cur_ring)
                         ring_id += 1
                         cur_ring = ogr.Geometry(ogr.wkbLinearRing)
                     if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                        #block_id = df.iloc[nrow, 0]
                         if block_id > 0:
                             if cur_ring.GetPointCount() > 2:
                                 cur_ring.CloseRings()
-                                # cur_block_part_geom.AddGeometry(cur_ring)
-                                # cur_block_geom.AddGeometry(cur_block_part_geom)
                                 cur_block_geom.AddGeometry(cur_ring)
                             cur_block_geom.CloseRings()
                             cur_block_geom.Transform(transform_gsk_to_wgs)
@@ -442,9 +415,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                             df.iloc[nrow, excel_col_nums['usage_type']],
                             df.iloc[nrow, excel_col_nums['lend_type']],
                             df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
-                            # csource,
                             meta_dict['name'],
-                            # curl,
                             meta_dict['url'],
                             # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
                             meta_dict['order_date'],
@@ -452,33 +423,22 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                             meta_dict.get('deadline')
                         ]
                         cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
-                        # cur_block_part_geom = ogr.Geometry(ogr.wkbPolygon)
-                        # cur_block_geom = ogr.Geometry(ogr.wkbMultiPolygon)
                         ring_id = 1
 
-                    y_d = df.iloc[nrow, excel_col_nums['y_d']]
-                    y_m = df.iloc[nrow, excel_col_nums['y_m']]
+
                     y_s = df.iloc[nrow, excel_col_nums['y_s']]
-                    x_d = df.iloc[nrow, excel_col_nums['x_d']]
-                    x_m = df.iloc[nrow, excel_col_nums['x_m']]
-                    x_s = df.iloc[nrow, excel_col_nums['x_s']]
                     if str(y_s).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                        # print(filename, f"[block id: {block_id}] [ring id: {ring_id}]" , *df.iloc[nrow, 4:11])
                         y = float(str(df.iloc[nrow, excel_col_nums['y_d']]).replace(',', '.')) + \
                             float(str(df.iloc[nrow, excel_col_nums['y_m']]).replace(',', '.')) / 60 + \
                             float(str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '.')) / 3600
                         x = float(str(df.iloc[nrow, excel_col_nums['x_d']]).replace(',', '.')) + \
                             float(str(df.iloc[nrow, excel_col_nums['x_m']]).replace(',', '.')) / 60 + \
                             float(str(df.iloc[nrow, excel_col_nums['x_s']]).replace(',', '.')) / 3600
-                        # print(x, y)
                         cur_ring.AddPoint(x, y)
                 if block_id > 0:
                     if cur_ring.GetPointCount() > 2:
                         cur_ring.CloseRings()
-                        # cur_block_part_geom.AddGeometry(cur_ring)
-                        # cur_block_geom.AddGeometry(cur_block_part_geom)
                         cur_block_geom.AddGeometry(cur_ring)
-                    # cur_block_part_geom.CloseRings()
                     cur_block_geom.CloseRings()
                     cur_block_geom.Transform(transform_gsk_to_wgs)
                     feature = ogr.Feature(featureDefn)
