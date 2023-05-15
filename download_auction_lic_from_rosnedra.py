@@ -266,8 +266,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                                                 deadline = datetime(1970, 1, 1)
                                                                 logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content\n")
                                         metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
-                                        with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
-                                            df.write(deadline.strftime('%Y-%m-%d %H:$M'))
+                                        # with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
+                                        #     df.write(deadline.strftime('%Y-%m-%d %H:$M'))
                                 with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
                                     json.dump(metadata_dict, outfile, ensure_ascii=False)
                             else:
