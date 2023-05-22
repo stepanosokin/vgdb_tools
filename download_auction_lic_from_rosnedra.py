@@ -80,254 +80,253 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
     bot_token = bot_info[0]
     bot_chatID = bot_info[1]
     telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
-    # open the logfile
-    with open(log_file, 'a', encoding='utf-8') as logf:
-        # start a requests session
-        with requests.Session() as s:
-            message = 'Download data from Rosnedra started!'
+    # open the logfile and start a requests session
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+
+        message = 'Download data from Rosnedra started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        # create url string for the main search request
+        url = 'https://www.rosnedra.gov.ru/index.fcgi'
+        params = {
+            'page': 'search',
+            'step': '1',
+            'q': search_string
+        }
+        headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'ru - RU, ru;q = 0.9, en - US;q = 0.8, en;q = 0.7, en - GB;q = 0.6',
+            'Connection': 'keep-alive',
+            'DNT': '1'
+        }
+        # try to retreive the result from the search engine
+        try:
+            # make get request to the service
+            search_result = s.get(url, params=params, headers=headers, verify=False)
+            # i is a number of tries to retrieve a result
+            i = 1
+            # while the service returns anything other than 200 (OK):
+            while search_result.status_code != 200:
+                # make one more try
+                search_result = s.get(url, params=params, headers=headers, verify=False)
+                i += 1
+                # until 100 attempts
+                if i > 100:
+                    break
+        except:
+            # if something went wrong, write a line to ligfile
+            message = 'Initial request to www.rosnedra.gov.ru failed, please check your params'
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-            # create url string for the main search request
-            url = 'https://www.rosnedra.gov.ru/index.fcgi'
-            params = {
-                'page': 'search',
-                'step': '1',
-                'q': search_string
-            }
-            headers = {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept-Language': 'ru - RU, ru;q = 0.9, en - US;q = 0.8, en;q = 0.7, en - GB;q = 0.6',
-                'Connection': 'keep-alive',
-                'DNT': '1'
-            }
-            # try to retreive the result from the search engine
-            try:
-                # make get request to the service
-                search_result = s.get(url, params=params, headers=headers, verify=False)
-                # i is a number of tries to retrieve a result
-                i = 1
-                # while the service returns anything other than 200 (OK):
-                while search_result.status_code != 200:
-                    # make one more try
-                    search_result = s.get(url, params=params, headers=headers, verify=False)
-                    i += 1
-                    # until 100 attempts
-                    if i > 100:
-                        break
-            except:
-                # if something went wrong, write a line to ligfile
-                message = 'Initial request to www.rosnedra.gov.ru failed, please check your params'
-                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
-            # create a beutifulsoup from the first search results page
-            first_soup = BeautifulSoup(search_result.text, 'html.parser')
-            # find the Pager element, which contains the number of pages with search results, and convert it to a list
-            pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
-            # convert page numbers to text
-            pages = [p.text for p in pages if p.text != '']
-            # start the downloaded results counter
-            results_downloaded = 0
+        # create a beutifulsoup from the first search results page
+        first_soup = BeautifulSoup(search_result.text, 'html.parser')
+        # find the Pager element, which contains the number of pages with search results, and convert it to a list
+        pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
+        # convert page numbers to text
+        pages = [p.text for p in pages if p.text != '']
+        # start the downloaded results counter
+        results_downloaded = 0
 
-            # if there are any pages with the results
-            if len(pages) > 0:
-                # create a variable for counting the search results
-                search_result_number = 1
-                # loop through all search result page numbers
-                for page in pages:
-                    # for each page number, create an url, params (see the 'part' parameter) and try to make get request,
-                    # including error handling
-                    url = 'https://www.rosnedra.gov.ru/index.fcgi'
-                    params={
-                        'page': 'search',
-                        'from_day': '28',
-                        'from_month': '04',
-                        'from_year': '2012',
-                        'till_day': datetime.now().strftime('%d'),
-                        'till_month': datetime.now().strftime('%m'),
-                        'till_year': datetime.now().strftime('%Y'),
-                        'q': search_string,
-                        'step': '1',
-                        'order': '2',
-                        'part': page
-                    }
-                    try:
+        # if there are any pages with the results
+        if len(pages) > 0:
+            # create a variable for counting the search results
+            search_result_number = 1
+            # loop through all search result page numbers
+            for page in pages:
+                # for each page number, create an url, params (see the 'part' parameter) and try to make get request,
+                # including error handling
+                url = 'https://www.rosnedra.gov.ru/index.fcgi'
+                params={
+                    'page': 'search',
+                    'from_day': '28',
+                    'from_month': '04',
+                    'from_year': '2012',
+                    'till_day': datetime.now().strftime('%d'),
+                    'till_month': datetime.now().strftime('%m'),
+                    'till_year': datetime.now().strftime('%Y'),
+                    'q': search_string,
+                    'step': '1',
+                    'order': '2',
+                    'part': page
+                }
+                try:
+                    page_result = s.get(url, params=params, headers=headers, verify=False)
+                    i = 1
+                    while page_result.status_code != 200:
                         page_result = s.get(url, params=params, headers=headers, verify=False)
-                        i = 1
-                        while page_result.status_code != 200:
-                            page_result = s.get(url, params=params, headers=headers, verify=False)
-                            i += 1
-                            if i > 100:
-                                break
-                    except:
-                        message = f'Request to www.rosnedra.gov.ru search results page {url} failed, please check your params'
-                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. {message}\n")
-                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                        i += 1
+                        if i > 100:
+                            break
+                except:
+                    message = f'Request to www.rosnedra.gov.ru search results page {url} failed, please check your params'
+                    logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
-                    # create a beautifulsoup from the current search results page
-                    cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
-                    # find all search-result-item tags and put them to the list
-                    for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
-                        # set the locale to russian to be able to work with the item's date
-                        locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
-                        # loop through search-result-link-info-item tags
-                        for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
-                            # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
-                            if 'Дата' in search_result_link_info_item.text:
-                                # use a custom function to put the month name to nominative form
-                                if platform.system() == 'Windows':
-                                    item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
-                                else:
-                                    item_date = search_result_link_info_item.text.lower()
-                                # extract the datestamp of the document
-                                item_date = item_date.replace(u'\xa0', u' ')
-                                item_date = item_date.replace('  ', ' ')
-                                item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
-                                pass
-                                # item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
+                # create a beautifulsoup from the current search results page
+                cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
+                # find all search-result-item tags and put them to the list
+                for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
+                    # set the locale to russian to be able to work with the item's date
+                    locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
+                    # loop through search-result-link-info-item tags
+                    for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
+                        # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
+                        if 'Дата' in search_result_link_info_item.text:
+                            # use a custom function to put the month name to nominative form
+                            if platform.system() == 'Windows':
+                                item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
+                            else:
+                                item_date = search_result_link_info_item.text.lower()
+                            # extract the datestamp of the document
+                            item_date = item_date.replace(u'\xa0', u' ')
+                            item_date = item_date.replace('  ', ' ')
+                            item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
+                            pass
+                            # item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
 
-                        # check if the datestamp matches the given time period
-                        if start <= item_date <= end:
-                            # find the search-result-link tag inside the current search-result-item and extract url from it
-                            url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
-                            # make a standard process of requesting a page for the current search-result-item
-                            try:
-                                item_page_result = s.get(url)
-                                i = 1
-                                while item_page_result.status_code != 200:
-                                    page_result = s.get(url, verify=False)
-                                    i += 1
-                                    if i > 100:
-                                        message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
-                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                        break
-                            except:
-                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
-                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                            # create a beautifulsoup from search-result-item's webpage
-                            cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
-                            # find a content tag inside the page. It contents the links to the downloadable files.
-                            cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
-                            # find all h1 tags to obtain the full document name and check if it contains the
-                            # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
-                            # order, not some other trash
-                            cur_h1_tags = cur_item_page_result_soup.find_all('h1')
-                            is_order = False
-                            if cur_h1_tags:
-                                for h1_tag in cur_h1_tags:
-                                    if 'Приказ Роснедр от' in h1_tag.text:
-                                        is_order = True
-                                        announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
-                                        ord_i = announcement.find('Приказ Роснедр от')
-                                        order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
+                    # check if the datestamp matches the given time period
+                    if start <= item_date <= end:
+                        # find the search-result-link tag inside the current search-result-item and extract url from it
+                        url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
+                        # make a standard process of requesting a page for the current search-result-item
+                        try:
+                            item_page_result = s.get(url)
+                            i = 1
+                            while item_page_result.status_code != 200:
+                                page_result = s.get(url, verify=False)
+                                i += 1
+                                if i > 100:
+                                    message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
+                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                    break
+                        except:
+                            message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                        # create a beautifulsoup from search-result-item's webpage
+                        cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
+                        # find a content tag inside the page. It contents the links to the downloadable files.
+                        cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                        # find all h1 tags to obtain the full document name and check if it contains the
+                        # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
+                        # order, not some other trash
+                        cur_h1_tags = cur_item_page_result_soup.find_all('h1')
+                        is_order = False
+                        if cur_h1_tags:
+                            for h1_tag in cur_h1_tags:
+                                if 'Приказ Роснедр от' in h1_tag.text:
+                                    is_order = True
+                                    announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
+                                    ord_i = announcement.find('Приказ Роснедр от')
+                                    order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
 
 
-                            # if we know that we've found an order and if it contains Content elements
-                            if cur_content_tags and is_order:
-                                # then we create a new folder to store the current results
-                                final_directory = os.path.join(current_directory, folder)
-                                final_directory = os.path.join(final_directory, f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
-                                # if it already exists, delete it
-                                if os.path.exists(final_directory):
-                                    shutil.rmtree(final_directory, ignore_errors=True)
-                                # create a new folder
-                                os.makedirs(final_directory)
-                                results_downloaded += 1
+                        # if we know that we've found an order and if it contains Content elements
+                        if cur_content_tags and is_order:
+                            # then we create a new folder to store the current results
+                            final_directory = os.path.join(current_directory, folder)
+                            final_directory = os.path.join(final_directory, f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
+                            # if it already exists, delete it
+                            if os.path.exists(final_directory):
+                                shutil.rmtree(final_directory, ignore_errors=True)
+                            # create a new folder
+                            os.makedirs(final_directory)
+                            results_downloaded += 1
 
-                                metadata_dict = {}
-                                metadata_dict['url'] = url
-                                metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
+                            metadata_dict = {}
+                            metadata_dict['url'] = url
+                            metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
 
-                                # extract the full name of a hyperlink and store it to the result_name.txt file.
-                                # store url to the result_url.txt file.
-                                name = search_result_item.find(attrs={'class': 'search-result-link'}).text
-                                metadata_dict['name'] = name
-                                metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
+                            # extract the full name of a hyperlink and store it to the result_name.txt file.
+                            # store url to the result_url.txt file.
+                            name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                            metadata_dict['name'] = name
+                            metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
 
-                                # find all </a> tags inside the Content element and loop through them
-                                for item_doc_tag in cur_content_tags.find_all('a'):
-                                    # create a full url string from the current </a>
-                                    curl = f"https://www.rosnedra.gov.ru{item_doc_tag['href']}"
-                                    # extract a name of the document from the hyperlink text
-                                    cname = item_doc_tag.text
-                                    # standard process of downloading a file by the link and logging the errors.
-                                    try:
+                            # find all </a> tags inside the Content element and loop through them
+                            for item_doc_tag in cur_content_tags.find_all('a'):
+                                # create a full url string from the current </a>
+                                curl = f"https://www.rosnedra.gov.ru{item_doc_tag['href']}"
+                                # extract a name of the document from the hyperlink text
+                                cname = item_doc_tag.text
+                                # standard process of downloading a file by the link and logging the errors.
+                                try:
+                                    dresult = s.get(curl)
+                                    i = 1
+                                    while dresult.status_code != 200:
                                         dresult = s.get(curl)
-                                        i = 1
-                                        while dresult.status_code != 200:
-                                            dresult = s.get(curl)
-                                            i += 1
-                                            if i > 100:
-                                                print(f'Maximum tries to download resource {curl} exceeded, please check your params')
-                                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params"
-                                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                                break
+                                        i += 1
+                                        if i > 100:
+                                            print(f'Maximum tries to download resource {curl} exceeded, please check your params')
+                                            message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params"
+                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                            break
+                                except:
+                                    message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params"
+                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                # if something has been downloaded
+                                if dresult.status_code == 200:
+                                    # create a new file using cname and the file extension from the curl
+                                    with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
+                                        f.write(dresult.content)
+                                        pass
+                            for item_doc_p_tag in cur_content_tags.find_all('p'):
+                                if 'последнийсрокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
+                                    deadlinestr = item_doc_p_tag.text
+                                    deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
+                                    if platform.system() == 'Windows':
+                                        deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
+                                    else:
+                                        deadlinestr = deadlinestr.lower()
+                                    try:
+                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.')
                                     except:
-                                        message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params"
-                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                    # if something has been downloaded
-                                    if dresult.status_code == 200:
-                                        # create a new file using cname and the file extension from the curl
-                                        with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
-                                            f.write(dresult.content)
-                                            pass
-                                for item_doc_p_tag in cur_content_tags.find_all('p'):
-                                    if 'последнийсрокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
-                                        deadlinestr = item_doc_p_tag.text
-                                        deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
-                                        if platform.system() == 'Windows':
-                                            deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
-                                        else:
-                                            deadlinestr = deadlinestr.lower()
                                         try:
-                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.')
+                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.)')
                                         except:
                                             try:
-                                                deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.)')
+                                                deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.')
                                             except:
                                                 try:
-                                                    deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.')
+                                                    deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)')
                                                 except:
                                                     try:
-                                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)')
+                                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.')
+                                                        pass
                                                     except:
                                                         try:
-                                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.')
-                                                            pass
+                                                            deadline = datetime.strptime(deadlinestr.title(),'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)')
                                                         except:
-                                                            try:
-                                                                deadline = datetime.strptime(deadlinestr.title(),'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)')
-                                                            except:
-                                                                deadline = datetime(1970, 1, 1)
-                                                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
-                                                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                                                send_to_telegram(s, logf, bot_info=bot_info,
-                                                                                 message=message,
-                                                                                 logdateformat=logdateformat)
-                                        metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
-                                        # with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
-                                        #     df.write(deadline.strftime('%Y-%m-%d %H:$M'))
-                                with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
-                                    json.dump(metadata_dict, outfile, ensure_ascii=False)
-                            else:
-                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
-                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                 logdateformat=logdateformat)
-                            # iterate the search result number
-                            search_result_number += 1
-            # return the locale settings to the initial state
-            locale.setlocale(locale.LC_ALL, locale='')
-            # write log message about results downloaded count
-            message = f"Rosnedra orders download from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
-                      f"{results_downloaded} results downloaded."
-            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                                            deadline = datetime(1970, 1, 1)
+                                                            message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
+                                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                            send_to_telegram(s, logf, bot_info=bot_info,
+                                                                             message=message,
+                                                                             logdateformat=logdateformat)
+                                    metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
+                                    # with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
+                                    #     df.write(deadline.strftime('%Y-%m-%d %H:$M'))
+                            with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
+                                json.dump(metadata_dict, outfile, ensure_ascii=False)
+                        else:
+                            message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                             logdateformat=logdateformat)
+                        # iterate the search result number
+                        search_result_number += 1
+        # return the locale settings to the initial state
+        locale.setlocale(locale.LC_ALL, locale='')
+        # write log message about results downloaded count
+        message = f"Rosnedra orders download from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
+                  f"{results_downloaded} results downloaded."
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 
@@ -339,15 +338,11 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     logdateformat = '%Y-%m-%d %H:%M:%S'
     # create a pthname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
-    bot_token = bot_info[0]
-    bot_chatID = bot_info[1]
-    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
-    with open(log_file, 'a', encoding='utf-8') as logf:
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
 
         message = 'Rosnedra data parsing started!'
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-        with requests.Session() as s:
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
         gpkg_path = os.path.join(directory, gpkg)
 
@@ -520,8 +515,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     out_layer.CreateFeature(feature)
         message = f"downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-        with requests.Session() as s:
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def get_latest_order_date_from_synology(pgconn):
@@ -537,17 +531,12 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
     directory = os.path.join(current_directory, folder)
     # define the datetime format for the logfile
     logdateformat = '%Y-%m-%d %H:%M:%S'
-    # create a pthname for the logfile
+    # create a pathname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
-    bot_token = bot_info[0]
-    bot_chatID = bot_info[1]
-    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
-    with open(log_file, 'a', encoding='utf-8') as logf:
-
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
         message = 'Synology table rosnedra.license_blocks_rosnedra_orders update started!'
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-        with requests.Session() as s:
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)
@@ -565,13 +554,11 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
             gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
             message = f"Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            with requests.Session() as s:
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         except:
             message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            with requests.Session() as s:
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def clear_folder(folder):
