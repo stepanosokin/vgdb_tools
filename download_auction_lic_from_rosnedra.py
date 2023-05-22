@@ -37,10 +37,12 @@ def send_to_telegram(s: requests.Session,
             i += 1
             # until 10 attempts
             if i > 10:
+                logf.write(
+                    f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after 10 attempts'\n")
                 break
     except:
         logf.write(
-            f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after 10 attempts'\n")
+            f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after {i} attempts'\n")
 
 
 def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')):
