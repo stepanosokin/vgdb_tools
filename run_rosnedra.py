@@ -11,7 +11,7 @@ with psycopg2.connect(dsn) as pgconn:
     startdt = get_latest_order_date_from_synology(pgconn) + timedelta(days=1)
 
 # bot_info = ('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')
-bot_info = ('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '-987181064')
+bot_info = ('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '-1001814423962')
 
 clear_folder('rosnedra_auc')
 
