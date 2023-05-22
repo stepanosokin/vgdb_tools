@@ -324,10 +324,9 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
             # return the locale settings to the initial state
             locale.setlocale(locale.LC_ALL, locale='')
             # write log message about results downloaded count
-            message = f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from " \
-                      f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
+            message = f"Rosnedra orders download from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
                       f"{results_downloaded} results downloaded."
-            logf.write(f"{message}\n")
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
@@ -566,20 +565,8 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
             gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
             message = f"Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            try:
-                res = s.post(telegram_url,
-                             json={'chat_id': bot_chatID, 'text': message})
-                i = 1
-                while res.status_code != 200:
-                    res = s.post(telegram_url,
-                                 json={'chat_id': bot_chatID, 'text': message})
-                    i += 1
-                    # until 10 attempts
-                    if i > 10:
-                        break
-            except:
-                logf.write(
-                    f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after 10 attempts'\n")
+            with requests.Session() as s:
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         except:
             message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
