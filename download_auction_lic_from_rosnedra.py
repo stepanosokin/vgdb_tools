@@ -21,7 +21,29 @@ def rus_month_genitive_to_nominative(i_string):
     return i_string
 
 
-def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc'):
+def send_to_telegram(s: requests.Session,
+                     logf,
+                     bot_info=('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508'),
+                     message='Hello vrom vgdb!',
+                     logdateformat='%Y-%m-%d %H:%M:%S'):
+    bot_token = bot_info[0]
+    bot_chatID = bot_info[1]
+    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+    try:
+        res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+        i = 1
+        while res.status_code != 200:
+            res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+            i += 1
+            # until 10 attempts
+            if i > 10:
+                break
+    except:
+        logf.write(
+            f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after 10 attempts'\n")
+
+
+def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')):
     '''
     This function downloads license blocks auctions announcement data from www.rosnedra.gov.ru website
     and saves it to the hierarchy of folders.
@@ -53,12 +75,18 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
     current_directory = os.getcwd()
     # define the datetime format for the logfile
     logdateformat = '%Y-%m-%d %H:%M:%S'
-    # create a pthname for the logfile
+    # create a pathname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    bot_token = bot_info[0]
+    bot_chatID = bot_info[1]
+    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     # open the logfile
     with open(log_file, 'a', encoding='utf-8') as logf:
         # start a requests session
         with requests.Session() as s:
+            message = 'Download data from Rosnedra started!'
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
             # create url string for the main search request
             url = 'https://www.rosnedra.gov.ru/index.fcgi'
             params = {
@@ -89,7 +117,9 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                         break
             except:
                 # if something went wrong, write a line to ligfile
-                logf.write(f"{datetime.now().strftime(logdateformat)} Initial request to www.rosnedra.gov.ru failed, please check your params\n")
+                message = 'Initial request to www.rosnedra.gov.ru failed, please check your params'
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
             # create a beutifulsoup from the first search results page
             first_soup = BeautifulSoup(search_result.text, 'html.parser')
@@ -131,7 +161,9 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             if i > 100:
                                 break
                     except:
-                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. Request to www.rosnedra.gov.ru search results page {url} failed, please check your params\n")
+                        message = f'Request to www.rosnedra.gov.ru search results page {url} failed, please check your params'
+                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. {message}\n")
+                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
                     # create a beautifulsoup from the current search results page
                     cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
@@ -167,10 +199,14 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     page_result = s.get(url, verify=False)
                                     i += 1
                                     if i > 100:
-                                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params\n")
+                                        message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                                         break
                             except:
-                                logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params\n")
+                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
+                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                             # create a beautifulsoup from search-result-item's webpage
                             cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
                             # find a content tag inside the page. It contents the links to the downloadable files.
@@ -226,10 +262,14 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                             i += 1
                                             if i > 100:
                                                 print(f'Maximum tries to download resource {curl} exceeded, please check your params')
-                                                logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params\n")
+                                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params"
+                                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                                                 break
                                     except:
-                                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params\n")
+                                        message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                                     # if something has been downloaded
                                     if dresult.status_code == 200:
                                         # create a new file using cname and the file extension from the curl
@@ -264,25 +304,35 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                                                 deadline = datetime.strptime(deadlinestr.title(),'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)')
                                                             except:
                                                                 deadline = datetime(1970, 1, 1)
-                                                                logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content\n")
+                                                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
+                                                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                                send_to_telegram(s, logf, bot_info=bot_info,
+                                                                                 message=message,
+                                                                                 logdateformat=logdateformat)
                                         metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
                                         # with open(os.path.join(final_directory, 'application_deadline.txt'), 'w', encoding='UTF-8') as df:
                                         #     df.write(deadline.strftime('%Y-%m-%d %H:$M'))
                                 with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
                                     json.dump(metadata_dict, outfile, ensure_ascii=False)
                             else:
-                                logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content\n")
+                                message = f"Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
+                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                 logdateformat=logdateformat)
                             # iterate the search result number
                             search_result_number += 1
             # return the locale settings to the initial state
             locale.setlocale(locale.LC_ALL, locale='')
             # write log message about results downloaded count
-            logf.write(f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from "
-                       f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. "
-                       f"{results_downloaded} results downloaded.\n")
+            message = f"{datetime.now().strftime(logdateformat)} Rosnedra orders download from " \
+                      f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
+                      f"{results_downloaded} results downloaded."
+            logf.write(f"{message}\n")
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
-def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg'):
+
+def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')):
 
     current_directory = os.getcwd()
     directory = os.path.join(current_directory, folder)
@@ -290,7 +340,15 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
     logdateformat = '%Y-%m-%d %H:%M:%S'
     # create a pthname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    bot_token = bot_info[0]
+    bot_chatID = bot_info[1]
+    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     with open(log_file, 'a', encoding='utf-8') as logf:
+
+        message = 'Rosnedra data parsing started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        with requests.Session() as s:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
         gpkg_path = os.path.join(directory, gpkg)
 
@@ -461,7 +519,10 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
                         feature.SetField(f_name, f_val)
                     blocks_parsed += 1
                     out_layer.CreateFeature(feature)
-        logf.write(f"{datetime.now().strftime(logdateformat)} downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed.\n")
+        message = f"downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        with requests.Session() as s:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def get_latest_order_date_from_synology(pgconn):
@@ -472,14 +533,23 @@ def get_latest_order_date_from_synology(pgconn):
         return ldatetime
 
 
-def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg'):
+def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg', bot_info=('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')):
     current_directory = os.getcwd()
     directory = os.path.join(current_directory, folder)
     # define the datetime format for the logfile
     logdateformat = '%Y-%m-%d %H:%M:%S'
     # create a pthname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    bot_token = bot_info[0]
+    bot_chatID = bot_info[1]
+    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     with open(log_file, 'a', encoding='utf-8') as logf:
+
+        message = 'Synology table rosnedra.license_blocks_rosnedra_orders update started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        with requests.Session() as s:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)
         sourcepath = os.path.join(folder, gpkg)
@@ -494,11 +564,27 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
         )
         try:
             gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
-            logf.write(f"{datetime.now().strftime(logdateformat)} Synology table rosnedra.license_blocks_rosnedra_orders "
-                       f"updated successfully.\n")
+            message = f"Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            try:
+                res = s.post(telegram_url,
+                             json={'chat_id': bot_chatID, 'text': message})
+                i = 1
+                while res.status_code != 200:
+                    res = s.post(telegram_url,
+                                 json={'chat_id': bot_chatID, 'text': message})
+                    i += 1
+                    # until 10 attempts
+                    if i > 10:
+                        break
+            except:
+                logf.write(
+                    f"{datetime.now().strftime(logdateformat)} 'Sending message from vgdb_bot failed after 10 attempts'\n")
         except:
-            logf.write(f"{datetime.now().strftime(logdateformat)} Synology table rosnedra.license_blocks_rosnedra_orders "
-                       f"update FAILED.\n")
+            message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED."
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            with requests.Session() as s:
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def clear_folder(folder):
@@ -519,21 +605,13 @@ def clear_folder(folder):
 # with open('.pggdal', encoding='utf-8') as gdalf:
 #     gdalpgcs = gdalf.read().replace('\n', '')
 #
+# bot_info = ('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')
 #
 # clear_folder('rosnedra_auc')
 #
-# # # startdt = datetime(2023, 1, 1)
-# download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
+# startdt = datetime(2023, 4, 1)
+# download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info)
 # #
-# parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
+# parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info)
 #
-# update_synology_table(gdalpgcs, folder='rosnedra_auc')
-
-
-
-
-
-
-
-
-
+# update_synology_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)

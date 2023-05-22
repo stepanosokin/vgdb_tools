@@ -10,11 +10,13 @@ with open('.pggdal', encoding='utf-8') as gdalf:
 with psycopg2.connect(dsn) as pgconn:
     startdt = get_latest_order_date_from_synology(pgconn) + timedelta(days=1)
 
+bot_info = ('5576469760:AAGs39cBmZM-lfhzolRdT7N-fvK0hsjrdTc', '165098508')
+
 clear_folder('rosnedra_auc')
 
-download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc')
+download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info)
 
-parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg')
+parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info)
 #
 # # this is a test comment #3
-update_synology_table(gdalpgcs, folder='rosnedra_auc')
+update_synology_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
