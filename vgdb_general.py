@@ -2,6 +2,12 @@ from datetime import datetime
 import requests
 
 
+def log_message(s, logf, bot_info, message, logdateformat='%Y-%m-%d %H:%M', to_telegram=True):
+    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+    if to_telegram:
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+
+
 def send_to_telegram(s: requests.Session,
                      logf,
                      bot_info: tuple,
