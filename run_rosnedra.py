@@ -22,12 +22,13 @@ with open('bot_info_vgdb_bot_toGroup.json', 'r', encoding='utf-8') as f:
 
 # get the latest rosnedra order announce date from postgres
 with psycopg2.connect(dsn) as pgconn:
-    startdt_result = get_latest_order_date_from_synology(pgconn)
-    if startdt_result[0]:
+    lastdt_result = get_latest_order_date_from_synology(pgconn)
+    if lastdt_result[0]:
+        startdt = lastdt_result[1] + timedelta(days=1)
         # clear any previous results from folder
         clear_folder('rosnedra_auc')
         # # download newly announced Rosnedra orders since last loaded to database
-        if download_orders(start=startdt_result[1] + timedelta(days=1) - timedelta(days=10), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info):
+        if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info):
             # # parse the blocks from order announcements to geopackage
             if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info):
                 # # load new blocks to the database
