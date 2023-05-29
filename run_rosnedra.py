@@ -32,4 +32,4 @@ with psycopg2.connect(dsn) as pgconn:
             # # parse the blocks from order announcements to geopackage
             if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info):
                 # # load new blocks to the database
-                update_synology_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+                update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)

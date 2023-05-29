@@ -643,7 +643,7 @@ def get_latest_order_date_from_synology(pgconn):
         return (False, None)
 
 
-def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg', bot_info=('token', 'chatid')):
+def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', table='rosnedra.license_blocks_rosnedra_orders', bot_info=('token', 'chatid')):
     '''
     This function takes the results of the parse_blocks_from_orders function and dumps them to the \n
     rosnedra.license_blocks_rosnedra_orders table inside the specified database. \n
@@ -686,7 +686,7 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
         # layers: source layer names list
         # geometryType: destination geometry type
         myoptions = gdal.VectorTranslateOptions(
-            layerName='rosnedra.license_blocks_rosnedra_orders',
+            layerName=table,
             format='PostgreSQL',
             accessMode='append',
             dstSRS=srs,
