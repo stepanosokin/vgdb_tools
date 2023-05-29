@@ -54,6 +54,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
     2. logfile.txt with reports about parsed pages from the search result. This logfile is filled cumulatively,
     so if you make several attempts, no lines are deleted from it.
     '''
+    # variable to return the success result
+    success = False
     # get the current working directory of the script
     current_directory = os.getcwd()
     # define the datetime format for the logfile
@@ -256,6 +258,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                                 # if something has been downloaded
                                 if dresult.status_code == 200:
+                                    # if we've downloaded at east 1 file, then function is a success
+                                    success = True
                                     # create a new file using cname and the file extension from the curl
                                     with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
                                         f.write(dresult.content)
@@ -322,6 +326,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                   f"{results_downloaded} results downloaded."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        # and return a success result
+        return success
 
 
 
@@ -337,6 +343,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     :param bot_info: tuple containing two strings. This is the credentials to use to send log messages to a Telegram chat from a telegram bot. First string is a telegram token of a bot, second string is an id of a chat to send messages to. You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, then go to https://api.telegram.org/bot<Bot Token>/getUpdates page and look for something like "chat":{"id": 1234567 ...}. The id parameter is the chat id.
     :return: None
     '''
+    # variable for function returna success
+    success = False
     # get the current working directory
     current_directory = os.getcwd()
     # join the current working directory with the folder containing downloaded data
@@ -522,6 +530,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             blocks_parsed += 1
                             # and add a new feature to the layer.
                             out_layer.CreateFeature(feature)
+                            # and function is a success if we've stored at least 1 feature
+                            success = True
                         # now we iterate the block_id inside the current excel
                         block_id += 1
 
@@ -607,10 +617,13 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     blocks_parsed += 1
                     # and add a new feature to the layer.
                     out_layer.CreateFeature(feature)
+                    # and set function result to success if we've added at least 1 feature
+                    success = True
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        return success
 
 
 def get_latest_order_date_from_synology(pgconn):
@@ -618,13 +631,16 @@ def get_latest_order_date_from_synology(pgconn):
     This function returns the latest Rosnedra order announce date recorded to the \n
     rosnedra.license_blocks_rosnedra_orders table inside the specified database.
     :param pgconn: psycopg2 connection object to the postgres database
-    :return: datetime object
+    :return: tuple of 2 elements: (bool_success, datetime_object)
     '''
-    with pgconn.cursor() as cur:
-        cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
-        ldate = cur.fetchall()[0][0]
-        ldatetime = datetime(ldate.year, ldate.month, ldate.day)
-        return ldatetime
+    try:
+        with pgconn.cursor() as cur:
+            cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
+            ldate = cur.fetchall()[0][0]
+            ldatetime = datetime(ldate.year, ldate.month, ldate.day)
+            return (True, ldatetime)
+    except:
+        return (False, None)
 
 
 def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_result.gpkg', bot_info=('token', 'chatid')):
@@ -638,6 +654,7 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
     :param bot_info: tuple containing two strings. This is the credentials to use to send log messages to a Telegram chat from a telegram bot. First string is a telegram token of a bot, second string is an id of a chat to send messages to. You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, then go to https://api.telegram.org/bot<Bot Token>/getUpdates page and look for something like "chat":{"id": 1234567 ...}. The id parameter is the chat id.
     :return: None
     '''
+    success = False
     # get the current working directory
     current_directory = os.getcwd()
     # get the path to the folder
@@ -677,17 +694,31 @@ def update_synology_table(gdalpgcs, folder='rosnedra_auc',  gpkg='rosnedra_resul
             geometryType='MULTIPOLYGON'
         )
         try:
-            # try to do the conversion
-            gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
-            # if OK, then send the log message
-            message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
-            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            i = 1
+            while i <= 10:
+                # try to do the conversion
+                if gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions):
+                    success = True
+                    # if OK, then send the log message
+                    message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
+                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                    break
+                else:
+                    i += 1
+                    message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated FAILED, retrying (attempt {i} of 10)..."
+                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            if i > 10:
+                message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED after 10 attempts."
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         except:
             # if not OK, then send the log message
             message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+    return success
 
 
 def clear_folder(folder):
@@ -712,15 +743,15 @@ def clear_folder(folder):
 # with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
 #     jdata = json.load(f)
 #     bot_info = (jdata['token'], jdata['chatid'])
-
-# This is telegram credentials to send message to the 'VG Database Techinfo' group
-# with open('bot_info_vgdb_bot_toGroup.json', 'r', encoding='utf-8') as f:
-#     jdata = json.load(f)
-#     bot_info = (jdata['token'], jdata['chatid'])
 #
+# # This is telegram credentials to send message to the 'VG Database Techinfo' group
+# # with open('bot_info_vgdb_bot_toGroup.json', 'r', encoding='utf-8') as f:
+# #     jdata = json.load(f)
+# #     bot_info = (jdata['token'], jdata['chatid'])
+# #
 # clear_folder('rosnedra_auc')
-#
-# download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info)
+# #
+# download_orders(start=datetime(2023, 5, 13), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info)
 # #
 # parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info)
 #

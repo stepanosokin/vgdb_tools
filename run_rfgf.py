@@ -1,5 +1,5 @@
 import json
-from license_blocks_rfgf import *
+from vgdb_license_blocks_rfgf import *
 
 # read the telegram bot credentials
 with open('bot_info_vgdb_bot_toGroup.json', 'r', encoding='utf-8') as f:

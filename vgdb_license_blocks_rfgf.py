@@ -1,7 +1,7 @@
 
 import requests, json, os, psycopg2
 from datetime import datetime
-from vgdb_general import log_message, send_to_telegram
+from vgdb_general import log_message
 from osgeo import ogr, osr, gdal
 
 
@@ -16,7 +16,7 @@ def download_rfgf_blocks(json_request, json_result, folder='rfgf_blocks', bot_in
     editor; 5. Find the "limit":100 parameter and change it to some big value, e.g. 250000. Save the file.
     This is your json request file that you can use for this function.
     :param json_result: path to the result data json file
-    :return: NULL
+    :return: bool success
     '''
 
     current_directory = os.getcwd()
@@ -343,7 +343,6 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
                     message = f"LicenseBlockUpdater: Successfully deleted all old Rosgeolfond blocks from server. Starting update..."
                     log_message(s, logf, bot_info, message)
 
-
                     # create VectorTranslateOptions to specify the data conversion parameters
                     # layerName: full destination table name
                     # format: destination format
@@ -405,32 +404,20 @@ def dms_to_dec(dms_coords):
 
 
 
+#
+#
+# read the telegram bot credentials
+with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+    jdata = json.load(f)
+    bot_info = (jdata['token'], jdata['chatid'])
 
+# read the postgres login credentials for gdal from file
+with open('test.pggdal', encoding='utf-8') as gdalf:
+    gdalpgcs = gdalf.read().replace('\n', '')
 
-# with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
-#     jdata = json.load(f)
-#     bot_info = (jdata['token'], jdata['chatid'])
-# #
-# # # read the postgres login credentials for gdal from file
-# # # with open('.pggdal', encoding='utf-8') as gdalf:
-# # #     gdalpgcs = gdalf.read().replace('\n', '')
-# with open('test.pggdal', encoding='utf-8') as gdalf:
-#     gdalpgcs = gdalf.read().replace('\n', '')
-# 
-# d_suc = False
-# # d_suc = download_rfgf_blocks('rfgf_request_noFilter_10000.json', 'rfgf_result_noFilter_10000.json', bot_info=bot_info)
-# # d_suc = download_rfgf_blocks('rfgf_request_example_ВЛГ02282НП.json', 'rfgf_result_example_ВЛГ02282НП.json', bot_info=bot_info)
-# # d_suc = download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info)
-# 
-# p_suc = False
-# d_suc = True
-# if d_suc:
-#     pass
-#     # p_suc = parse_rfgf_blocks('rfgf_result_noFilter_10000.json', bot_info=bot_info)
-#     # p_suc = parse_rfgf_blocks('rfgf_result_example_ВЛГ02282НП.json', bot_info=bot_info)
-#     # p_suc = parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info)
-# 
-# p_suc = True
-# if p_suc:
-#     update_postgres_table(gdalpgcs, folder='rfgf_blocks', gpkg='d_r_20230524.gpkg', layer='l_b', bot_info=bot_info, where="license_block_name LIKE '%Иван%'")
-# #     pass
+# download the license blocks data from Rosgeolfond
+if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
+    # parse the blocks from downloaded json
+    if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+        # update license blocks on server
+        update_postgres_table(gdalpgcs, bot_info=bot_info)
