@@ -695,7 +695,7 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
         )
         try:
             i = 1
-            while i <= 10:
+            while i < 10:
                 # try to do the conversion
                 if gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions):
                     success = True
