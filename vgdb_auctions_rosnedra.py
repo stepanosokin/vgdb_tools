@@ -8,6 +8,7 @@ import os, fnmatch, shutil, platform
 import pandas as pd
 from osgeo import ogr, osr, gdal
 import psycopg2
+from psycopg2.extras import *
 import json
 from vgdb_general import send_to_telegram
 # from timezonefinder import TimezoneFinder
@@ -330,6 +331,211 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         return success
 
 
+def download_auc_results(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Информация об итогах проведения аукциона на право пользования недрами', folder='rosnedra_auc_results', bot_info=('token', 'id')):
+    success = False
+    current_directory = os.getcwd()
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        message = 'AuctionResultsUpdater: Download data from Rosnedra started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        url = 'https://www.rosnedra.gov.ru/index.fcgi'
+        params = {'page': 'search', 'step': '1', 'q': search_string}
+        headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'ru - RU, ru;q = 0.9, en - US;q = 0.8, en;q = 0.7, en - GB;q = 0.6',
+            'Connection': 'keep-alive',
+            'DNT': '1'
+        }
+        try:
+            # make get request to the service
+            search_result = s.get(url, params=params, headers=headers, verify=False)
+            # i is a number of tries to retrieve a result
+            i = 1
+            # while the service returns anything other than 200 (OK):
+            while search_result.status_code != 200:
+                # make one more try
+                search_result = s.get(url, params=params, headers=headers, verify=False)
+                i += 1
+                # until 100 attempts
+                if i > 100:
+                    break
+        except:
+            # if something went wrong, write a line to ligfile
+            message = 'AuctionResultsUpdater: Initial request to www.rosnedra.gov.ru failed, please check your params'
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+
+        # create a beutifulsoup from the first search results page
+        first_soup = BeautifulSoup(search_result.text, 'html.parser')
+        # find the Pager element, which contains the number of pages with search results, and convert it to a list
+        pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
+        # convert page numbers to text
+        pages = [p.text for p in pages if p.text != '']
+        # start the downloaded results counter
+        results_downloaded = 0
+
+        # if there are any pages with the results
+        if len(pages) > 0:
+            # create a variable for counting the search results
+            search_result_number = 1
+            # loop through all search result page numbers
+            for page in pages:
+                # for each page number, create an url, params (see the 'part' parameter) and try to make get request,
+                # including error handling
+                url = 'https://www.rosnedra.gov.ru/index.fcgi'
+                params = {
+                    'page': 'search',
+                    'from_day': '28',
+                    'from_month': '04',
+                    'from_year': '2012',
+                    'till_day': datetime.now().strftime('%d'),
+                    'till_month': datetime.now().strftime('%m'),
+                    'till_year': datetime.now().strftime('%Y'),
+                    'q': search_string,
+                    'step': '1',
+                    'order': '2',
+                    'part': page
+                }
+                try:
+                    page_result = s.get(url, params=params, headers=headers, verify=False)
+                    i = 1
+                    while page_result.status_code != 200:
+                        page_result = s.get(url, params=params, headers=headers, verify=False)
+                        i += 1
+                        if i > 100:
+                            break
+                except:
+                    # send log message
+                    message = f'Request to www.rosnedra.gov.ru search results page {url} failed, please check your params'
+                    logf.write(f"{datetime.now().strftime(logdateformat)} Result #{search_result_number}. {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+
+                # create a beautifulsoup from the current search results page
+                cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
+                # find all search-result-item tags and put them to the list
+                for search_result_item in cur_search_results_page_soup.find(
+                    attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
+                    # set the locale to russian to be able to work with the item's date
+                    locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
+                    # loop through search-result-link-info-item tags
+                    for search_result_link_info_item in search_result_item.find_all(
+                            attrs={'class': 'search-result-link-info-item'}):
+                        # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
+                        if 'Дата' in search_result_link_info_item.text:
+                            # use a custom function to put the month name to nominative form
+                            if platform.system() == 'Windows':
+                                item_date = rus_month_genitive_to_nominative(search_result_link_info_item.text.lower())
+                            else:
+                                item_date = search_result_link_info_item.text.lower()
+                            # extract the datestamp of the document
+                            item_date = item_date.replace(u'\xa0', u' ')
+                            item_date = item_date.replace('  ', ' ')
+                            item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
+                    # check if the datestamp matches the given time period
+                    if start <= item_date <= end:
+                        # find the search-result-link tag inside the current search-result-item and extract url from it
+                        url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace(
+                            '//', '/')
+                        # make a standard process of requesting a page for the current search-result-item
+                        try:
+                            item_page_result = s.get(url)
+                            i = 1
+                            while item_page_result.status_code != 200:
+                                page_result = s.get(url, verify=False)
+                                i += 1
+                                if i > 100:
+                                    # send log message
+                                    message = f"AuctionResultsUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
+                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                     logdateformat=logdateformat)
+                                    break
+                        except:
+                            # send log message
+                            message = f"AuctionResultsUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                        # create a beautifulsoup from search-result-item's webpage
+                        cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
+                        # find a content tag inside the page. It contents the links to the downloadable files.
+                        cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                        # find all h1 tags to obtain the full document name and check if it contains the
+                        # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
+                        # order, not some other trash
+                        cur_h1_tags = cur_item_page_result_soup.find_all('h1')
+                        is_auc_result = False
+                        if cur_h1_tags:
+                            for h1_tag in cur_h1_tags:
+                                if 'Информация об итогах проведения аукциона' in h1_tag.text:
+                                    is_auc_result = True
+                                    announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
+                        # if we know that we've found an auc result and if it contains Content elements
+                        if cur_content_tags and is_auc_result:
+                            # then we create a new folder to store the current results
+                            final_directory = os.path.join(current_directory, folder)
+                            final_directory = os.path.join(final_directory,
+                                                           f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
+                            # if it already exists, delete it
+                            if os.path.exists(final_directory):
+                                shutil.rmtree(final_directory, ignore_errors=True)
+                            # create a new folder
+                            os.makedirs(final_directory)
+                            # iterate the downloaded results counter
+                            results_downloaded += 1
+                            # create a new dictionary to store the order's metadata
+                            metadata_dict = {}
+                            # write auc_result's url to metadata_dict
+                            metadata_dict['url'] = url
+                            # write order announce date to metadata_dict
+                            metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
+                            # extract the full name of a hyperlink and store it to the metadata_dict dictionary.
+                            name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                            metadata_dict['name'] = name
+
+                            # find all <p> tags inside the Content element and loop through them
+                            item_p_tags = cur_content_tags.find_all('p')
+                            idx = item_p_tags[0].text.find('расположен')
+                            lb_name = item_p_tags[0].text[:idx].lower().replace('в административном отношении', '').replace('участок', '').replace('недр', '').strip()
+                            if 'на право пользования участком' in lb_name:
+                                idx = lb_name.find('на право пользования участком')
+                                lb_name = lb_name[idx + 30:]
+                            if lb_name:
+                                metadata_dict['license_block'] = lb_name.replace('«', '').replace('»', '').strip()
+                            else:
+                                metadata_dict['license_block'] = ''
+                            metadata_dict['auction_held'] = 'NO'
+                            content_list = []
+                            for item_p_tag in list(item_p_tags):
+                                content_list.append(item_p_tag.text)
+                                if 'признан состоявшимся' in item_p_tag.text:
+                                    metadata_dict['auction_held'] = 'YES'
+                            metadata_dict['item_content_list'] = content_list
+                            # now record all item's metadata to a json file in its folder
+                            with open(os.path.join(final_directory, 'result_metadata.json'), "w",
+                                      encoding='utf-8') as outfile:
+                                json.dump(metadata_dict, outfile, ensure_ascii=False)
+                                success = True
+                        else:
+                            # if the item is not an auc result, then send a message to log
+                            message = f"AuctionResultsUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                             logdateformat=logdateformat)
+                            # iterate the search result number
+                        search_result_number += 1
+        # return the locale settings to the initial state
+        locale.setlocale(locale.LC_ALL, locale='')
+        # write log message about results downloaded count
+        message = f"AuctionResultsUpdater: Rosnedra auction results download from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
+                  f"{results_downloaded} results downloaded."
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        # and return a success result
+        return success
+
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=('token', 'id')):
     '''
@@ -643,6 +849,23 @@ def get_latest_order_date_from_synology(pgconn):
         return (False, None)
 
 
+def get_latest_auc_result_date_from_synology(pgconn):
+    '''
+    This function returns the latest Rosnedra order announce date recorded to the \n
+    rosnedra.license_blocks_rosnedra_orders table inside the specified database.
+    :param pgconn: psycopg2 connection object to the postgres database
+    :return: tuple of 2 elements: (bool_success, datetime_object)
+    '''
+    try:
+        with pgconn.cursor() as cur:
+            cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.auc_results")
+            ldate = cur.fetchall()[0][0]
+            ldatetime = datetime(ldate.year, ldate.month, ldate.day)
+            return (True, ldatetime)
+    except:
+        return (False, None)
+
+
 def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', table='rosnedra.license_blocks_rosnedra_orders', bot_info=('token', 'chatid')):
     '''
     This function takes the results of the parse_blocks_from_orders function and dumps them to the \n
@@ -719,6 +942,46 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
     return success
+
+
+def update_postgres_auc_results_table(pgconn, folder='rosnedra_auc_results', table='rosnedra.auc_results', bot_info=('token', 'chatid')):
+    success = False
+    # get the current working directory
+    current_directory = os.getcwd()
+    # get the path to the folder
+    directory = os.path.join(current_directory, folder)
+    # define the datetime format for the logfile
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    # create a pathname for the logfile
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    # open the log file and start a requests session to send messages to Telegram
+    results_list = []
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        # send a log message about the start of table update
+        message = 'AuctionResultsUpdater: Synology table rosnedra.auc_results update started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        for path, dirs, files in os.walk(os.path.abspath(directory)):
+            for filename in fnmatch.filter(files, 'result_metadata.json'):
+                with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
+                    meta_dict = json.load(jf)
+                    results_list.append(meta_dict)
+        values_to_insert_lists = []
+        for result in results_list:
+            values_to_insert_lists.append([f"'{result['url']}'"
+                                             , f"'{result['announce_date']}'"
+                                             , "'" + result['name'].replace("'", "''") + "'"
+                                             , f"'{result['license_block']}'"
+                                             , f"'{result['auction_held']}'"
+                                             , '\n'.join(["'" + x.replace("'", "''") + "'" for x in result['item_content_list']])])
+        values_to_insert_list = ['(' + ', '.join(x) + ')' for x in values_to_insert_lists]
+
+        sql = f"insert into {table}(url, announce_date, title, license_block, auction_success, content)" \
+              f" values{', '.join(['(' + ', '.join(x) + ')' for x in values_to_insert_lists])};"
+        with pgconn.cursor() as cur:
+            cur.execute(sql)
+            pgconn.commit()
+        pass
 
 
 def clear_folder(folder):
