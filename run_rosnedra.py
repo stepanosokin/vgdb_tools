@@ -33,3 +33,11 @@ with psycopg2.connect(dsn) as pgconn:
             if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info):
                 # # load new blocks to the database
                 update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+    lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
+    if lastdt_result[0]:
+        startdt = lastdt_result[1] + timedelta(days=1)
+        clear_folder('rosnedra_auc_results')
+        if download_auc_results(start=startdt, end=datetime.now(),
+                                search_string='Информация об итогах проведения аукциона на право пользования недрами',
+                                folder='rosnedra_auc_results', bot_info=bot_info):
+            update_postgres_auc_results_table(pgconn, bot_info=bot_info)

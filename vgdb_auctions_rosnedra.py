@@ -979,9 +979,16 @@ def update_postgres_auc_results_table(pgconn, folder='rosnedra_auc_results', tab
         sql = f"insert into {table}(url, announce_date, title, license_block, auction_success, content)" \
               f" values{', '.join(['(' + ', '.join(x) + ')' for x in values_to_insert_lists])};"
         with pgconn.cursor() as cur:
-            cur.execute(sql)
-            pgconn.commit()
-        pass
+            try:
+                cur.execute(sql)
+                pgconn.commit()
+                message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results updated successfully."
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            except:
+                message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results failed"
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def clear_folder(folder):
