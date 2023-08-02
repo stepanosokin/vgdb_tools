@@ -25,3 +25,4 @@ with psycopg2.connect(dsn, cursor_factory=DictCursor) as pgconn:
         clear_folder('rosnedra_auc_results')
         if download_auc_results(start=startdt, end=datetime.now(), search_string='Информация об итогах проведения аукциона на право пользования недрами', folder='rosnedra_auc_results', bot_info=bot_info):
             update_postgres_auc_results_table(pgconn, bot_info=bot_info)
+            pass

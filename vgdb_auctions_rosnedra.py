@@ -331,7 +331,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         return success
 
 
-def download_auc_results(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Информация об итогах проведения аукциона на право пользования недрами', folder='rosnedra_auc_results', bot_info=('token', 'id')):
+def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime.now(), search_string='Информация об итогах проведения аукциона на право пользования недрами', folder='rosnedra_auc_results', bot_info=('token', 'id')):
     success = False
     current_directory = os.getcwd()
     logdateformat = '%Y-%m-%d %H:%M:%S'
@@ -388,12 +388,18 @@ def download_auc_results(start=datetime(year=2023, month=1, day=1), end=datetime
                 url = 'https://www.rosnedra.gov.ru/index.fcgi'
                 params = {
                     'page': 'search',
-                    'from_day': '28',
-                    'from_month': '04',
-                    'from_year': '2012',
-                    'till_day': datetime.now().strftime('%d'),
-                    'till_month': datetime.now().strftime('%m'),
-                    'till_year': datetime.now().strftime('%Y'),
+                    # 'from_day': '28',
+                    'from_day': start.strftime('%d'),
+                    # 'from_month': '04',
+                    'from_month': start.strftime('%m'),
+                    # 'from_year': '2012',
+                    'from_year': start.strftime('%Y'),
+                    # 'till_day': datetime.now().strftime('%d'),
+                    # 'till_month': datetime.now().strftime('%m'),
+                    # 'till_year': datetime.now().strftime('%Y'),
+                    'till_day': end.strftime('%d'),
+                    'till_month': end.strftime('%m'),
+                    'till_year': end.strftime('%Y'),
                     'q': search_string,
                     'step': '1',
                     'order': '2',
@@ -974,8 +980,6 @@ def update_postgres_auc_results_table(pgconn, folder='rosnedra_auc_results', tab
                                              , f"'{result['license_block']}'"
                                              , f"'{result['auction_held']}'"
                                              , '\n'.join(["'" + x.replace("'", "''") + "'" for x in result['item_content_list']])])
-        values_to_insert_list = ['(' + ', '.join(x) + ')' for x in values_to_insert_lists]
-
         sql = f"insert into {table}(url, announce_date, title, license_block, auction_success, content)" \
               f" values{', '.join(['(' + ', '.join(x) + ')' for x in values_to_insert_lists])};"
         with pgconn.cursor() as cur:
