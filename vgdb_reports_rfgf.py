@@ -329,6 +329,7 @@ def check_report(pgconn, table, report):
                 if str(result[0][1:][i]) != value:
                     change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
                     changes.append(change)
+                    value = str(value).replace("'", "''")
                     sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{report['Вид документа']}'and \"Название документа\" = '{report['Название документа']}';"
                     cur.execute(sql)
                     pass
