@@ -377,7 +377,7 @@ def refresh_rfgf_reports(pgdsn,
                     pgconn.commit()
                     pass
         if send_updates and updates_report:
-            with open('rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                 with requests.Session() as s:
                     message = ''
                     new_reports = [x for x in updates_report if x['update_type'] == 'new_report']
