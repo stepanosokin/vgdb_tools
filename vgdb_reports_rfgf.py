@@ -332,7 +332,7 @@ def check_report(pgconn, table, report):
                     change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
                     changes.append(change)
                     value = str(value).replace("'", "''")
-                    sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{report['Вид документа']}'and \"Название документа\" = '{report['Название документа']}';"
+                    sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}'and \"Название документа\" = '{doc_name}';"
                     cur.execute(sql)
                     pgconn.commit()
                     pass
