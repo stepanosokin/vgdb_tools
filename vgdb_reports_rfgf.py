@@ -317,7 +317,9 @@ def check_report(pgconn, table, report):
     with pgconn.cursor() as cur:
         cur.execute(f"Select * FROM {table} LIMIT 0")
         fields = [desc[0] for desc in cur.description]
-        sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{report['Вид документа']}' and \"Название документа\" = '{report['Название документа']}';"
+        doc_type = report['Вид документа'].replace("'", "''")
+        doc_name = report['Название документа'].replace("'", "''")
+        sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}' and \"Название документа\" = '{doc_name}';"
         cur.execute(sql)
         result = cur.fetchall()
         if result:
@@ -332,6 +334,7 @@ def check_report(pgconn, table, report):
                     value = str(value).replace("'", "''")
                     sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{report['Вид документа']}'and \"Название документа\" = '{report['Название документа']}';"
                     cur.execute(sql)
+                    pgconn.commit()
                     pass
             if changes:
                 pass
@@ -347,6 +350,7 @@ def check_report(pgconn, table, report):
             values_to_insert = ["'" + x.replace("'", "''") + "'" for x in report.values()]
             sql = f"insert into {table}({', '.join(fields_to_update[1:])}) values({', '.join(values_to_insert)});"
             cur.execute(sql)
+            pgconn.commit()
             return {"update_type": "new_report", "update_info": {"report_sn": report['Инвентарный номер'], "report_name": report['Название документа'], "report_type": report['Вид документа']}}
         pass
     pass
@@ -361,15 +365,16 @@ def refresh_rfgf_reports(pgdsn,
                          max_packs=10000000):
     pages_result = get_pages_number()
     if pages_result[0]:
-        updates_report = []
+        # updates_report = []
         pages = pages_result[1]
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
         for i in range(0, n_packs):
+            updates_report = []
             start_page = i * pages_pack_size + 1
             end_page = (i + 1) * pages_pack_size
             if i <= max_packs:
-                reports = request_reports(ftext='', start_page = start_page, end_page = end_page)
+                reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
                 with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
                     for report in reports:
                         update = check_report(pgconn, table=table, report=report)
@@ -377,6 +382,35 @@ def refresh_rfgf_reports(pgdsn,
                             updates_report.append(update)
                     pgconn.commit()
                     pass
+            if send_updates and updates_report:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    with requests.Session() as s:
+                        message = ''
+                        new_reports = [x for x in updates_report if x['update_type'] == 'new_report']
+                        if new_reports:
+                            message += f"В базу отчетов Росгеолфонда добавлено {str(len(new_reports))} новых отчетов:"
+                            message += '\n'
+                            message += ',\n'.join([x['update_info']['report_sn'] + ' ' + x['update_info']['report_type'] for x in new_reports])
+                        send_to_telegram(s, f, bot_info=report_bot_info, message=message)
+                        changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
+                        if changed_reports:
+                            for changed_report in changed_reports:
+                                message = ''
+                                message += f"Изменен отчет {changed_report['update_info']['report_sn']}"
+                                # message += '\n'
+                                for change in changed_report['update_info']['changes']:
+                                    message += '\n'
+                                    message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
+                                send_to_telegram(s, f, bot_info=report_bot_info, message=message)
+        start_page = n_packs * pages_pack_size + 1
+        reports = request_reports(ftext='', start_page=start_page)
+        updates_report = []
+        with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
+            for report in reports:
+                update = check_report(pgconn, table=table, report=report)
+                if update:
+                    updates_report.append(update)
+            pgconn.commit()
         if send_updates and updates_report:
             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                 with requests.Session() as s:
@@ -385,13 +419,12 @@ def refresh_rfgf_reports(pgdsn,
                     if new_reports:
                         message += f"В базу отчетов Росгеолфонда добавлено {str(len(new_reports))} новых отчетов:"
                         message += '\n'
-                        message += ',\n'.join([x['update_info']['report_sn'] + ' ' + x['update_info']['report_type'] for x in new_reports])
+                        message += ',\n'.join(
+                            [x['update_info']['report_sn'] + ' ' + x['update_info']['report_type'] for x in
+                             new_reports])
                     send_to_telegram(s, f, bot_info=report_bot_info, message=message)
-                    pass
-
                     changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
                     if changed_reports:
-
                         for changed_report in changed_reports:
                             message = ''
                             message += f"Изменен отчет {changed_report['update_info']['report_sn']}"
@@ -400,10 +433,8 @@ def refresh_rfgf_reports(pgdsn,
                                 message += '\n'
                                 message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
                             send_to_telegram(s, f, bot_info=report_bot_info, message=message)
-                    pass
-        start_page = n_packs * pages_pack_size + 1
-        # reports_dict = request_reports(ftext='', start_page = start_page)
-    pass
+
+        # reports_dict = request_reports(ftext='', start_page=start_page)
 
 
 # This is an example of using the class.
@@ -427,13 +458,13 @@ def refresh_rfgf_reports(pgdsn,
 # reports = my_investigator.request_reports(ftext='', out_csv='all_reports_from_rfgf_20230911_part5.csv', start_page=18761, end_page=23450)
 # reports = my_investigator.request_reports(ftext='', out_csv='all_reports_from_rfgf_20230911_part6.csv', start_page=23451)
 
-# with open('.pgdsn', encoding='utf-8') as dsnf:
-#     dsn = dsnf.read().replace('\n', '')
-#
-# # # This is telegram credentials to send message to stepanosokin
-# with open('bot_info_vgdb_bot_toReportsGroup.json', 'r', encoding='utf-8') as f:
-#     jdata = json.load(f)
-#     bot_info = (jdata['token'], jdata['chatid'])
-#
-# refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=3)
-# pass
+with open('.pgdsn', encoding='utf-8') as dsnf:
+    dsn = dsnf.read().replace('\n', '')
+
+# # This is telegram credentials to send message to stepanosokin
+with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+    jdata = json.load(f)
+    bot_info = (jdata['token'], jdata['chatid'])
+
+refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=3)
+pass
