@@ -458,13 +458,13 @@ def refresh_rfgf_reports(pgdsn,
 # reports = my_investigator.request_reports(ftext='', out_csv='all_reports_from_rfgf_20230911_part5.csv', start_page=18761, end_page=23450)
 # reports = my_investigator.request_reports(ftext='', out_csv='all_reports_from_rfgf_20230911_part6.csv', start_page=23451)
 
-with open('.pgdsn', encoding='utf-8') as dsnf:
-    dsn = dsnf.read().replace('\n', '')
-
-# # This is telegram credentials to send message to stepanosokin
-with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
-    jdata = json.load(f)
-    bot_info = (jdata['token'], jdata['chatid'])
-
-refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=3)
-pass
+# with open('.pgdsn', encoding='utf-8') as dsnf:
+#     dsn = dsnf.read().replace('\n', '')
+#
+# # # This is telegram credentials to send message to stepanosokin
+# with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+#     jdata = json.load(f)
+#     bot_info = (jdata['token'], jdata['chatid'])
+#
+# refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=3)
+# pass
