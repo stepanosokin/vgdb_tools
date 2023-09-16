@@ -373,7 +373,12 @@ def refresh_rfgf_reports(pgdsn,
                     message = f"Загрузка отчетов Росгеолфонда. Страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-                for report in reports:
+                for j, report in enumerate(reports):
+                    if j % 1000 == 0 and j > 0:
+                        with requests.Session() as s:
+                            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                                message = f"Проверено 1000 отчетов."
+                                send_to_telegram(s, f, bot_info=log_bot_info, message=message)
                     update = check_report(pgconn, table=table, report=report)
                     if update:
                         updates_report.append(update)
