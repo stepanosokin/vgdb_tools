@@ -363,19 +363,19 @@ def refresh_rfgf_reports(pgdsn,
         pages = pages_result[1]
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
-        for i in range(0, n_packs):
+        for i in range(0, min([n_packs, max_packs])):
             updates_report = []
             start_page = i * pages_pack_size + 1
             end_page = (i + 1) * pages_pack_size
-            if i <= max_packs:
-                reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
-                with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-                    for report in reports:
-                        update = check_report(pgconn, table=table, report=report)
-                        if update:
-                            updates_report.append(update)
-                    pgconn.commit()
-                    pass
+            reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
+            with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
+                for report in reports:
+                    update = check_report(pgconn, table=table, report=report)
+                    if update:
+                        updates_report.append(update)
+                pgconn.commit()
+                pass
+            pass
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     with requests.Session() as s:
@@ -460,5 +460,5 @@ def refresh_rfgf_reports(pgdsn,
 #     jdata = json.load(f)
 #     bot_info = (jdata['token'], jdata['chatid'])
 #
-# refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=3)
+# refresh_rfgf_reports(dsn, pages_pack_size=2, report_bot_info=bot_info, send_updates=True, max_packs=1)
 # pass
