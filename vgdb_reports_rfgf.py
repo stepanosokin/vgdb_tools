@@ -397,36 +397,37 @@ def refresh_rfgf_reports(pgdsn,
                                     message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
                                 send_to_telegram(s, f, bot_info=report_bot_info, message=message)
         start_page = n_packs * pages_pack_size + 1
-        reports = request_reports(ftext='', start_page=start_page)
-        updates_report = []
-        with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-            for report in reports:
-                update = check_report(pgconn, table=table, report=report)
-                if update:
-                    updates_report.append(update)
-            pgconn.commit()
-        if send_updates and updates_report:
-            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                with requests.Session() as s:
-                    message = ''
-                    new_reports = [x for x in updates_report if x['update_type'] == 'new_report']
-                    if new_reports:
-                        message += f"В базу отчетов Росгеолфонда добавлено {str(len(new_reports))} новых отчетов:"
-                        message += '\n'
-                        message += ',\n'.join(
-                            [x['update_info']['report_sn'] + ' ' + x['update_info']['report_type'] for x in
-                             new_reports])
-                    send_to_telegram(s, f, bot_info=report_bot_info, message=message)
-                    changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
-                    if changed_reports:
-                        for changed_report in changed_reports:
-                            message = ''
-                            message += f"Изменен отчет {changed_report['update_info']['report_sn']}"
-                            # message += '\n'
-                            for change in changed_report['update_info']['changes']:
-                                message += '\n'
-                                message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
-                            send_to_telegram(s, f, bot_info=report_bot_info, message=message)
+        if max_packs > n_packs:
+            reports = request_reports(ftext='', start_page=start_page)
+            updates_report = []
+            with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
+                for report in reports:
+                    update = check_report(pgconn, table=table, report=report)
+                    if update:
+                        updates_report.append(update)
+                pgconn.commit()
+            if send_updates and updates_report:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    with requests.Session() as s:
+                        message = ''
+                        new_reports = [x for x in updates_report if x['update_type'] == 'new_report']
+                        if new_reports:
+                            message += f"В базу отчетов Росгеолфонда добавлено {str(len(new_reports))} новых отчетов:"
+                            message += '\n'
+                            message += ',\n'.join(
+                                [x['update_info']['report_sn'] + ' ' + x['update_info']['report_type'] for x in
+                                 new_reports])
+                        send_to_telegram(s, f, bot_info=report_bot_info, message=message)
+                        changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
+                        if changed_reports:
+                            for changed_report in changed_reports:
+                                message = ''
+                                message += f"Изменен отчет {changed_report['update_info']['report_sn']}"
+                                # message += '\n'
+                                for change in changed_report['update_info']['changes']:
+                                    message += '\n'
+                                    message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
+                                send_to_telegram(s, f, bot_info=report_bot_info, message=message)
 
         # reports_dict = request_reports(ftext='', start_page=start_page)
 
