@@ -333,7 +333,7 @@ def check_report(pgconn, table, report):
                     value = str(value).replace("'", "''")
                     sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}'and \"Название документа\" = '{doc_name}';"
                     cur.execute(sql)
-                    # pgconn.commit()
+                    pgconn.commit()
                     pass
             if changes:
                 return {"update_type": "report_changed", "update_info": {"report_sn": report['Инвентарный номер'], "changes": changes}}
@@ -344,7 +344,7 @@ def check_report(pgconn, table, report):
             values_to_insert = ["'" + x.replace("'", "''") + "'" for x in report.values()]
             sql = f"insert into {table}({', '.join(fields_to_update[1:])}) values({', '.join(values_to_insert)});"
             cur.execute(sql)
-            # pgconn.commit()
+            pgconn.commit()
             return {"update_type": "new_report", "update_info": {"report_sn": report['Инвентарный номер'], "report_name": report['Название документа'], "report_type": report['Вид документа']}}
         pass
     pass
