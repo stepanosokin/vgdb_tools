@@ -406,6 +406,10 @@ def refresh_rfgf_reports(pgdsn,
                                 send_to_telegram(s, f, bot_info=report_bot_info, message=message)
         start_page = n_packs * pages_pack_size + 1
         if max_packs > n_packs:
+            with requests.Session() as s:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    message = f"Загрузка отчетов Росгеолфонда. Страницы с {str(start_page)} по последнюю."
+                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             reports = request_reports(ftext='', start_page=start_page)
             updates_report = []
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
