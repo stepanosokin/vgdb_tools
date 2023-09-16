@@ -359,6 +359,10 @@ def refresh_rfgf_reports(pgdsn,
                          max_packs=10000000):
     pages_result = get_pages_number()
     if pages_result[0]:
+        with requests.Session() as s:
+            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                message = f"Запущено обновление отчетов Росгеолфонда. Размер пака {str(pages_pack_size)}, максимум паков {str(max_packs)}."
+                send_to_telegram(s, f, bot_info=log_bot_info, message=message)
         # updates_report = []
         pages = pages_result[1]
         # pages_pack_size = 5000
@@ -368,6 +372,10 @@ def refresh_rfgf_reports(pgdsn,
             start_page = i * pages_pack_size + 1
             end_page = (i + 1) * pages_pack_size
             reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
+            with requests.Session() as s:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    message = f"Загрузка отчетов Росгеолфонда. Страницы с {str(start_page)} по {str(end_page)}."
+                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
                 for report in reports:
                     update = check_report(pgconn, table=table, report=report)
