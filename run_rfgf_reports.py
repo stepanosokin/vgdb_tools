@@ -10,4 +10,4 @@ with open('bot_info_vgdb_bot_toReportsGroup.json', 'r', encoding='utf-8') as f:
 with open('.pgdsn', encoding='utf-8') as gdalf:
     dsn = gdalf.read().replace('\n', '')
 
-refresh_rfgf_reports(dsn, pages_pack_size=5000, report_bot_info=bot_info, send_updates=True)
+refresh_rfgf_reports(dsn, pages_pack_size=1000, report_bot_info=bot_info, send_updates=True)
