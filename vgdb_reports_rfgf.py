@@ -322,9 +322,6 @@ def check_report(pgconn, table, report):
         cur.execute(sql)
         result = cur.fetchall()
         if result:
-            pass
-            # report_from_b = [str(result[0][1:][x]) for x in range(len(report))]
-            # report_new = [list(report.values())[x] for x in range(len(report))]
             changes = []
             for i, value in enumerate(list(report.values())):
                 if str(result[0][1:][i]) != value:
@@ -334,11 +331,10 @@ def check_report(pgconn, table, report):
                     sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}'and \"Название документа\" = '{doc_name}';"
                     cur.execute(sql)
                     pgconn.commit()
-                    pass
             if changes:
                 return {"update_type": "report_changed", "update_info": {"report_sn": report['Инвентарный номер'], "changes": changes}}
-
-            return None
+            else:
+                return False
         else:
             fields_to_update = ['"' + x + '"' for x in fields]
             values_to_insert = ["'" + x.replace("'", "''") + "'" for x in report.values()]
@@ -381,9 +377,7 @@ def refresh_rfgf_reports(pgdsn,
                     update = check_report(pgconn, table=table, report=report)
                     if update:
                         updates_report.append(update)
-                pgconn.commit()
-                pass
-            pass
+                # pgconn.commit()
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     with requests.Session() as s:
@@ -417,7 +411,7 @@ def refresh_rfgf_reports(pgdsn,
                     update = check_report(pgconn, table=table, report=report)
                     if update:
                         updates_report.append(update)
-                pgconn.commit()
+                # pgconn.commit()
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     with requests.Session() as s:
@@ -440,8 +434,6 @@ def refresh_rfgf_reports(pgdsn,
                                     message += '\n'
                                     message += f"{change['field']}: {change['old_value']} -> {change['new_value']};"
                                 send_to_telegram(s, f, bot_info=report_bot_info, message=message)
-
-        # reports_dict = request_reports(ftext='', start_page=start_page)
 
 
 # This is an example of using the class.
