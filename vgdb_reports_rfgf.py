@@ -460,5 +460,5 @@ def refresh_rfgf_reports(pgdsn,
 #     jdata = json.load(f)
 #     bot_info = (jdata['token'], jdata['chatid'])
 #
-# refresh_rfgf_reports(dsn, pages_pack_size=2, report_bot_info=bot_info, send_updates=True, max_packs=1)
+# refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=1)
 # pass
