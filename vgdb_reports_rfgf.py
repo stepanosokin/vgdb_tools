@@ -380,10 +380,10 @@ def refresh_rfgf_reports(pgdsn,
             # with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconnection:
             for j, report in enumerate(reports):
                 update = check_report(pgconnection, table=table, report=report)
-                if (j + 1) % 10000 == 0 and j > 0:
+                if (j + 1) % 10000 == 0:
                     with requests.Session() as s:
                         with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                            message = f"Проверено {str(j)} отчетов."
+                            message = f"Проверено {str(j + 1)} отчетов."
                             send_to_telegram(s, f, bot_info=log_bot_info, message=message)
                 if update:
                     updates_report.append(update)
@@ -428,7 +428,7 @@ def refresh_rfgf_reports(pgdsn,
                 if (j + 1) % 10000 == 0 and j > 0:
                     with requests.Session() as s:
                         with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                            message = f"Проверено {str(j)} отчетов."
+                            message = f"Проверено {str(j + 1)} отчетов."
                             send_to_telegram(s, f, bot_info=log_bot_info, message=message)
                 if update:
                     updates_report.append(update)
