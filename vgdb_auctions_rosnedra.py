@@ -543,7 +543,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
         return success
 
 
-def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=('token', 'id')):
+def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=('token', 'id'), report_bot_info=('token', 'id')):
     '''
     This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
@@ -602,6 +602,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         featureDefn = out_layer.GetLayerDefn()
         # start the parsed blocks counter
         blocks_parsed = 0
+
+        # create empty list for new blocks for telegram report
+        new_blocks_list = []
 
         # loop through the folders inside the folder with downloaded data
         for path, dirs, files in os.walk(os.path.abspath(directory)):
@@ -721,6 +724,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             feature = ogr.Feature(featureDefn)
                             # and set the feature's geometry to the current block's geometry.
                             feature.SetGeometry(cur_block_geom)
+                            # add an item to the list of new blocks for telegram report
+                            new_blocks_list.append(attrs_dict)
                             # next we populate the feature's attributes with current block attribute values
                             for f_name, f_val in zip(field_names, field_vals):
                                 if f_name == 'appl_deadline' and f_val:
@@ -774,6 +779,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             # as not all orders contain deadlines, so we use get method to receive None if there is no one.
                             meta_dict.get('deadline')
                         ]
+                        # create a dict with attributes for the telegram report
+                        attrs_dict = dict(zip(field_names, field_vals))
                         # create a new current block geometry
                         cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
                         # and set the ring_id value to 1.
@@ -807,6 +814,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     feature = ogr.Feature(featureDefn)
                     # and set its geometry to the current block's geometry.
                     feature.SetGeometry(cur_block_geom)
+                    # add an item to the list of new blocks for telegram report
+                    new_blocks_list.append(attrs_dict)
 
                     # next we populate the feature's attributes with current block attribute values
                     for f_name, f_val in zip(field_names, field_vals):
@@ -830,7 +839,16 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # and add a new feature to the layer.
                     out_layer.CreateFeature(feature)
                     # and set function result to success if we've added at least 1 feature
-                    success = True
+
+        # If new blocks contain any HCS blocks, send report to telegram            success = True
+        new_hcs_blocks_list = [x for x in new_blocks_list if any([str(x['resource_type']).find('нефть') >= 0, str(x['resource_type']).find('газ') >= 0, str(x['resource_type']).find('конденсат') >= 0])]
+        if new_hcs_blocks_list:
+            message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о выставлении участков УВС на аукционы:\n"
+            for j, hcs_block in enumerate(new_hcs_blocks_list):
+                hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
+                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; Приказ от {hcs_block['order_date']}; {hcs_block_name}; Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; {hcs_block['source_url']}" + '\n'
+            # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
+            send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")

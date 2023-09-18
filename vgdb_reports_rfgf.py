@@ -376,17 +376,19 @@ def refresh_rfgf_reports(pgdsn,
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-            with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-                for j, report in enumerate(reports):
-                    update = check_report(pgconn, table=table, report=report)
-                    if j % 10000 == 0 and j > 0:
-                        with requests.Session() as s:
-                            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                                message = f"Проверено {str(j)} отчетов."
-                                send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-                    if update:
-                        updates_report.append(update)
-                # pgconn.commit()
+            pgconnection = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
+            # with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconnection:
+            for j, report in enumerate(reports):
+                update = check_report(pgconnection, table=table, report=report)
+                if (j + 1) % 10000 == 0 and j > 0:
+                    with requests.Session() as s:
+                        with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                            message = f"Проверено {str(j)} отчетов."
+                            send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+                if update:
+                    updates_report.append(update)
+            # pgconn.commit()
+            pgconnection.close()
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     with requests.Session() as s:
@@ -419,18 +421,19 @@ def refresh_rfgf_reports(pgdsn,
                     message = f"Загрузка отчетов Росгеолфонда выполнена, страницы с {str(start_page)} по последнюю."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             updates_report = []
-            with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-                for j, report in enumerate(reports):
-                    if j % 10000 == 0 and j > 0:
-                        update = check_report(pgconn, table=table, report=report)
-                        if j % 10000 == 0 and j > 0:
-                            with requests.Session() as s:
-                                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                                    message = f"Проверено {str(j)} отчетов."
-                                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-                        if update:
-                            updates_report.append(update)
-                # pgconn.commit()
+            pgconn = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
+            # with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
+            for j, report in enumerate(reports):
+                update = check_report(pgconn, table=table, report=report)
+                if (j + 1) % 10000 == 0 and j > 0:
+                    with requests.Session() as s:
+                        with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                            message = f"Проверено {str(j)} отчетов."
+                            send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+                if update:
+                    updates_report.append(update)
+            # pgconn.commit()
+            pgconn.close()
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     with requests.Session() as s:
