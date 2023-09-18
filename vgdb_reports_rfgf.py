@@ -367,19 +367,23 @@ def refresh_rfgf_reports(pgdsn,
             updates_report = []
             start_page = i * pages_pack_size + 1
             end_page = (i + 1) * pages_pack_size
+            with requests.Session() as s:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по {str(end_page)}."
+                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
             with requests.Session() as s:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    message = f"Загрузка отчетов Росгеолфонда. Страницы с {str(start_page)} по {str(end_page)}."
+                    message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
                 for j, report in enumerate(reports):
+                    update = check_report(pgconn, table=table, report=report)
                     if j % 1000 == 0 and j > 0:
                         with requests.Session() as s:
                             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                                message = f"Проверено 1000 отчетов."
+                                message = f"Проверено {str(j)} отчетов."
                                 send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-                    update = check_report(pgconn, table=table, report=report)
                     if update:
                         updates_report.append(update)
                 # pgconn.commit()
@@ -407,9 +411,13 @@ def refresh_rfgf_reports(pgdsn,
         if max_packs > n_packs:
             with requests.Session() as s:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    message = f"Загрузка отчетов Росгеолфонда. Страницы с {str(start_page)} по последнюю."
+                    message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по последнюю."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             reports = request_reports(ftext='', start_page=start_page)
+            with requests.Session() as s:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    message = f"Загрузка отчетов Росгеолфонда выполнена, страницы с {str(start_page)} по последнюю."
+                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             updates_report = []
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
                 for report in reports:
