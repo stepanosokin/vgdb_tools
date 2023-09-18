@@ -379,7 +379,7 @@ def refresh_rfgf_reports(pgdsn,
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
                 for j, report in enumerate(reports):
                     update = check_report(pgconn, table=table, report=report)
-                    if j % 1000 == 0 and j > 0:
+                    if j % 10000 == 0 and j > 0:
                         with requests.Session() as s:
                             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                                 message = f"Проверено {str(j)} отчетов."
@@ -420,10 +420,16 @@ def refresh_rfgf_reports(pgdsn,
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
             updates_report = []
             with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-                for report in reports:
-                    update = check_report(pgconn, table=table, report=report)
-                    if update:
-                        updates_report.append(update)
+                for j, report in enumerate(reports):
+                    if j % 10000 == 0 and j > 0:
+                        update = check_report(pgconn, table=table, report=report)
+                        if j % 10000 == 0 and j > 0:
+                            with requests.Session() as s:
+                                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                                    message = f"Проверено {str(j)} отчетов."
+                                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+                        if update:
+                            updates_report.append(update)
                 # pgconn.commit()
             if send_updates and updates_report:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
