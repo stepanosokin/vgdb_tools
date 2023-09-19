@@ -33,7 +33,6 @@ def send_to_telegram(s: requests.Session,
     # start tries counter
     i = 1
     # try to send the message
-    result = True
     try:
         err_code = 0
         # res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
@@ -48,9 +47,9 @@ def send_to_telegram(s: requests.Session,
             logf.write(
                 f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after 10 attempts, {res.status_code} error received, message=[{message}], reason=[{res.reason}], response_text={res.text}'\n")
             # and quit the loop
-            result = False
+            return False
     except:
         logf.write(
             f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, message [{message}], reason=[{res.reason}], response_text={res.text}'\n")
-        result = False
-    return result
+        return False
+    return True
