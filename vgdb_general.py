@@ -44,12 +44,12 @@ def send_to_telegram(s: requests.Session,
             if i > 10:
                 # if 10 failed tries passed, send an error message to the log
                 logf.write(
-                    f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after 10 attempts, {res.status_code} error received'\n")
+                    f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after 10 attempts, {res.status_code} error received, message=[{message}], reason=[{res.reason}], response_text={res.text}'\n")
                 # and quit the loop
                 result = False
                 break
     except:
         logf.write(
-            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts'\n")
+            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, message [{message}], reason=[{res.reason}], response_text={res.text}'\n")
         result = False
     return result
