@@ -191,6 +191,7 @@ def request_reports(**kwargs):
                                                  'page': str(i)
                                              }
                                              )
+                    status_code = new_response.status_code
                 except:
                     pass
                 k += 1
@@ -304,12 +305,17 @@ def get_pages_number():
         'source': '',
         'pi': ''
     }
-    try:
-        response = requests.post('https://rfgf.ru/catalog/index.php', headers=headers, data=data)
+    with requests.Session() as s:
         i = 1
-        while response.status_code != 200 and i <= 10:
-            response = requests.post('https://rfgf.ru/catalog/index.php', headers=headers, data=data)
-        if response.status_code != 200:
+        status_code = 0
+        while status_code != 200 and i <= 10:
+            try:
+                response = s.post('https://rfgf.ru/catalog/index.php', headers=headers, data=data)
+                status_code = response.status_code
+            except:
+                pass
+            i += 1
+        if status_code != 200:
             return (False, 0)
         # parse the html result of the request with BeautifulSoup parser
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -328,8 +334,6 @@ def get_pages_number():
             return (True, pages)
         else:
             return (True, 0)
-    except:
-        return (False, 0)
 
 
 def check_report(pgconn, table, report):
