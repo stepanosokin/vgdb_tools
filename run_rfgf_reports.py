@@ -1,7 +1,7 @@
 import json
 from vgdb_reports_rfgf import *
 
-# read the telegram bot credentials
+# # read the telegram bot credentials
 with open('bot_info_vgdb_bot_toReportsGroup.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
     bot_info = (jdata['token'], jdata['chatid'])
