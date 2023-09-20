@@ -343,16 +343,18 @@ def check_report(pgconn, table, report):
         doc_type = report['Вид документа'].replace("'", "''")
         doc_name = report['Название документа'].replace("'", "''")
         sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}' and \"Название документа\" = '{doc_name}';"
+        # sql = f"select * from {table} where \"№ п/п\" = '{report['№ п/п']}';"
         cur.execute(sql)
         result = cur.fetchall()
         if result:
             changes = []
-            for i, value in enumerate(list(report.values())):
-                if str(result[0][1:][i]) != value:
+            for i, value in enumerate(list(report.values())[1:]):
+                if str(result[0][2:][i]) != value:
                     change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
                     changes.append(change)
                     value = str(value).replace("'", "''")
                     sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}'and \"Название документа\" = '{doc_name}';"
+                    # sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"№ п/п\" = '{report['№ п/п']}';"
                     cur.execute(sql)
                     pgconn.commit()
             if changes:
@@ -472,6 +474,7 @@ def refresh_rfgf_reports(pgdsn,
                         send_to_telegram(s, f, bot_info=report_bot_info, message=message)
                         changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
                         if changed_reports:
+                            pass
                             for changed_report in changed_reports:
                                 message = ''
                                 message += f"Изменен отчет {changed_report['update_info']['report_sn']}"
