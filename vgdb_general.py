@@ -52,6 +52,6 @@ def send_to_telegram(s: requests.Session,
             return False
     except:
         logf.write(
-            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, message [{message}], reason=[{reason}], response_text={res_text}'\n")
+            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, error sending request to telegram API. message [{message}]'\n")
         return False
     return True
