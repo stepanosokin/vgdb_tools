@@ -12,7 +12,8 @@ def send_to_telegram(s: requests.Session,
                      logf,
                      bot_info: tuple,
                      message='Hello vrom vgdb!',
-                     logdateformat='%Y-%m-%d %H:%M:%S'):
+                     logdateformat='%Y-%m-%d %H:%M:%S',
+                     document=''):
     '''
     This function sends a message to a Telegram chat from a Telegram bot. \n
     You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, \n
@@ -28,8 +29,11 @@ def send_to_telegram(s: requests.Session,
     # get the bot token and the chat id from the input tuple
     bot_token = bot_info[0]
     bot_chatID = bot_info[1]
-    # create senmessage url
-    telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+    # create sendmessage url
+    if not document:
+        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
+    else:
+        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendDocument'
     # start tries counter
     i = 1
     # try to send the message
@@ -39,7 +43,14 @@ def send_to_telegram(s: requests.Session,
         # if we receive an http error
         while err_code != 200 and i <= 10:
             # then try again, making 10 tries
-            res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+            if not document:
+                res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+            else:
+                with open(document, 'rb') as sf:
+                    res = s.post(telegram_url,
+                                 data={'chat_id': bot_chatID, 'caption': message},
+                                 files={'document': sf}
+                                 )
             err_code = res.status_code
             reason = res.reason
             res_text = res.text
@@ -52,6 +63,6 @@ def send_to_telegram(s: requests.Session,
             return False
     except:
         logf.write(
-            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, error sending request to telegram API. message [{message}]'\n")
+            f"{datetime.now().strftime(logdateformat)} 'Sending message from bot failed after {i} attempts, error sending request to telegram API. URL: [{telegram_url}]. Message: [{message}]'\n")
         return False
     return True
