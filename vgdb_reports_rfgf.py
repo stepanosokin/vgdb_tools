@@ -400,7 +400,7 @@ def refresh_rfgf_reports(pgdsn,
         pages = pages_result[1]
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now().strftime('%Y%m%d%H%M')
         for i in range(0, min([n_packs, max_packs])):
             updates_report = []
             start_page = i * pages_pack_size + 1
@@ -434,7 +434,7 @@ def refresh_rfgf_reports(pgdsn,
                         if new_reports:
                             fname = f"Новые_документы_РФГФ_{timestamp}_{str(i + 1)}.csv"
                             with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Сериный номер', 'Название', 'Вид документа']
+                                fields = ['Серийный номер', 'Название', 'Вид документа']
                                 writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
                                 writer.writeheader()
                                 for new_report in new_reports:
@@ -455,13 +455,13 @@ def refresh_rfgf_reports(pgdsn,
                         if changed_reports:
                             fname = f"Изменения_документов_РФГФ_{timestamp}_{str(i + 1)}.csv"
                             with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Сериный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение', 'Новое значение']
+                                fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение', 'Новое значение']
                                 writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
                                 writer.writeheader()
                                 for changed_report in changed_reports:
                                     for change in changed_report['update_info']['changes']:
                                         writer.writerow({
-                                            "Сериный номер": changed_report['update_info']['report_sn'],
+                                            "Серийный номер": changed_report['update_info']['report_sn'],
                                             "Название": changed_report['update_info']['report_name'],
                                             "Тип документа": changed_report['update_info']['report_type'],
                                             "Атрибут": change['field'],
