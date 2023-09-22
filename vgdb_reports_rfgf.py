@@ -407,8 +407,10 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all
                       'Старое значение',
                       'Новое значение']
             message = f"Удалена ссылка в {str(len(reports_list))} документах по УВС в Каталоге Росгеолфонда"
-        with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
+        # with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
+        with open(fname, 'w', newline='', encoding='Windows-1251') as csvfile:
+            # writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
+            writer = csv.DictWriter(csvfile, fieldnames=fields, dialect='excel', delimiter=';')
             writer.writeheader()
             for report in reports_list:
                 if list_type == 'all_new':
@@ -562,7 +564,6 @@ def refresh_rfgf_reports(pgdsn,
 #     bot_info = (jdata['token'], jdata['chatid'])
 # #
 # # refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=1)
-# refresh_rfgf_reports(dsn, pages_pack_size=10, report_bot_info=bot_info, log_bot_info=bot_info, send_updates=True)
+# refresh_rfgf_reports(dsn, pages_pack_size=10, report_bot_info=bot_info, log_bot_info=bot_info, send_updates=True, max_packs=1)
 # pass
-
 
