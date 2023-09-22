@@ -681,7 +681,7 @@ def refresh_rfgf_reports(pgdsn,
                                                 "Старое значение": change['old_value'],
                                                 "Новое значение": change['new_value']
                                             })
-                                message = f'Удалена ссылка в {str(len(reports_with_link_added))} документах по УВС в Каталоге Росгеолфонда'
+                                message = f'Удалена ссылка в {str(len(reports_with_link_removed))} документах по УВС в Каталоге Росгеолфонда'
                                 success = send_to_telegram(s, f, bot_info=report_bot_info, message=message,
                                                            document=fname)
                                 if not success:
