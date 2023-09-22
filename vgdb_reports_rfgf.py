@@ -369,6 +369,7 @@ def check_report(pgconn, table, report):
                             "report_sn": report['Инвентарный номер'],
                             "report_name": report['Название документа'],
                             "report_type": report['Вид документа'],
+                            "report_url": report['Ссылка'],
                             "changes": changes
                         }
                     }
@@ -381,7 +382,11 @@ def check_report(pgconn, table, report):
                 cur.execute(sql)
                 # pgconn.commit()
                 if any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):
-                    return {"update_type": "new_report", "update_info": {"report_sn": report['Инвентарный номер'], "report_name": report['Название документа'], "report_type": report['Вид документа']}}
+                    return {"update_type": "new_report",
+                            "update_info": {"report_sn": report['Инвентарный номер'],
+                                            "report_name": report['Название документа'],
+                                            "report_type": report['Вид документа'],
+                                            "report_url": report['Ссылка']}}
                 else:
                     return False
 
@@ -391,21 +396,21 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all
         fields = []
         message = ''
         if list_type == 'all_new':
-            fields = ['Сериный номер', 'Название', 'Вид документа']
+            fields = ['Сериный номер', 'Название', 'Вид документа', 'Адрес']
             message = f"В Каталог Росгеолфонда добавлено {str(len(reports_list))} новых документов"
         elif list_type == 'all_changed':
             fields = ['Сериный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
-                      'Новое значение']
+                      'Новое значение', 'Адрес']
             message = f'Изменено {str(len(reports_list))} документов в Каталоге Росгеолфонда'
         elif list_type == 'link_added':
             fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
                       'Старое значение',
-                      'Новое значение']
+                      'Новое значение', 'Адрес']
             message = f"Добавлена ссылка в {str(len(reports_list))} документов по УВС в Каталоге Росгеолфонда"
         elif list_type == 'link_removed':
             fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
                       'Старое значение',
-                      'Новое значение']
+                      'Новое значение', 'Адрес']
             message = f"Удалена ссылка в {str(len(reports_list))} документах по УВС в Каталоге Росгеолфонда"
         # with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
         with open(fname, 'w', newline='', encoding='Windows-1251') as csvfile:
@@ -417,7 +422,8 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all
                     writer.writerow({
                                         "Серийный номер": report['report_sn'],
                                         "Название": report['report_name'],
-                                        "Вид документа": report['report_type']
+                                        "Вид документа": report['report_type'],
+                                        "Адрес": report['report_url']
                                     })
                 elif list_type in ['all_changed', 'link_added', 'link_removed']:
                     for change in report['update_info']['changes']:
@@ -427,7 +433,8 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all
                             "Тип документа": report['update_info']['report_type'],
                             "Атрибут": change['field'],
                             "Старое значение": change['old_value'],
-                            "Новое значение": change['new_value']
+                            "Новое значение": change['new_value'],
+                            "Адрес": report['update_info']['report_url']
                         })
         success = send_to_telegram(s, fname, bot_info=bot_info, message=message, document=fname)
         if not success:
