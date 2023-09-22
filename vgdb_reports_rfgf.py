@@ -386,6 +386,58 @@ def check_report(pgconn, table, report):
                     return False
 
 
+def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all_new', bot_info=('token', 'chatid')):
+    if reports_list:
+        fields = []
+        message = ''
+        if list_type == 'all_new':
+            fields = ['Сериный номер', 'Название', 'Вид документа']
+            message = f"В Каталог Росгеолфонда добавлено {str(len(reports_list))} новых документов"
+        elif list_type == 'all_changed':
+            fields = ['Сериный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
+                      'Новое значение']
+            message = f'Изменено {str(len(reports_list))} документов в Каталоге Росгеолфонда'
+        elif list_type == 'link_added':
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
+                      'Старое значение',
+                      'Новое значение']
+            message = f"Добавлена ссылка в {str(len(reports_list))} документов по УВС в Каталоге Росгеолфонда"
+        elif list_type == 'link_removed':
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
+                      'Старое значение',
+                      'Новое значение']
+            message = f"Удалена ссылка в {str(len(reports_list))} документах по УВС в Каталоге Росгеолфонда"
+        with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
+            writer.writeheader()
+            for report in reports_list:
+                if list_type == 'all_new':
+                    writer.writerow({
+                                        "Серийный номер": report['report_sn'],
+                                        "Название": report['report_name'],
+                                        "Вид документа": report['report_type']
+                                    })
+                elif list_type in ['all_changed', 'link_added', 'link_removed']:
+                    for change in report['update_info']['changes']:
+                        writer.writerow({
+                            "Сериный номер": report['update_info']['report_sn'],
+                            "Название": report['update_info']['report_name'],
+                            "Тип документа": report['update_info']['report_type'],
+                            "Атрибут": change['field'],
+                            "Старое значение": change['old_value'],
+                            "Новое значение": change['new_value']
+                        })
+        success = send_to_telegram(s, fname, bot_info=bot_info, message=message, document=fname)
+        if not success:
+            logf.write(
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
+            print(
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
+        if os.path.exists(os.path.join(os.getcwd(), fname)):
+            os.remove(os.path.join(os.getcwd(), fname))
+
+
+
 def refresh_rfgf_reports(pgdsn,
                          table='rfgf.rfgf_catalog',
                          pages_pack_size=5000,
@@ -404,23 +456,34 @@ def refresh_rfgf_reports(pgdsn,
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
         timestamp = datetime.now().strftime('%Y%m%d%H%M')
-        for i in range(0, min([n_packs, max_packs])):
+        for i in range(0, min([n_packs, max_packs]) + 1):
             updates_report = []
             start_page = i * pages_pack_size + 1
-            end_page = (i + 1) * pages_pack_size
+            if i < n_packs:
+                end_page = (i + 1) * pages_pack_size
+            else:
+                end_page = pages
             with requests.Session() as s:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-            reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
+            if i < n_packs:
+                reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
+            else:
+                reports = request_reports(ftext='', start_page=start_page)
+
             with requests.Session() as s:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}."
+                    message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}. " \
+                              f"Загружено {len(reports)} документов."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+
             pgconnection = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
             # with pgconnection:
             for j, report in enumerate(reports):
+
                 update = check_report(pgconnection, table=table, report=report)
+
                 if (j + 1) % 10000 == 0:
                     with requests.Session() as s:
                         with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
@@ -438,48 +501,14 @@ def refresh_rfgf_reports(pgdsn,
                         new_reports = [x['update_info'] for x in updates_report if x['update_type'] == 'new_report']
                         if new_reports:
                             fname = f"Новые_документы_УВС_РФГФ_{timestamp}_{str(i + 1)}.csv"
-                            with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Серийный номер', 'Название', 'Вид документа']
-                                writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                writer.writeheader()
-                                for new_report in new_reports:
-                                    writer.writerow({
-                                        "Серийный номер": new_report['report_sn'],
-                                        "Название": new_report['report_name'],
-                                        "Вид документа": new_report['report_type']
-                                    })
-                            message = f"В Каталог Росгеолфонда добавлено {str(len(new_reports))} новых документов по УВС"
-                            success = send_to_telegram(s, f, bot_info=report_bot_info, message=message, document=fname)
-                            if not success:
-                                f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                            if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                os.remove(os.path.join(os.getcwd(), fname))
+                            send_reports_csv_to_telegram(s, f, fname, new_reports, list_type='all_new',
+                                                         bot_info=report_bot_info)
 
                         changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
                         if changed_reports:
                             fname = f"Изменения_документов_УВС_РФГФ_{timestamp}_{str(i + 1)}.csv"
-                            with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение', 'Новое значение']
-                                writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                writer.writeheader()
-                                for changed_report in changed_reports:
-                                    for change in changed_report['update_info']['changes']:
-                                        writer.writerow({
-                                            "Серийный номер": changed_report['update_info']['report_sn'],
-                                            "Название": changed_report['update_info']['report_name'],
-                                            "Тип документа": changed_report['update_info']['report_type'],
-                                            "Атрибут": change['field'],
-                                            "Старое значение": change['old_value'],
-                                            "Новое значение": change['new_value']
-                                        })
-                            message = f'Изменено {str(len(changed_reports))} документов по УВС в Каталоге Росгеолфонда'
-                            success = send_to_telegram(s, f, bot_info=report_bot_info, message=message, document=fname)
-                            if not success:
-                                f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                            if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                os.remove(os.path.join(os.getcwd(), fname))
+                            send_reports_csv_to_telegram(s, f, fname, changed_reports, list_type='all_changed',
+                                                         bot_info=report_bot_info)
 
                             # reports_with_changed_link = [x for x in changed_reports if 'Доступен для загрузки через реестр ЕФГИ' in [change['field'] for change in x['update_info']['changes']]]
                             reports_with_link_added = []
@@ -493,204 +522,14 @@ def refresh_rfgf_reports(pgdsn,
                                             reports_with_link_removed.append(report)
                             if reports_with_link_added:
                                 fname = f"Документы_УВС_РФГФ_с_новой_ссылкой_{timestamp}_{str(i + 1)}.csv"
-                                with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                    fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
-                                              'Новое значение']
-                                    writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                    writer.writeheader()
-                                    for changed_report in reports_with_link_added:
-                                        for change in changed_report['update_info']['changes']:
-                                            writer.writerow({
-                                                "Серийный номер": changed_report['update_info']['report_sn'],
-                                                "Название": changed_report['update_info']['report_name'],
-                                                "Тип документа": changed_report['update_info']['report_type'],
-                                                "Атрибут": change['field'],
-                                                "Старое значение": change['old_value'],
-                                                "Новое значение": change['new_value']
-                                            })
-                                message = f'Добавлена ссылка в {str(len(reports_with_link_added))} документов по УВС в Каталоге Росгеолфонда'
-                                success = send_to_telegram(s, f, bot_info=report_bot_info, message=message,
-                                                           document=fname)
-                                if not success:
-                                    f.write(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                    print(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                    os.remove(os.path.join(os.getcwd(), fname))
+                                send_reports_csv_to_telegram(s, f, fname, reports_with_link_added,
+                                                             list_type='link_added',
+                                                             bot_info=report_bot_info)
                             if reports_with_link_removed:
                                 fname = f"Документы_УВС_РФГФ_с_удаленной_ссылкой_{timestamp}_{str(i + 1)}.csv"
-                                with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                    fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
-                                              'Новое значение']
-                                    writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                    writer.writeheader()
-                                    for changed_report in reports_with_link_removed:
-                                        for change in changed_report['update_info']['changes']:
-                                            writer.writerow({
-                                                "Серийный номер": changed_report['update_info']['report_sn'],
-                                                "Название": changed_report['update_info']['report_name'],
-                                                "Тип документа": changed_report['update_info']['report_type'],
-                                                "Атрибут": change['field'],
-                                                "Старое значение": change['old_value'],
-                                                "Новое значение": change['new_value']
-                                            })
-                                message = f'Удалена ссылка в {str(len(reports_with_link_added))} документах по УВС в Каталоге Росгеолфонда'
-                                success = send_to_telegram(s, f, bot_info=report_bot_info, message=message,
-                                                           document=fname)
-                                if not success:
-                                    f.write(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                    print(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                    os.remove(os.path.join(os.getcwd(), fname))
-
-
-        start_page = n_packs * pages_pack_size + 1
-        if max_packs > n_packs:
-            with requests.Session() as s:
-                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по последнюю."
-                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-            reports = request_reports(ftext='', start_page=start_page)
-            with requests.Session() as s:
-                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    message = f"Загрузка отчетов Росгеолфонда выполнена, страницы с {str(start_page)} по последнюю."
-                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-            updates_report = []
-            pgconn = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
-            # with psycopg2.connect(pgdsn, cursor_factory=DictCursor) as pgconn:
-            for j, report in enumerate(reports):
-                update = check_report(pgconn, table=table, report=report)
-                if (j + 1) % 10000 == 0:
-                    with requests.Session() as s:
-                        with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                            message = f"Проверено {str(j + 1)} отчетов."
-                            send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-                if update:
-                    updates_report.append(update)
-            # pgconn.commit()
-            pgconn.close()
-            if send_updates and updates_report:
-                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    with requests.Session() as s:
-                        new_reports = [x['update_info'] for x in updates_report if x['update_type'] == 'new_report']
-                        if new_reports:
-                            fname = f"Новые_документы_РФГФ_{timestamp}_{str(n_packs + 1)}.csv"
-                            with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Сериный номер', 'Название', 'Вид документа']
-                                writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                writer.writeheader()
-                                for new_report in new_reports:
-                                    writer.writerow({
-                                        "Серийный номер": new_report['report_sn'],
-                                        "Название": new_report['report_name'],
-                                        "Вид документа": new_report['report_type']
-                                    })
-                            message = f"В Каталог Росгеолфонда добавлено {str(len(new_reports))} новых документов"
-                            success = send_to_telegram(s, f, bot_info=report_bot_info, message=message, document=fname)
-                            if not success:
-                                f.write(
-                                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                print(
-                                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                            if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                os.remove(os.path.join(os.getcwd(), fname))
-
-                        changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
-                        if changed_reports:
-                            fname = f"Изменения_документов_РФГФ_{timestamp}_{str(n_packs + 1)}.csv"
-                            with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                fields = ['Сериный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
-                                          'Новое значение']
-                                writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                writer.writeheader()
-                                for changed_report in changed_reports:
-                                    for change in changed_report['update_info']['changes']:
-                                        writer.writerow({
-                                            "Сериный номер": changed_report['update_info']['report_sn'],
-                                            "Название": changed_report['update_info']['report_name'],
-                                            "Тип документа": changed_report['update_info']['report_type'],
-                                            "Атрибут": change['field'],
-                                            "Старое значение": change['old_value'],
-                                            "Новое значение": change['new_value']
-                                        })
-                            message = f'Изменено {str(len(changed_reports))} документов в Каталоге Росгеолфонда'
-                            success = send_to_telegram(s, f, bot_info=report_bot_info, message=message, document=fname)
-                            if not success:
-                                f.write(
-                                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                print(
-                                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                            if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                os.remove(os.path.join(os.getcwd(), fname))
-
-                            reports_with_link_added = []
-                            reports_with_link_removed = []
-                            for report in changed_reports:
-                                for change in report['update_info']['changes']:
-                                    if change['field'] == 'Доступен для загрузки через реестр ЕФГИ':
-                                        if change['new_value']:
-                                            reports_with_link_added.append(report)
-                                        else:
-                                            reports_with_link_removed.append(report)
-                            if reports_with_link_added:
-                                fname = f"Документы_УВС_РФГФ_с_новой_ссылкой_{timestamp}_{str(i + 1)}.csv"
-                                with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                    fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
-                                              'Старое значение',
-                                              'Новое значение']
-                                    writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                    writer.writeheader()
-                                    for changed_report in reports_with_link_added:
-                                        for change in changed_report['update_info']['changes']:
-                                            writer.writerow({
-                                                "Серийный номер": changed_report['update_info']['report_sn'],
-                                                "Название": changed_report['update_info']['report_name'],
-                                                "Тип документа": changed_report['update_info']['report_type'],
-                                                "Атрибут": change['field'],
-                                                "Старое значение": change['old_value'],
-                                                "Новое значение": change['new_value']
-                                            })
-                                message = f'Добавлена ссылка в {str(len(reports_with_link_added))} документов по УВС в Каталоге Росгеолфонда'
-                                success = send_to_telegram(s, f, bot_info=report_bot_info, message=message,
-                                                           document=fname)
-                                if not success:
-                                    f.write(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                    print(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                    os.remove(os.path.join(os.getcwd(), fname))
-                            if reports_with_link_removed:
-                                fname = f"Документы_УВС_РФГФ_с_удаленной_ссылкой_{timestamp}_{str(i + 1)}.csv"
-                                with open(fname, 'w', newline='', encoding='utf-8') as csvfile:
-                                    fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
-                                              'Старое значение',
-                                              'Новое значение']
-                                    writer = csv.DictWriter(csvfile, fieldnames=fields, delimiter='|')
-                                    writer.writeheader()
-                                    for changed_report in reports_with_link_removed:
-                                        for change in changed_report['update_info']['changes']:
-                                            writer.writerow({
-                                                "Серийный номер": changed_report['update_info']['report_sn'],
-                                                "Название": changed_report['update_info']['report_name'],
-                                                "Тип документа": changed_report['update_info']['report_type'],
-                                                "Атрибут": change['field'],
-                                                "Старое значение": change['old_value'],
-                                                "Новое значение": change['new_value']
-                                            })
-                                message = f'Удалена ссылка в {str(len(reports_with_link_removed))} документах по УВС в Каталоге Росгеолфонда'
-                                success = send_to_telegram(s, f, bot_info=report_bot_info, message=message,
-                                                           document=fname)
-                                if not success:
-                                    f.write(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                    print(
-                                        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
-                                if os.path.exists(os.path.join(os.getcwd(), fname)):
-                                    os.remove(os.path.join(os.getcwd(), fname))
+                                send_reports_csv_to_telegram(s, f, fname, reports_with_link_removed,
+                                                             list_type='link_removed',
+                                                             bot_info=report_bot_info)
 
 
 # This is an example of using the class.
