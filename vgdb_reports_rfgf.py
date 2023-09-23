@@ -343,17 +343,17 @@ def check_report(pgconn, table, report):
         with pgconn.cursor() as cur:
             cur.execute(f"Select * FROM {table} LIMIT 0")
             fields = [desc[0] for desc in cur.description]
-            doc_type = report['Вид документа'].replace("'", "''")
-            doc_name = report['Название документа'].replace("'", "''")
+            doc_type = report['Вид документа'].replace("'", "''").lower()
+            doc_name = report['Название документа'].replace("'", "''").lower()
             res_type = report['Полезные ископаемые'].lower()
-            sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and \"Вид документа\" = '{doc_type}' and \"Название документа\" = '{doc_name}';"
+            sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and LOWER(\"Вид документа\") = '{doc_type}' and LOWER(\"Название документа\") = '{doc_name}';"
             # sql = f"select * from {table} where \"№ п/п\" = '{report['№ п/п']}';"
             cur.execute(sql)
             result = cur.fetchall()
             if result:
                 changes = []
                 for i, value in enumerate(list(report.values())):
-                    if str(result[0][1:][i]) != value:
+                    if str(result[0][1:][i]).lower() != value.lower():
                         if i != 0 and any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):  # If the field is not "№ п/п" (it changes all the time)
                             change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
                             changes.append(change)
