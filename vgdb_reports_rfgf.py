@@ -391,7 +391,7 @@ def check_report(pgconn, table, report):
                     return False
 
 
-def send_reports_csv_to_telegram(s, logf, fname, reports_list=[], list_type='all_new', bot_info=('token', 'chatid')):
+def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='all_new', bot_info=('token', 'chatid')):
     if reports_list:
         fields = []
         message = ''
