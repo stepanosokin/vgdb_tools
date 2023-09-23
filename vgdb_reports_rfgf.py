@@ -476,10 +476,8 @@ def refresh_rfgf_reports(pgdsn,
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-            if i < n_packs:
-                reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
-            else:
-                reports = request_reports(ftext='', start_page=start_page)
+
+            reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
 
             with requests.Session() as s:
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
@@ -519,7 +517,6 @@ def refresh_rfgf_reports(pgdsn,
                             send_reports_csv_to_telegram(s, f, fname, changed_reports, list_type='all_changed',
                                                          bot_info=report_bot_info)
 
-                            # reports_with_changed_link = [x for x in changed_reports if 'Доступен для загрузки через реестр ЕФГИ' in [change['field'] for change in x['update_info']['changes']]]
                             reports_with_link_added = []
                             reports_with_link_removed = []
                             for report in changed_reports:
