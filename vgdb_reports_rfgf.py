@@ -396,10 +396,10 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
         fields = []
         message = ''
         if list_type == 'all_new':
-            fields = ['Сериный номер', 'Название', 'Вид документа', 'Адрес']
+            fields = ['Серийный номер', 'Название', 'Вид документа', 'Адрес']
             message = f"В Каталог Росгеолфонда добавлено {str(len(reports_list))} новых документов"
         elif list_type == 'all_changed':
-            fields = ['Сериный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
                       'Новое значение', 'Адрес']
             message = f'Изменено {str(len(reports_list))} документов в Каталоге Росгеолфонда'
         elif list_type == 'link_added':
@@ -428,7 +428,7 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
                 elif list_type in ['all_changed', 'link_added', 'link_removed']:
                     for change in report['update_info']['changes']:
                         writer.writerow({
-                            "Сериный номер": report['update_info']['report_sn'],
+                            "Серийный номер": report['update_info']['report_sn'],
                             "Название": report['update_info']['report_name'],
                             "Тип документа": report['update_info']['report_type'],
                             "Атрибут": change['field'],
