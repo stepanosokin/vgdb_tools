@@ -537,7 +537,10 @@ def refresh_rfgf_reports(pgdsn,
                                                              list_type='link_removed',
                                                              bot_info=report_bot_info)
 
-
+        with requests.Session() as s:
+            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                message = f"Обновление отчетов Росгеолфонда завершено."
+                send_to_telegram(s, f, bot_info=log_bot_info, message=message)
 # This is an example of using the class.
 # first you create an instance of RfgfCatalogInvestigator.
 # second, you call it's request_reports function to download the data from rfgf.ru/catalog/index.php
