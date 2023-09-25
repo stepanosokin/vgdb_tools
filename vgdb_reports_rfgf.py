@@ -436,7 +436,7 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
                             "Новое значение": change['new_value'],
                             "Адрес": report['update_info']['report_url']
                         })
-        success = send_to_telegram(s, fname, bot_info=bot_info, message=message, document=fname)
+        success = send_to_telegram(s, logf, bot_info=bot_info, message=message, document=fname)
         if not success:
             logf.write(
                 f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Send file {fname} to telegram failed")
@@ -465,7 +465,7 @@ def refresh_rfgf_reports(pgdsn,
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
         timestamp = datetime.now().strftime('%Y%m%d%H%M')
-        for i in range(0, min([n_packs, max_packs]) + 1):
+        for i in range(min([n_packs + 1, max_packs])):
             updates_report = []
             start_page = i * pages_pack_size + 1
             if i < n_packs:
