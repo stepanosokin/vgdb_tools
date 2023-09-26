@@ -841,7 +841,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # and set function result to success if we've added at least 1 feature
 
         # If new blocks contain any HCS blocks, send report to telegram            success = True
-        new_hcs_blocks_list = [x for x in new_blocks_list if any([str(x['resource_type']).find('нефть') >= 0, str(x['resource_type']).find('газ') >= 0, str(x['resource_type']).find('конденсат') >= 0])]
+        new_hcs_blocks_list = [x for x in new_blocks_list if any(['нефт' in str(x['resource_type']), 'газ' in str(x['resource_type']), 'конденсат' in str(x['resource_type'])])]
         if new_hcs_blocks_list:
             message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о выставлении участков УВС на аукционы:\n"
             for j, hcs_block in enumerate(new_hcs_blocks_list):
