@@ -397,11 +397,11 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
         message = ''
         if list_type == 'all_new':
             fields = ['Серийный номер', 'Название', 'Вид документа', 'Адрес']
-            message = f"В Каталог Росгеолфонда добавлено {str(len(reports_list))} новых документов"
+            message = f"Добавлено {str(len(reports_list))} новых документов по УВС в Каталог Росгеолфонда "
         elif list_type == 'all_changed':
             fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
                       'Новое значение', 'Адрес']
-            message = f'Изменено {str(len(reports_list))} документов в Каталоге Росгеолфонда'
+            message = f'Изменено {str(len(reports_list))} документов по УВС в Каталоге Росгеолфонда'
         elif list_type == 'link_added':
             fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
                       'Старое значение',
