@@ -666,6 +666,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             excel_col_nums['point_num'] = ncol - 1
                             # and we also presume that previous column contains license block area
                             excel_col_nums['area_km'] = ncol - 2
+
+                            excel_col_nums['block_num'] = ncol - 5
+
                         # now we start checking if the cell contains a fieldname keywords. If we find a keyword in a cell,
                         # then we use its column number to put into excel_col_nums dictionary
                         if str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '').lower() == 'видполезногоископаемого' and excel_col_nums['resource_type'] == 0:
@@ -707,7 +710,11 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                         cur_ring = ogr.Geometry(ogr.wkbLinearRing)
                     # now we check if we are at a block's first row.
                     # We check that a block number column has some value, and that the row has digital coordinates
+
+                    ##########ЗДЕСЬ СУКА ЖУЧАРА СИДИТ, В ЭТОТ IF НЕ ПОПАДАЕМ НИ РАЗУ
                     if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                    ##########
+
                         # if this is not the first block,
                         if block_id > 0:
                             # if we have at least 3 points in a current ring,
