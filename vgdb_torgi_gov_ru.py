@@ -1,6 +1,6 @@
 import requests, json, psycopg2, os
 from datetime import datetime, timedelta
-from vgdb_general import send_to_telegram, log_message
+from vgdb_general import send_to_telegram, log_message, send_to_teams
 from psycopg2.extras import *
 
 
@@ -182,7 +182,8 @@ def parse_lotcard(lotcard):
 
 
 def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=('token', 'chatid'),
-                  report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
+                  report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt',
+                  webhook=''):
     status_dict = {
         "PUBLISHED": 'Опубликован',
         "APPLICATIONS_SUBMISSION": 'Прием заявок',
@@ -250,6 +251,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                 log_message(s, logf, report_bot_info, message)
+                                if webhook:
+                                    send_to_teams(webhook, message, logf)
                     pass
                 else:
                     fields_to_update = ['"' + x + '"' for x in lotcard_dict.keys()]
@@ -275,18 +278,20 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         log_message(s, logf, report_bot_info, message)
+                        if webhook:
+                            send_to_teams(webhook, message, logf)
     else:
         message = f"Ошибка: отсутствует lotcard id"
         with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
             log_message(s, logf, log_bot_info, message)
 
 
-def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
+def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt', webhook=''):
     lotcards = download_lotcards(log_bot_info=log_bot_info, logfile=logfile)
     if lotcards and dsn:
         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
         for lotcard in lotcards:
-            check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile)
+            check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile, webhook=webhook)
         pgconn.commit()
         pgconn.close()
         pass

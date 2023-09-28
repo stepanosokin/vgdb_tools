@@ -16,4 +16,8 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     log_bot_info = (jdata['token'], jdata['chatid'])
     # report_bot_info = (jdata['token'], jdata['chatid'])
 
-refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
+# # This is telegram credentials to send message to stepanosokin
+with open('license_blocks.webhook', 'r', encoding='utf-8') as f:
+    webhook = f.read().replace('\n', '')
+
+refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=webhook)

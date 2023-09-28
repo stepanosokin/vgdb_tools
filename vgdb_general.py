@@ -1,11 +1,21 @@
 from datetime import datetime
 import requests
+import pymsteams
 
 
 def log_message(s, logf, bot_info, message, logdateformat='%Y-%m-%d %H:%M', to_telegram=True):
     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
     if to_telegram:
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+
+
+def send_to_teams(webhook, message, logf):
+    try:
+        myTeamsMessage = pymsteams.connectorcard(webhook)
+        myTeamsMessage.text(message)
+        myTeamsMessage.send()
+    except:
+        logf.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки мообщения в Teams\n")
 
 
 def send_to_telegram(s: requests.Session,
