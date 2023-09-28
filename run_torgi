@@ -1,0 +1,6 @@
+export PATH=$PATH:/home/user/miniconda3/bin
+conda activate vgdb_env
+source  /home/user/miniconda3/bin/activate vgdb_env
+cd /home/user/vgdb_tools/vgdb_tools
+git pull -f --no-edit https://github.com/stepanosokin/vgdb_tools.git
+python run_torgi.py

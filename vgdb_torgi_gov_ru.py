@@ -1,10 +1,10 @@
 import requests, json, psycopg2, os
 from datetime import datetime, timedelta
 from vgdb_general import send_to_telegram, log_message
+from psycopg2.extras import *
 
 
-
-def download_torgi_gov_ru(size=100, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
+def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
       url = 'https://torgi.gov.ru/new/api/public/lotcards/search' \
             '?chars=&chars=sl-mineralResource:hydrocarbon' \
             '&catCode=609' \
@@ -25,7 +25,7 @@ def download_torgi_gov_ru(size=100, log_bot_info=('token', 'chatid'), report_bot
                }
 
       with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-            message = 'Запущена загрузка данных об аукционах на участки УВС с сайта torgi.gov.ru'
+            message = 'Запущена загрузка лотов на участки УВС с сайта torgi.gov.ru'
             log_message(s, logf, log_bot_info, message)
             status_code = 0
             i = 1
@@ -41,5 +41,252 @@ def download_torgi_gov_ru(size=100, log_bot_info=('token', 'chatid'), report_bot
                   log_message(s, logf, log_bot_info, message)
                   return False
             else:
-                  data = response.json()
-                  pass
+                  message = f"Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(list(response.json()['content']))} лотов"
+                  log_message(s, logf, log_bot_info, message)
+                  return response.json()['content']
+
+
+def parse_lotcard(lotcard):
+    lotcard_id = lotcard.get('id')
+    if lotcard_id:
+        lotcard_dict = {"id": f"'{lotcard_id}'"}
+        if lotcard.get('noticeNumber'):
+            noticeNumber = lotcard['noticeNumber'].replace("'", "''")
+            lotcard_dict['noticeNumber'] = f"'{noticeNumber}'"
+        if lotcard.get('lotNumber'):
+            lotcard_dict['lotNumber'] = lotcard['lotNumber']
+        if lotcard.get('lotStatus'):
+            lotStatus = lotcard['lotStatus'].replace("'", "''")
+            lotcard_dict['lotStatus'] = f"'{lotStatus}'"
+        if lotcard.get('biddType'):
+            if lotcard['biddType'].get('code'):
+                biddType_code = lotcard['biddType']['code'].replace("'", "''")
+                lotcard_dict['biddType_code'] = f"'{biddType_code}'"
+            if lotcard['biddType'].get('name'):
+                biddType_name = lotcard['biddType']['name'].replace("'", "''")
+                lotcard_dict['biddType_name'] = f"'{biddType_name}'"
+        if lotcard.get('biddForm'):
+            if lotcard['biddForm'].get('code'):
+                biddForm_code = lotcard['biddForm']['code'].replace("'", "''")
+                lotcard_dict['biddForm_code'] = f"'{biddForm_code}'"
+            if lotcard['biddForm'].get('name'):
+                biddForm_name = lotcard['biddForm']['name'].replace("'", "''")
+                lotcard_dict['biddForm_name'] = f"'{biddForm_name}'"
+        if lotcard.get('lotName'):
+            lotName = lotcard['lotName'].replace("'", "''")
+            lotcard_dict['lotName'] = f"'{lotName}'"
+        if lotcard.get('lotDescription'):
+            lotDescription = lotcard['lotDescription'].replace("'", "''")
+            lotcard_dict['lotDescription'] = f"'{lotDescription}'"
+        if lotcard.get('priceMin'):
+            lotcard_dict['priceMin'] = lotcard['priceMin']
+        if lotcard.get('priceFin'):
+            lotcard_dict['priceFin'] = lotcard['priceFin']
+        if lotcard.get('biddEndTime'):
+            lotcard_dict[
+                'biddEndTime'] = f"'{datetime.fromisoformat(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
+        if lotcard.get('characteristics'):
+            for charstic in lotcard['characteristics']:
+                if charstic.get('code') == 'mineralResource':
+                    if charstic['characteristicValue'].get('value'):
+                        mineralResource = charstic['characteristicValue']['value'].replace("'", "''")
+                        lotcard_dict['mineralResource'] = f"'{mineralResource}'"
+                if charstic.get('code') == 'resourceCategory':
+                    if charstic['characteristicValue'].get('value'):
+                        resourceCategory = charstic['characteristicValue']['value'].replace("'", "''")
+                        lotcard_dict['resourceCategory'] = f"'{resourceCategory}'"
+                if charstic.get('code') == 'squareMR':
+                    if charstic.get('characteristicValue'):
+                        lotcard_dict['squareMR'] = charstic['characteristicValue']
+                if charstic.get('code') == 'resourcePotential':
+                    if charstic.get('characteristicValue'):
+                        resourcePotential = charstic['characteristicValue'].replace("'", "''")
+                        lotcard_dict['resourcePotential'] = f"'{resourcePotential}'"
+                if charstic.get('code') == 'resourceAreaId':
+                    if charstic.get('characteristicValue'):
+                        lotcard_dict['resourceAreaId'] = charstic['characteristicValue']['value']
+        if lotcard.get('currencyCode'):
+            currencyCode = lotcard['currencyCode'].replace("'", "''")
+            lotcard_dict['currencyCode'] = f"'{currencyCode}'"
+        if lotcard.get('etpCode'):
+            etpCode = lotcard['etpCode'].replace("'", "''")
+            lotcard_dict['etpCode'] = f"'{etpCode}'"
+        if lotcard.get('createDate'):
+            lotcard_dict[
+                'createDate'] = f"'{datetime.fromisoformat(lotcard['createDate']).strftime('%Y-%m-%d %H:%M:%S')}'"
+        if lotcard.get('timeZoneName'):
+            timeZoneName = lotcard['timeZoneName'].replace("'", "''")
+            lotcard_dict['timeZoneName'] = f"'{timeZoneName}'"
+        if lotcard.get('timezoneOffset'):
+            timezoneOffset = lotcard['timezoneOffset'].replace("'", "''")
+            lotcard_dict['timeZoneOffset'] = f"'{timezoneOffset}'"
+        if 'hasAppeals' in lotcard.keys():
+            lotcard_dict['hasAppeals'] = f"'{lotcard['hasAppeals']}'"
+        if 'isStopped' in lotcard.keys():
+            lotcard_dict['isStopped'] = f"'{lotcard['isStopped']}'"
+        if 'isAnnuled' in lotcard.keys():
+            lotcard_dict['isAnnuled'] = f"'{lotcard['isAnnuled']}'"
+        if lotcard.get('attributes'):
+            for attr in lotcard['attributes']:
+                if attr.get('code') == 'miningSiteName_EA(N)':
+                    if attr.get('value'):
+                        miningSiteName = attr['value'].replace("'", "''")
+                        lotcard_dict['miningSiteName_EA(N)'] = f"'{miningSiteName}'"
+                if attr.get('code') == 'resourceTypeUse_EA(N)':
+                    if attr.get('value'):
+                        if attr.get('value').get('name'):
+                            resourceTypeUse = attr['value']['name'].replace("'", "''")
+                            lotcard_dict['resourceTypeUse_EA(N)'] = f"'{resourceTypeUse}'"
+                if attr.get('code') == 'resourceLocation_EA(N)':
+                    if attr.get('value'):
+                        resourceLocation = ', '.join([x.get('name').replace("'", "''") for x in attr['value']])
+                        lotcard_dict['resourceLocation_EA(N)'] = f"'{resourceLocation}'"
+                if attr.get('code') == 'conditionsOfUse_EA(N)':
+                    if attr.get('value'):
+                        conditionsOfUse = attr['value'].replace("'", "''")
+                        lotcard_dict['conditionsOfUse_EA(N)'] = f"'{conditionsOfUse}'"
+                if attr.get('code') == 'licensePeriod_EA(N)':
+                    if attr.get('value'):
+                        licensePeriod = attr['value'].replace("'", "''")
+                        lotcard_dict['licensePeriod_EA(N)'] = f"'{licensePeriod}'"
+                if attr.get('code') == 'licenseFeeAmount_EA(N)':
+                    if attr.get('value'):
+                        lotcard_dict['licensePeriod_EA(N)'] = attr['value']
+                if attr.get('code') == 'licenseProcedureMaking_EA(N)':
+                    if attr.get('value'):
+                        licenseProcedureMaking = attr['value'].replace("'", "''")
+                        lotcard_dict['licenseProcedureMaking_EA(N)'] = f"'{licenseProcedureMaking}'"
+                if attr.get('code') == 'participationFee_EA(N)':
+                    if attr.get('value'):
+                        lotcard_dict['participationFee_EA(N)'] = attr['value']
+                if attr.get('code') == 'feeProcedureMaking_EA(N)':
+                    if attr.get('value'):
+                        feeProcedureMaking = attr['value'].replace("'", "''")
+                        lotcard_dict['feeProcedureMaking_EA(N)'] = f"'{feeProcedureMaking}'"
+                if attr.get('code') == 'oneTimePaymentProcedure_EA(N)':
+                    if attr.get('value'):
+                        oneTimePaymentProcedure = attr['value'].replace("'", "''")
+                        lotcard_dict['oneTimePaymentProcedure_EA(N)'] = f"'{oneTimePaymentProcedure}'"
+                if attr.get('code') == 'depositTimeAndRules_EA(N)':
+                    if attr.get('value'):
+                        depositTimeAndRules = attr['value'].replace("'", "''")
+                        lotcard_dict['depositTimeAndRules_EA(N)'] = f"'{depositTimeAndRules}'"
+                if attr.get('code') == 'depositRefund_EA(N)':
+                    if attr.get('value'):
+                        depositRefund = attr['value'].replace("'", "''")
+                        lotcard_dict['depositRefund_EA(N)'] = f"'{depositRefund}'"
+                lotcard_dict['lot_data'] = f"'{json.dumps(lotcard, ensure_ascii=False)}'"
+        return lotcard_dict
+    else:
+        return False
+
+
+def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=('token', 'chatid'),
+                  report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
+    status_dict = {
+        "PUBLISHED": 'Опубликован',
+        "APPLICATIONS_SUBMISSION": 'Прием заявок',
+        "DETERMINING_WINNER": 'Определение победителя',
+        "FAILED": 'Не состоялся',
+        "SUCCEED": 'Состоялся'
+    }
+    lotcard_dict = parse_lotcard(lotcard)
+    if lotcard_dict:
+        sql = f"select * from {table} where \"id\" = {lotcard_dict['id']};"
+        with pgconn:
+            with pgconn.cursor() as cur:
+                cur.execute(sql)
+                result = cur.fetchall()
+                if result:
+                    fields_to_check = ['lotStatus', 'priceMin', 'biddEndTime']
+                    changes = []
+                    for field, val in lotcard_dict.items():
+                        if type(val) == str:
+                            val = val[1:-1]
+                            val.replace("''", "'")
+                        if field in ['lotNumber', 'licensePeriod_EA(N)']:
+                            val = str(val)
+                        if field in ['biddEndTime', 'createDate']:
+                            val = datetime.strptime(val, '%Y-%m-%d %H:%M:%S')
+                        if field in ['hasAppeals', 'isStopped', 'isAnnuled']:
+                            val = json.loads(val.lower())
+                        if field == 'lot_data':
+                            val = json.loads(val)
+
+                        if val != result[0][field]:
+                            changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+
+                    if changes:
+                        fields_to_update = []
+                        values_to_insert = []
+                        for change in changes:
+                            fields_to_update.append('"' + change['field'] + '"')
+                            values_to_insert.append(str(lotcard_dict[change['field']]))
+
+                        sql = f"update {table} set {', '.join([x[0] + ' = ' + x[1] for x in zip(fields_to_update, values_to_insert)])} " \
+                              f"where \"id\" = {lotcard_dict['id']};"
+
+                        cur.execute(sql)
+                        pgconn.commit()
+                        message = ''
+                        chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
+                        for i, change in enumerate([x for x in changes if change['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
+                            if i == 0:
+                                message = f"Изменен лот \"{change['lotName']}\":"
+                            val = change['new']
+                            if change['field'] == 'biddEndTime':
+                                if lotcard_dict.get('timeZoneOffset'):
+                                    offset = lotcard_dict['timeZoneOffset'].replace("'", "")
+                                    val = val + timedelta(minutes=int(offset))
+                                val = val.strftime('%d.%m.%Y %H:%M')
+                                if lotcard_dict.get('timeZoneName'):
+                                    tz = lotcard_dict['timeZoneName'].replace("'", "")
+                                    val += f' {tz}'
+                            if change['field'] == 'lotStatus':
+                                message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
+                            else:
+                                message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
+                        if message:
+                            message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false"
+                            with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+                                log_message(s, logf, report_bot_info, message)
+                    pass
+                else:
+                    fields_to_update = ['"' + x + '"' for x in lotcard_dict.keys()]
+                    values_to_insert = lotcard_dict.values()
+                    sql = f"insert into {table}({', '.join(fields_to_update)}) values({', '.join([str(x) for x in values_to_insert])});"
+                    cur.execute(sql)
+                    lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
+                    message = f"Новый лот на участок УВС на torgi.gov.ru:\n{lotcard_dict['lotName']}"
+                    message += f"\nСтатус: {status_dict.get(lotcard_dict['lotStatus'], lotcard_dict['lotStatus'])}"
+                    if lotcard_dict.get('priceMin'):
+                        message += f"\nНач.цена: {str(lotcard_dict['priceMin'])}"
+                    if lotcard_dict.get('priceFin'):
+                        message += f"\nИтог.цена: {str(lotcard_dict['priceFin'])}"
+                    if lotcard_dict.get('biddEndTime'):
+                        endtime = datetime.strptime(lotcard_dict['biddEndTime'], "%Y-%m-%d %H:%M:%S")
+                        if lotcard_dict.get('timeZoneOffset'):
+                            endtime = endtime + timedelta(minutes=int(lotcard_dict['timeZoneOffset']))
+                        message += f"\nЗаявки до: {endtime.strftime('%d.%m.%Y %H:%M')}"
+                        if lotcard_dict.get('timeZoneName'):
+                            message += f" {lotcard_dict['timeZoneName']}"
+                    if lotcard_dict.get('resourcePotential'):
+                        message += f"\nРесурсы: {lotcard_dict['resourcePotential']}"
+                    message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
+                    with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+                        log_message(s, logf, report_bot_info, message)
+    else:
+        message = f"Ошибка: отсутствует lotcard id"
+        with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+            log_message(s, logf, log_bot_info, message)
+
+
+def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
+    lotcards = download_lotcards(log_bot_info=log_bot_info, logfile=logfile)
+    if lotcards and dsn:
+        pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+        for lotcard in lotcards:
+            check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile)
+        pgconn.commit()
+        pgconn.close()
+        pass

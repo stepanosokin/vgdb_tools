@@ -1,10 +1,19 @@
 from vgdb_torgi_gov_ru import *
 from datetime import datetime, timedelta
 
+# read the postgres login credentials in dsn format from file
+with open('.pgdsn', encoding='utf-8') as dsnf:
+    dsn = dsnf.read().replace('\n', '')
+
+# This is telegram credentials to send message to the 'VG Database Techinfo' group
+with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+    jdata = json.load(f)
+    # report_bot_info = (jdata['token'], jdata['chatid'])
+
 # # This is telegram credentials to send message to stepanosokin
 with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
     log_bot_info = (jdata['token'], jdata['chatid'])
     report_bot_info = (jdata['token'], jdata['chatid'])
 
-download = download_torgi_gov_ru(log_bot_info=log_bot_info)
+refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
