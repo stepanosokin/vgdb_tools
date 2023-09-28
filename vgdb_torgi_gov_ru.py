@@ -232,7 +232,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
                         for i, change in enumerate([x for x in changes if change['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
                             if i == 0:
-                                message = f"Изменен лот \"{change['lotName']}\":"
+                                message = f"Изменен лот на участок УВС на torgi.gov.ru:\n\"{change['lotName']}\":"
                             val = change['new']
                             if change['field'] == 'biddEndTime':
                                 if lotcard_dict.get('timeZoneOffset'):
