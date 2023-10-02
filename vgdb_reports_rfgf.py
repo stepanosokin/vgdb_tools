@@ -465,10 +465,10 @@ def refresh_rfgf_reports(pgdsn,
         # pages_pack_size = 5000
         n_packs = pages // pages_pack_size
         timestamp = datetime.now().strftime('%Y%m%d%H%M')
-        for i in range(min([n_packs, max_packs])):
+        for i in range(min([n_packs + 1, max_packs])):
             updates_report = []
             start_page = i * pages_pack_size + 1
-            if i < n_packs - 1:
+            if i < n_packs:
                 end_page = (i + 1) * pages_pack_size
             else:
                 end_page = pages
