@@ -9,10 +9,12 @@ def log_message(s, logf, bot_info, message, logdateformat='%Y-%m-%d %H:%M', to_t
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
-def send_to_teams(webhook, message, logf):
+def send_to_teams(webhook, message, logf, button_text='', button_link = ''):
     try:
         myTeamsMessage = pymsteams.connectorcard(webhook)
         myTeamsMessage.text(message)
+        if button_text and button_link:
+            myTeamsMessage.addLinkButton(button_text, button_link)
         myTeamsMessage.send()
     except:
         logf.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки мообщения в Teams\n")

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import csv
 import psycopg2
 from psycopg2.extras import *
-from vgdb_general import send_to_telegram
+from vgdb_general import send_to_telegram, send_to_teams
 from datetime import datetime
 
 
@@ -453,6 +453,7 @@ def refresh_rfgf_reports(pgdsn,
                          send_updates=True,
                          log_bot_info=('fake_token', 'fake_chatid'),
                          report_bot_info=('fake_token', 'fake_chatid'),
+                         webhook='',
                          max_packs=10000000):
     pages_result = get_pages_number()
     if pages_result[0]:
@@ -531,11 +532,27 @@ def refresh_rfgf_reports(pgdsn,
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_added,
                                                              list_type='link_added',
                                                              bot_info=report_bot_info)
+                                message = f"Добавлена ссылка в {len(reports_with_link_added)} документах в каталоге РФГФ:\n"
+                                send_to_teams(webhook, message, f)
+                                for report in reports_with_link_added:
+                                    message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                    new_link = [x['new_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
+                                    message += f"\nНовая ссылка: {new_link}"
+                                    docurl = report['update_info']['report_url']
+                                    send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
                             if reports_with_link_removed:
                                 fname = f"Документы_УВС_РФГФ_с_удаленной_ссылкой_{timestamp}_{str(i + 1)}.csv"
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_removed,
                                                              list_type='link_removed',
                                                              bot_info=report_bot_info)
+                                message = f"Удалена ссылка в {len(reports_with_link_removed)} документах в каталоге РФГФ:\n"
+                                send_to_teams(webhook, message, f)
+                                for report in reports_with_link_removed:
+                                    message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                    old_link = [x['old_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
+                                    message += f"\nСтарая ссылка: {old_link}"
+                                    docurl = report['update_info']['report_url']
+                                    send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
 
         with requests.Session() as s:
             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:

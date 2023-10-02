@@ -20,5 +20,10 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
 with open('.pgdsn', encoding='utf-8') as gdalf:
     dsn = gdalf.read().replace('\n', '')
 
-refresh_rfgf_reports(dsn, pages_pack_size=5000, report_bot_info=report_bot_info, log_bot_info=log_bot_info, send_updates=True)
+
+with open('rfgf_reports.webhook', 'r', encoding='utf-8') as f:
+    rfgf_reports_webhook = f.read().replace('\n', '')
+
+refresh_rfgf_reports(dsn, pages_pack_size=5000, report_bot_info=report_bot_info,
+                     log_bot_info=log_bot_info, webhook=rfgf_reports_webhook, send_updates=True)
 # refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=report_bot_info, log_bot_info=log_bot_info, send_updates=True, max_packs=1)
