@@ -191,6 +191,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
         "FAILED": 'Не состоялся',
         "SUCCEED": 'Состоялся'
     }
+    updates = (0, 0)
     lotcard_dict = parse_lotcard(lotcard)
     if lotcard_dict:
         sql = f"select * from {table} where \"id\" = {lotcard_dict['id']};"
@@ -214,10 +215,16 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         if field == 'lot_data':
                             val = json.loads(val)
 
-                        if val != result[0][field]:
+                        dbval = result[0][field]
+                        if field in ['squareMR', 'priceFin', 'priceMin']:
+                            dbval = float(dbval)
+                            pass
+                        if val != dbval:
                             changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
 
                     if changes:
+                        # print(changes)
+                        updates = (0, 1)
                         fields_to_update = []
                         values_to_insert = []
                         for change in changes:
@@ -255,6 +262,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     send_to_teams(webhook, message, logf)
                     pass
                 else:
+                    updates = (1, 0)
                     fields_to_update = ['"' + x + '"' for x in lotcard_dict.keys()]
                     values_to_insert = lotcard_dict.values()
                     sql = f"insert into {table}({', '.join(fields_to_update)}) values({', '.join([str(x) for x in values_to_insert])});"
@@ -284,14 +292,19 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
         message = f"Ошибка: отсутствует lotcard id"
         with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
             log_message(s, logf, log_bot_info, message)
+    return updates
 
 
 def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt', webhook=''):
     lotcards = download_lotcards(log_bot_info=log_bot_info, logfile=logfile)
     if lotcards and dsn:
+        new, updated = 0, 0
         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
         for lotcard in lotcards:
-            check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile, webhook=webhook)
+            updates = check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile, webhook=webhook)
+            new, updated = [x + y for x, y in zip((new, updated), updates)]
         pgconn.commit()
         pgconn.close()
-        pass
+        message = f"Новых лотов: {str(new)}\nИзменено лотов: {str(updated)}"
+        with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+            log_message(s, logf, log_bot_info, message)
