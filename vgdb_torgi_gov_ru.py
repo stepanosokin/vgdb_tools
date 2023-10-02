@@ -25,7 +25,7 @@ def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_in
                }
 
       with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-            message = 'Запущена загрузка лотов на участки УВС с сайта torgi.gov.ru'
+            message = 'torgi_gov_ru: Запущена загрузка лотов на участки УВС с сайта torgi.gov.ru'
             log_message(s, logf, log_bot_info, message)
             status_code = 0
             i = 1
@@ -41,7 +41,7 @@ def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_in
                   log_message(s, logf, log_bot_info, message)
                   return False
             else:
-                  message = f"Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(list(response.json()['content']))} лотов"
+                  message = f"torgi_gov_ru: Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(list(response.json()['content']))} лотов"
                   log_message(s, logf, log_bot_info, message)
                   return response.json()['content']
 
