@@ -10,7 +10,7 @@ from osgeo import ogr, osr, gdal
 import psycopg2
 from psycopg2.extras import *
 import json
-from vgdb_general import send_to_telegram
+from vgdb_general import send_to_telegram, send_to_teams
 # from timezonefinder import TimezoneFinder
 # from tzdata import *
 
@@ -543,7 +543,9 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
         return success
 
 
-def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=('token', 'id'), report_bot_info=('token', 'id')):
+def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                             bot_info=('token', 'id'), report_bot_info=('token', 'id'),
+                             blocks_np_webhook='', blocks_nr_ne_webhook=''):
     '''
     This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
@@ -849,6 +851,29 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
 
         # If new blocks contain any HCS blocks, send report to telegram            success = True
         new_hcs_blocks_list = [x for x in new_blocks_list if any(['нефт' in str(x['resource_type']), 'газ' in str(x['resource_type']), 'конденсат' in str(x['resource_type'])])]
+        new_np_blocks_list = [x for x in new_hcs_blocks_list if
+                              'для геологического изучения недр' in x['source_name'].lower()]
+        new_nr_ne_blocks_list = [x for x in new_hcs_blocks_list if
+                              'для разведки и добычи полезных ископаемых' in x['source_name'].lower()]
+
+        if blocks_np_webhook:
+            for new_np_block in new_np_blocks_list:
+                np_block_name = ' '.join(new_np_block['name'].replace('\n', ' ').split())
+                message = f"Новый участок НП на сайте Роснедра:\n{str(new_np_block['resource_type'])}; " \
+                          f"\nПриказ от {new_np_block['order_date']}" \
+                          f"\n{np_block_name}" \
+                          f"\nСрок подачи заявки: {(new_np_block['appl_deadline'] or 'Неизвестен')}"
+                send_to_teams(blocks_np_webhook, message, logf, button_text='Открыть объявление', button_link=new_np_block['source_url'])
+
+        if blocks_nr_ne_webhook:
+            for new_nr_ne_block in new_nr_ne_blocks_list:
+                nr_ne_block_name = ' '.join(new_nr_ne_block['name'].replace('\n', ' ').split())
+                message = f"Новый участок НР, НЭ на сайте Роснедра:\n{str(new_nr_ne_block['resource_type'])}; " \
+                          f"\nПриказ от {new_nr_ne_block['order_date']}" \
+                          f"\n{nr_ne_block_name}" \
+                          f"\nСрок подачи заявки: {(new_nr_ne_block['appl_deadline'] or 'Неизвестен')}"
+                send_to_teams(blocks_nr_ne_webhook, message, logf, button_text='Открыть объявление', button_link=new_nr_ne_block['source_url'])
+
         if new_hcs_blocks_list:
             message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о выставлении участков УВС на аукционы:\n"
             for j, hcs_block in enumerate(new_hcs_blocks_list):
@@ -856,6 +881,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; Приказ от {hcs_block['order_date']}; {hcs_block_name}; Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; {hcs_block['source_url']}" + '\n'
             # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")

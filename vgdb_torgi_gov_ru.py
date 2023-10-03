@@ -301,7 +301,9 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
         new, updated = 0, 0
         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
         for lotcard in lotcards:
-            updates = check_lotcard(pgconn, lotcard, log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile, webhook=webhook)
+            updates = check_lotcard(pgconn, lotcard,
+                                    log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile,
+                                    webhook=webhook)
             new, updated = [x + y for x, y in zip((new, updated), updates)]
         pgconn.commit()
         pgconn.close()

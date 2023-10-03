@@ -26,6 +26,13 @@ with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
     report_bot_info = (jdata['token'], jdata['chatid'])
 
+# # This is telegram credentials to send message to teams
+with open('2023_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+    blocks_nr_ne_webhook = f.read().replace('\n', '')
+
+with open('2023_blocks_np.webhook', 'r', encoding='utf-8') as f:
+    blocks_np_webhook = f.read().replace('\n', '')
+
 # get the latest rosnedra order announce date from postgres
 with psycopg2.connect(dsn) as pgconn:
     lastdt_result = get_latest_order_date_from_synology(pgconn)
@@ -41,7 +48,10 @@ with psycopg2.connect(dsn) as pgconn:
         #                    folder='rosnedra_auc', bot_info=bot_info):
         # if True:
             # # parse the blocks from order announcements to geopackage
-            if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info, report_bot_info=report_bot_info):
+            if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                        bot_info=bot_info, report_bot_info=report_bot_info,
+                                        blocks_np_webhook=blocks_np_webhook,
+                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook):
                 # # load new blocks to the database
                 update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
                 # pass
