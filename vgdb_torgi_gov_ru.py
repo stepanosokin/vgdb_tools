@@ -217,7 +217,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
 
                         dbval = result[0][field]
                         if field in ['squareMR', 'priceFin', 'priceMin']:
-                            dbval = float(dbval)
+                            if dbval:
+                                dbval = float(dbval)
                             pass
                         if val != dbval:
                             changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
