@@ -859,7 +859,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         if blocks_np_webhook:
             for new_np_block in new_np_blocks_list:
                 np_block_name = ' '.join(new_np_block['name'].replace('\n', ' ').split())
-                message = f"Новый участок НП на сайте Роснедра:\n{str(new_np_block['resource_type'])}; " \
+                message = f"Новый участок НП в приказе Роснедра:\n{str(new_np_block['resource_type'])}; " \
                           f"\nПриказ от {new_np_block['order_date']}" \
                           f"\n{np_block_name}" \
                           f"\nСрок подачи заявки: {(new_np_block['appl_deadline'] or 'Неизвестен')}"
@@ -868,7 +868,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         if blocks_nr_ne_webhook:
             for new_nr_ne_block in new_nr_ne_blocks_list:
                 nr_ne_block_name = ' '.join(new_nr_ne_block['name'].replace('\n', ' ').split())
-                message = f"Новый участок НР, НЭ на сайте Роснедра:\n{str(new_nr_ne_block['resource_type'])}; " \
+                message = f"Новый участок НР, НЭ в приказе Роснедра:\n{str(new_nr_ne_block['resource_type'])}; " \
                           f"\nПриказ от {new_nr_ne_block['order_date']}" \
                           f"\n{nr_ne_block_name}" \
                           f"\nСрок подачи заявки: {(new_nr_ne_block['appl_deadline'] or 'Неизвестен')}"

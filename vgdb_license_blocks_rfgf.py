@@ -1,7 +1,7 @@
 
 import requests, json, os, psycopg2
 from datetime import datetime
-from vgdb_general import log_message
+from vgdb_general import log_message, send_to_teams
 from osgeo import ogr, osr, gdal
 
 
@@ -265,7 +265,7 @@ def parse_geometry(source_geom, coords_threshold):
     return (record_has_geometry, multipol_of_pols)
 
 
-def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', layer='l_b', bot_info=('token', 'chatid'), where="license_block_name NOT LIKE '%Северо-Врангелевский%'"):
+def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', layer='l_b', bot_info=('token', 'chatid'), webhook='', where="license_block_name NOT LIKE '%Северо-Врангелевский%'"):
     current_directory = os.getcwd()
     logpath = os.path.join(current_directory, folder, 'logfile.txt')
     logdateformat = '%Y-%m-%d %H:%M:%S'
@@ -364,8 +364,10 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
                         log_message(s, logf, bot_info, message)
                         # try to do the conversion
                         if gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions):
-                            message = f"LicenseBlockUpdater: Successfully updated Rosgeolfond license blocks table on server"
+                            message = f"Выполнено оновление лицензионных участков РФГФ в базе данных vgdb"
                             log_message(s, logf, bot_info, message)
+                            if webhook:
+                                send_to_teams(webhook, message, logf)
                         else:
                             message = f"LicenseBlockUpdater: Update Rosgeolfond license blocks table on server FAILED"
                             log_message(s, logf, bot_info, message)
