@@ -852,9 +852,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         # If new blocks contain any HCS blocks, send report to telegram            success = True
         new_hcs_blocks_list = [x for x in new_blocks_list if any(['нефт' in str(x['resource_type']), 'газ' in str(x['resource_type']), 'конденсат' in str(x['resource_type'])])]
         new_np_blocks_list = [x for x in new_hcs_blocks_list if
-                              'для геологического изучения недр' in x['source_name'].lower()]
+                              'для геологического изучения недр' in str(x['source_name']).lower()]
         new_nr_ne_blocks_list = [x for x in new_hcs_blocks_list if
-                              'для разведки и добычи полезных ископаемых' in x['source_name'].lower()]
+                              'для разведки и добычи полезных ископаемых' in str(x['source_name']).lower()]
 
         if blocks_np_webhook:
             for new_np_block in new_np_blocks_list:

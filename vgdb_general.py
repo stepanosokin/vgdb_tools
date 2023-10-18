@@ -25,6 +25,7 @@ def send_to_teams(webhook, message, logf, button_text='', button_link='', title=
                 sections_list.append(section)
             [myTeamsMessage.addSection(x) for x in sections_list]
         myTeamsMessage.send()
+        pass
     except:
         logf.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки мообщения в Teams\n")
 
