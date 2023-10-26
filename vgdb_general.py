@@ -18,16 +18,23 @@ def send_to_teams(webhook, message, logf, button_text='', button_link='', title=
         if title:
             myTeamsMessage.title(title)
         if sections:
-            sections_list = []
-            for section_source in sections:
-                section = pymsteams.cardsection()
-                section.text(section_source)
-                sections_list.append(section)
-            [myTeamsMessage.addSection(x) for x in sections_list]
+            if len(sections) > 10:
+                logmessage = f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки сообщения в Teams. " \
+                             f"Нельзя добавить больше 10 секций в карточку.\n"
+                logf.write(logmessage)
+                print(logmessage)
+                return False
+            else:
+                sections_list = []
+                for section_source in sections:
+                    section = pymsteams.cardsection()
+                    section.text(section_source)
+                    sections_list.append(section)
+                [myTeamsMessage.addSection(x) for x in sections_list]
         myTeamsMessage.send()
-        pass
+        return True
     except:
-        logf.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки мообщения в Teams\n")
+        logf.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M')} Ошибка отправки сообщения в Teams\n")
 
 
 def send_to_telegram(s: requests.Session,
