@@ -532,37 +532,45 @@ def refresh_rfgf_reports(pgdsn,
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_added,
                                                              list_type='link_added',
                                                              bot_info=report_bot_info)
-                                message = f"Добавлена ссылка в {len(reports_with_link_added)} документах в каталоге РФГФ:\n"
-                                title = 'Новые ссылки в каталоге РФГФ'
-                                # send_to_teams(webhook, message, f)
-                                sections = []
-                                for report in reports_with_link_added:
-                                    section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
-                                    new_link = [x['new_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
-                                    section_message += f"\nНовая ссылка: {new_link}"
-                                    docurl = report['update_info']['report_url']
-                                    section_message += f"\nОтчет: {docurl}"
-                                    sections.append(section_message)
-                                    # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
-                                send_to_teams(webhook, message, f, title=title, sections=sections)
+                                split_size = 10
+                                reports_with_link_added_splitted = [reports_with_link_added[i:i + split_size] for i in
+                                                 range(0, len(reports_with_link_added), split_size)]
+                                for reports_block in reports_with_link_added_splitted:
+                                    message = f"Добавлена ссылка в {len(reports_block)} документах в каталоге РФГФ:\n"
+                                    title = 'Новые ссылки в каталоге РФГФ'
+                                    # send_to_teams(webhook, message, f)
+                                    sections = []
+                                    for report in reports_block:
+                                        section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                        new_link = [x['new_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
+                                        section_message += f"\nНовая ссылка: {new_link}"
+                                        docurl = report['update_info']['report_url']
+                                        section_message += f"\nОтчет: {docurl}"
+                                        sections.append(section_message)
+                                        # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
+                                    send_to_teams(webhook, message, f, title=title, sections=sections)
                             if reports_with_link_removed:
                                 fname = f"Документы_УВС_РФГФ_с_удаленной_ссылкой_{timestamp}_{str(i + 1)}.csv"
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_removed,
                                                              list_type='link_removed',
                                                              bot_info=report_bot_info)
-                                message = f"Удалена ссылка в {len(reports_with_link_removed)} документах в каталоге РФГФ:\n"
-                                title = 'Удаленные ссылки в каталоге РФГФ'
-                                # send_to_teams(webhook, message, f)
-                                sections = []
-                                for report in reports_with_link_removed:
-                                    section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
-                                    old_link = [x['old_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
-                                    section_message += f"\nСтарая ссылка: {old_link}"
-                                    docurl = report['update_info']['report_url']
-                                    section_message += f"\nОтчет: {docurl}"
-                                    sections.append(section_message)
-                                    # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
-                                send_to_teams(webhook, message, f, title=title, sections=sections)
+                                split_size = 10
+                                reports_with_link_removed_splitted = [reports_with_link_removed[i:i + split_size] for i in
+                                                                    range(0, len(reports_with_link_removed), split_size)]
+                                for reports_block in reports_with_link_removed_splitted:
+                                    message = f"Удалена ссылка в {len(reports_block)} документах в каталоге РФГФ:\n"
+                                    title = 'Удаленные ссылки в каталоге РФГФ'
+                                    # send_to_teams(webhook, message, f)
+                                    sections = []
+                                    for report in reports_block:
+                                        section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                        old_link = [x['old_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
+                                        section_message += f"\nСтарая ссылка: {old_link}"
+                                        docurl = report['update_info']['report_url']
+                                        section_message += f"\nОтчет: {docurl}"
+                                        sections.append(section_message)
+                                        # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
+                                    send_to_teams(webhook, message, f, title=title, sections=sections)
 
         with requests.Session() as s:
             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
