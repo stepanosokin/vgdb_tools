@@ -241,7 +241,10 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
                         for i, change in enumerate([x for x in changes if change['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
                             if i == 0:
-                                message = f"Изменен лот на участок УВС на torgi.gov.ru:\n\"{change['lotName']}\":"
+                                message = f"Изменен лот на участок УВС на torgi.gov.ru: \n\"{change['lotName']}\""
+                                if lotcard_dict.get('resourceLocation_EA(N)'):
+                                    message += f" ({str(lotcard_dict['resourceLocation_EA(N)'])})"
+                                message += ':'
                             val = change['new']
                             if change['field'] == 'biddEndTime':
                                 if lotcard_dict.get('timeZoneOffset'):
@@ -271,20 +274,22 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
                     message = f"Новый лот на участок УВС на torgi.gov.ru:\n{lotcard_dict['lotName']}"
                     message += f"\nСтатус: {status_dict.get(lotcard_dict['lotStatus'], lotcard_dict['lotStatus'])}"
+                    if lotcard_dict.get('resourceLocation_EA(N)'):
+                        message += f"; \nТерритория: {str(lotcard_dict['resourceLocation_EA(N)'])}"
                     if lotcard_dict.get('priceMin'):
-                        message += f"\nНач.цена: {str(lotcard_dict['priceMin'])}"
+                        message += f"; \nНач.цена: {str(lotcard_dict['priceMin'])}"
                     if lotcard_dict.get('priceFin'):
-                        message += f"\nИтог.цена: {str(lotcard_dict['priceFin'])}"
+                        message += f"; \nИтог.цена: {str(lotcard_dict['priceFin'])}"
                     if lotcard_dict.get('biddEndTime'):
                         endtime = datetime.strptime(lotcard_dict['biddEndTime'], "%Y-%m-%d %H:%M:%S")
                         if lotcard_dict.get('timeZoneOffset'):
                             endtime = endtime + timedelta(minutes=int(lotcard_dict['timeZoneOffset']))
-                        message += f"\nЗаявки до: {endtime.strftime('%d.%m.%Y %H:%M')}"
+                        message += f"; \nЗаявки до: {endtime.strftime('%d.%m.%Y %H:%M')}"
                         if lotcard_dict.get('timeZoneName'):
                             message += f" {lotcard_dict['timeZoneName']}"
                     if lotcard_dict.get('resourcePotential'):
-                        message += f"\nРесурсы: {lotcard_dict['resourcePotential']}"
-                    message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
+                        message += f"; \nРесурсы: {lotcard_dict['resourcePotential']}"
+                    message += f"; \nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         log_message(s, logf, report_bot_info, message)
                         if webhook:
