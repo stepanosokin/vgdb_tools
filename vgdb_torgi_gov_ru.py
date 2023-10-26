@@ -243,7 +243,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             if i == 0:
                                 message = f"Изменен лот на участок УВС на torgi.gov.ru: \n\"{change['lotName']}\""
                                 if lotcard_dict.get('resourceLocation_EA(N)'):
-                                    message += f" ({str(lotcard_dict['resourceLocation_EA(N)'])})"
+                                    resourceLocation = str(lotcard_dict['resourceLocation_EA(N)']).replace("'", "")
+                                    message += f" ({resourceLocation})"
                                 message += ':'
                             val = change['new']
                             if change['field'] == 'biddEndTime':
@@ -275,7 +276,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     message = f"Новый лот на участок УВС на torgi.gov.ru:\n{lotcard_dict['lotName']}"
                     message += f"\nСтатус: {status_dict.get(lotcard_dict['lotStatus'], lotcard_dict['lotStatus'])}"
                     if lotcard_dict.get('resourceLocation_EA(N)'):
-                        message += f"; \nТерритория: {str(lotcard_dict['resourceLocation_EA(N)'])}"
+                        resourceLocation = str(lotcard_dict['resourceLocation_EA(N)']).replace("'", "")
+                        message += f"; \nРасположение: {resourceLocation}"
                     if lotcard_dict.get('priceMin'):
                         message += f"; \nНач.цена: {str(lotcard_dict['priceMin'])}"
                     if lotcard_dict.get('priceFin'):
