@@ -370,6 +370,7 @@ def check_report(pgconn, table, report):
                             "report_name": report['Название документа'],
                             "report_type": report['Вид документа'],
                             "report_url": report['Ссылка'],
+                            "report_study_area": report['Изучаемая территория'],
                             "changes": changes
                         }
                     }
@@ -386,6 +387,7 @@ def check_report(pgconn, table, report):
                             "update_info": {"report_sn": report['Инвентарный номер'],
                                             "report_name": report['Название документа'],
                                             "report_type": report['Вид документа'],
+                                            "report_study_area": report['Изучаемая территория'],
                                             "report_url": report['Ссылка']}}
                 else:
                     return False
@@ -396,19 +398,19 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
         fields = []
         message = ''
         if list_type == 'all_new':
-            fields = ['Серийный номер', 'Название', 'Вид документа', 'Адрес']
+            fields = ['Серийный номер', 'Название', 'Вид документа', 'Изучаемая территория', 'Адрес']
             message = f"Добавлено {str(len(reports_list))} новых документов по УВС в Каталог Росгеолфонда "
         elif list_type == 'all_changed':
-            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут', 'Старое значение',
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Изучаемая территория', 'Атрибут', 'Старое значение',
                       'Новое значение', 'Адрес']
             message = f'Изменено {str(len(reports_list))} документов по УВС в Каталоге Росгеолфонда'
         elif list_type == 'link_added':
-            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Изучаемая территория', 'Атрибут',
                       'Старое значение',
                       'Новое значение', 'Адрес']
             message = f"Добавлена ссылка в {str(len(reports_list))} документов по УВС в Каталоге Росгеолфонда"
         elif list_type == 'link_removed':
-            fields = ['Серийный номер', 'Название', 'Тип документа', 'Атрибут',
+            fields = ['Серийный номер', 'Название', 'Тип документа', 'Изучаемая территория', 'Атрибут',
                       'Старое значение',
                       'Новое значение', 'Адрес']
             message = f"Удалена ссылка в {str(len(reports_list))} документах по УВС в Каталоге Росгеолфонда"
@@ -423,7 +425,8 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
                                         "Серийный номер": report['report_sn'],
                                         "Название": report['report_name'],
                                         "Вид документа": report['report_type'],
-                                        "Адрес": report['report_url']
+                                        "Адрес": report['report_url'],
+                                        "Изучаемая территория": report['report_study_area']
                                     })
                 elif list_type in ['all_changed', 'link_added', 'link_removed']:
                     for change in report['update_info']['changes']:
@@ -431,6 +434,7 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
                             "Серийный номер": report['update_info']['report_sn'],
                             "Название": report['update_info']['report_name'],
                             "Тип документа": report['update_info']['report_type'],
+                            "Изучаемая территория": report['report_study_area'],
                             "Атрибут": change['field'],
                             "Старое значение": change['old_value'],
                             "Новое значение": change['new_value'],
@@ -542,10 +546,11 @@ def refresh_rfgf_reports(pgdsn,
                                     sections = []
                                     for report in reports_block:
                                         section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                        section_message += f"; \nИзучаемая территория: {report['update_info']['report_study_area']}"
                                         new_link = [x['new_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
-                                        section_message += f"\nНовая ссылка: {new_link}"
+                                        section_message += f"; \nНовая ссылка: {new_link}"
                                         docurl = report['update_info']['report_url']
-                                        section_message += f"\nОтчет: {docurl}"
+                                        section_message += f"; \nОтчет: {docurl}"
                                         sections.append(section_message)
                                         # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
                                     send_to_teams(webhook, message, f, title=title, sections=sections)
@@ -564,10 +569,11 @@ def refresh_rfgf_reports(pgdsn,
                                     sections = []
                                     for report in reports_block:
                                         section_message = f"- {report['update_info']['report_type']}: {report['update_info']['report_sn']} {report['update_info']['report_name']}"
+                                        section_message += f"; \nИзучаемая территория: {report['update_info']['report_study_area']}"
                                         old_link = [x['old_value'] for x in report['update_info']['changes'] if x['field'] == 'Доступен для загрузки через реестр ЕФГИ'][0]
-                                        section_message += f"\nСтарая ссылка: {old_link}"
+                                        section_message += f"; \nСтарая ссылка: {old_link}"
                                         docurl = report['update_info']['report_url']
-                                        section_message += f"\nОтчет: {docurl}"
+                                        section_message += f"; \nОтчет: {docurl}"
                                         sections.append(section_message)
                                         # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
                                     send_to_teams(webhook, message, f, title=title, sections=sections)
