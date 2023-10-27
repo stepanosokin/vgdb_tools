@@ -545,7 +545,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                              bot_info=('token', 'id'), report_bot_info=('token', 'id'),
-                             blocks_np_webhook='', blocks_nr_ne_webhook=''):
+                             blocks_np_webhook='', blocks_nr_ne_webhook='', pgconn=None):
     '''
     This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
@@ -555,6 +555,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     :param folder: name of the folder with the results of download_orders function at the same location with the script;
     :param gpkg: name of the geopackage to store the parsed results, OVERWRITING the file if it exists;
     :param bot_info: tuple containing two strings. This is the credentials to use to send log messages to a Telegram chat from a telegram bot. First string is a telegram token of a bot, second string is an id of a chat to send messages to. You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, then go to https://api.telegram.org/bot<Bot Token>/getUpdates page and look for something like "chat":{"id": 1234567 ...}. The id parameter is the chat id.
+    :param pgconn: psycopg2 connection to select regions geometry;
     :return: None
     '''
     # variable for function returna success
@@ -594,9 +595,24 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
         # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
         # create a list of fieldnames for license blocks
-        field_names = ['resource_type', 'name', 'area_km', 'reserves_predicted_resources', 'exp_protocol', 'usage_type', 'lend_type', 'planned_terms_conditions', 'source_name', 'source_url', 'order_date', 'announce_date', 'appl_deadline']
+        field_names = ['resource_type',
+                       'name',
+                       'area_km',
+                       'reserves_predicted_resources',
+                       'exp_protocol',
+                       'usage_type',
+                       'lend_type',
+                       'planned_terms_conditions',
+                       'source_name',
+                       'source_url',
+                       'order_date',
+                       'announce_date',
+                       'appl_deadline',
+                       'regions']
         # create a list of field types for license blocks. The order must match the field_names list.
-        field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate, ogr.OFTDate]
+        field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString,
+                       ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate,
+                       ogr.OFTDate, ogr.OFTString]
         # add fields to the result layer
         for f_name, f_type in zip(field_names, field_types):
             out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
@@ -713,9 +729,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # now we check if we are at a block's first row.
                     # We check that a block number column has some value, and that the row has digital coordinates
 
-                    ##########ЗДЕСЬ СУКА ЖУЧАРА СИДИТ, В ЭТОТ IF НЕ ПОПАДАЕМ НИ РАЗУ
                     if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                    ##########
 
                         # if this is not the first block,
                         if block_id > 0:
@@ -754,6 +768,28 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                     feature.SetField(f_name, f_val)
                             # iterate the parsed blocks counter
                             blocks_parsed += 1
+
+                            #####################################################################
+                            if pgconn:
+                                cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                                sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                                regions = ''
+                                with pgconn:
+                                    try:
+                                        with pgconn.cursor() as cur:
+                                            cur.execute(sql, [cur_block_geom_wkb])
+                                            regions = ', '.join([x[0] for x in cur.fetchall()])
+                                        if regions:
+                                            attrs_dict['regions'] = regions
+                                            feature.SetField('regions', regions)
+                                    except:
+                                        message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                         logdateformat=logdateformat)
+
+                            #####################################################################
+
                             # and add a new feature to the layer.
                             out_layer.CreateFeature(feature)
                             # and function is a success if we've stored at least 1 feature
@@ -823,6 +859,26 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     feature = ogr.Feature(featureDefn)
                     # and set its geometry to the current block's geometry.
                     feature.SetGeometry(cur_block_geom)
+
+                    ##############################################################
+                    if pgconn:
+                        cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                        sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                        with pgconn:
+                            try:
+                                with pgconn.cursor() as cur:
+                                    cur.execute(sql, [cur_block_geom_wkb])
+                                    regions = ', '.join([x[0] for x in cur.fetchall()])
+                                if regions:
+                                    attrs_dict['regions'] = regions
+                                    feature.SetField('regions', regions)
+                            except:
+                                message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                 logdateformat=logdateformat)
+                    ##############################################################
+
                     # add an item to the list of new blocks for telegram report
                     new_blocks_list.append(attrs_dict)
 
@@ -860,25 +916,35 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
             for new_np_block in new_np_blocks_list:
                 np_block_name = ' '.join(new_np_block['name'].replace('\n', ' ').split())
                 message = f"Новый участок УВС НП в приказе Роснедра:\n{str(new_np_block['resource_type'])}; " \
-                          f"\nПриказ от {new_np_block['order_date']}" \
-                          f"\n{np_block_name}" \
-                          f"\nСрок подачи заявки: {(new_np_block['appl_deadline'] or 'Неизвестен')}"
+                          f"\nПриказ от {new_np_block['order_date']}; " \
+                          f"\n{np_block_name}; "
+                if new_np_block.get('regions'):
+                    message += f"Регионы: {new_np_block['regions']}; "
+                message += f"\nСрок подачи заявки: {(new_np_block['appl_deadline'] or 'Неизвестен')}"
                 send_to_teams(blocks_np_webhook, message, logf, button_text='Открыть объявление', button_link=new_np_block['source_url'])
 
         if blocks_nr_ne_webhook:
             for new_nr_ne_block in new_nr_ne_blocks_list:
                 nr_ne_block_name = ' '.join(new_nr_ne_block['name'].replace('\n', ' ').split())
-                message = f"Новый участок УВС НР, НЭ в приказе Роснедра:\n{str(new_nr_ne_block['resource_type'])}; " \
-                          f"\nПриказ от {new_nr_ne_block['order_date']}" \
-                          f"\n{nr_ne_block_name}" \
-                          f"\nСрок подачи заявки: {(new_nr_ne_block['appl_deadline'] or 'Неизвестен')}"
+                message = f"Новый участок УВС НР, НЭ в приказе Роснедра: \n{str(new_nr_ne_block['resource_type'])}; " \
+                          f"\nПриказ от {new_nr_ne_block['order_date']}; " \
+                          f"\n{nr_ne_block_name}; "
+                if new_nr_ne_block.get('regions'):
+                    message += f"Регионы: {new_nr_ne_block['regions']}; "
+                message += f"\nСрок подачи заявки: {(new_nr_ne_block['appl_deadline'] or 'Неизвестен')}"
                 send_to_teams(blocks_nr_ne_webhook, message, logf, button_text='Открыть объявление', button_link=new_nr_ne_block['source_url'])
 
         if new_hcs_blocks_list:
             message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о выставлении участков УВС на аукционы:\n"
             for j, hcs_block in enumerate(new_hcs_blocks_list):
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
-                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; Приказ от {hcs_block['order_date']}; {hcs_block_name}; Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; {hcs_block['source_url']}" + '\n'
+                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; " \
+                                  f"Приказ от {hcs_block['order_date']}; " \
+                                  f"{hcs_block_name}; " \
+                                  f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
+                if hcs_block.get('regions'):
+                    message += f"Регионы: {hcs_block['regions']}; "
+                message += f"{hcs_block['source_url']}" + '\n'
             # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
 
@@ -897,11 +963,12 @@ def get_latest_order_date_from_synology(pgconn):
     :return: tuple of 2 elements: (bool_success, datetime_object)
     '''
     try:
-        with pgconn.cursor() as cur:
-            cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
-            ldate = cur.fetchall()[0][0]
-            ldatetime = datetime(ldate.year, ldate.month, ldate.day)
-            return (True, ldatetime)
+        with pgconn:
+            with pgconn.cursor() as cur:
+                cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
+                ldate = cur.fetchall()[0][0]
+                ldatetime = datetime(ldate.year, ldate.month, ldate.day)
+                return (True, ldatetime)
     except:
         return (False, None)
 
@@ -914,11 +981,12 @@ def get_latest_auc_result_date_from_synology(pgconn):
     :return: tuple of 2 elements: (bool_success, datetime_object)
     '''
     try:
-        with pgconn.cursor() as cur:
-            cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.auc_results")
-            ldate = cur.fetchall()[0][0]
-            ldatetime = datetime(ldate.year, ldate.month, ldate.day)
-            return (True, ldatetime)
+        with pgconn:
+            with pgconn.cursor() as cur:
+                cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.auc_results")
+                ldate = cur.fetchall()[0][0]
+                ldatetime = datetime(ldate.year, ldate.month, ldate.day)
+                return (True, ldatetime)
     except:
         return (False, None)
 
@@ -1033,17 +1101,18 @@ def update_postgres_auc_results_table(pgconn, folder='rosnedra_auc_results', tab
                                              , '\n'.join(["'" + x.replace("'", "''") + "'" for x in result['item_content_list']])])
         sql = f"insert into {table}(url, announce_date, title, license_block, auction_success, content)" \
               f" values{', '.join(['(' + ', '.join(x) + ')' for x in values_to_insert_lists])};"
-        with pgconn.cursor() as cur:
-            try:
-                cur.execute(sql)
-                pgconn.commit()
-                message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results updated successfully."
-                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-            except:
-                message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results failed"
-                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        with pgconn:
+            with pgconn.cursor() as cur:
+                try:
+                    cur.execute(sql)
+                    pgconn.commit()
+                    message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results updated successfully."
+                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                except:
+                    message = f"AuctionBlocksUpdater: Synology table rosnedra.auc_results failed"
+                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
 
 
 def clear_folder(folder):
