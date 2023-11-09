@@ -1,4 +1,4 @@
-import requests, csv, json
+import requests, csv
 
 with open('yandex_api_key', encoding='utf-8') as f:
     apikey = f.read().replace('\n', '')
@@ -24,9 +24,9 @@ with open('yandex_geocoder/Т+Справочник_предприятий_Оре
                         try:
                             response = s.get(url)
                             err_code = response.status_code
-                            pass
                         except:
                             print(f"Ошибка запроса {url}")
+                        i += 1
                     if response:
                         j = response.json()
                         coords = j['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['Point']['pos'].split(' ')
