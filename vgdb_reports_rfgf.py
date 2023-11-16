@@ -434,7 +434,7 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
                             "Серийный номер": report['update_info']['report_sn'],
                             "Название": report['update_info']['report_name'],
                             "Тип документа": report['update_info']['report_type'],
-                            "Изучаемая территория": report['report_study_area'],
+                            "Изучаемая территория": report['update_info']['report_study_area'],
                             "Атрибут": change['field'],
                             "Старое значение": change['old_value'],
                             "Новое значение": change['new_value'],

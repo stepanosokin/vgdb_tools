@@ -5,8 +5,8 @@ with open('yandex_api_key', encoding='utf-8') as f:
 
 # https://yandex.ru/dev/geocode/doc/ru/
 
-with open('yandex_geocoder/Т+Справочник_предприятий_Оренбург_Пермь_с_V.csv', encoding='utf-8', newline='') as in_f:
-    with open('yandex_geocoder/Адреса.csv', 'w', encoding='utf-8', newline='') as o_f:
+with open('yandex_geocoder/Т+Справочник_предприятий_Пермь_с_V.csv', encoding='utf-8', newline='') as in_f:
+    with open('yandex_geocoder/Т+Справочник_предприятий_Пермь_с_V_коорд.csv', 'w', encoding='utf-8', newline='') as o_f:
         reader = csv.DictReader(in_f, delimiter=';')
         fieldnames = list(reader.fieldnames)
         fieldnames.extend(['lon', 'lat'])
