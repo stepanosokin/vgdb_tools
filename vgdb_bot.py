@@ -18,7 +18,7 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
-import logging, psycopg2
+import logging, psycopg2, json
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -107,7 +107,9 @@ async def vacuum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
-    application = Application.builder().token("6702863648:AAHGC7f1wgw7IrAoGnk0CrOmQ_cU2Ag7LHM").build()
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+    application = Application.builder().token(jdata['token']).build()
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
