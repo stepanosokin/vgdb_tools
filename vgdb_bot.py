@@ -61,7 +61,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def wal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id == 165098508:
+    if update.effective_user.id in [165098508, 165635882]:
         with open('.pgdsn', encoding='utf-8') as dsnf:
             dsn = dsnf.read().replace('\n', '')
         conn = psycopg2.connect(dsn)
