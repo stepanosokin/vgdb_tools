@@ -153,21 +153,34 @@ async def get(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 with open('.pgdsn', encoding='utf-8') as dsnf:
                     dsn = dsnf.read().replace('\n', '')
                 conn = psycopg2.connect(dsn)
-                sql = f"select json_build_object('type', 'FeatureCollection', " \
-                      f"'features', json_agg(st_asgeojson(t.*)::json)) FROM (" \
-                      f"select * from rfgf.license_blocks_rfgf_hc_active " \
-                      f"where license_block_name like '%{context.args[1]}%' limit 10) as t"
-                with conn:
-                    with conn.cursor() as cur:
-                        cur.execute(sql)
-                        result = cur.fetchall()[0][0]
+                if ';' not in context.args[1]:
+                    searchstring = context.args[1].lower().replace(chr(27), '').replace(chr(22), '').lower()
+                    sql = f"select json_build_object('type', 'FeatureCollection', " \
+                          f"'features', json_agg(st_asgeojson(t.*)::json)) FROM (" \
+                          f"select * from rfgf.license_blocks_rfgf_hc_active " \
+                          f"where LOWER(license_block_name) like '%{searchstring}%' " \
+                          f"or LOWER(gos_reg_num) like '%{searchstring}%' " \
+                          f"or LOWER(user_info) like '%{searchstring}%' " \
+                          f"limit 10) as t;"
+                    with conn:
+                        with conn.cursor() as cur:
+                            cur.execute(sql)
+                            result = cur.fetchall()[0][0]
+                            pass
+                            # await update.message.reply_document(json.dump(result, ensure_ascii=False))
+                            # await update.message.reply_document(io.StringIO(json.dumps(result)), caption='result')
+                            with open('Лицензионные участки.json', 'w') as rfile:
+                                json.dump(result, rfile, ensure_ascii=False)
+                            with open('Лицензионные участки.json', 'rb') as sfile:
+                                await update.message.reply_document(sfile, caption=context.args[1])
 
-                        # await update.message.reply_document(json.dump(result, ensure_ascii=False))
-                        await update.message.reply_document(io.StringIO(result))
+
+                else:
+                    await update.message.reply_text('Запрещенные символы')
             else:
                 await update.message.reply_text('Укажите ключевое слово')
     else:
-        await update.message.reply_text('Укажите параметры команды')
+        await update.message.reply_text('Укажите параметры команды:\nlicense - лицензионные участки в geojson (макс.10)')
 
 
 def main() -> None:
