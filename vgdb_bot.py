@@ -161,7 +161,7 @@ async def get(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                     with conn.cursor() as cur:
                         cur.execute(sql)
                         result = cur.fetchall()[0][0]
-                        io.StringIO("some initial text data")
+
                         # await update.message.reply_document(json.dump(result, ensure_ascii=False))
                         await update.message.reply_document(io.StringIO(result))
             else:
