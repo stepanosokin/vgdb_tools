@@ -222,6 +222,9 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             pass
                         if val != dbval:
                             changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+                            message = f"lotcard {result[0]['id']} change detected: {field} -> {val}"
+                            with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+                                log_message(s, logf, log_bot_info, message)
 
                     if changes:
                         # print(changes)
@@ -240,6 +243,9 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         message = ''
                         chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
                         for i, change in enumerate([x for x in changes if change['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
+                            logmessage = f"logging lotcard change: {change['id']} -> {change['field']} -> {str(change['new'])}"
+                            with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+                                log_message(s, logf, log_bot_info, logmessage)
                             if i == 0:
                                 message = f"Изменен лот на участок УВС на torgi.gov.ru: \n\"{change['lotName']}\""
                                 if lotcard_dict.get('resourceLocation_EA(N)'):
