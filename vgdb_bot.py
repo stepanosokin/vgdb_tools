@@ -18,7 +18,7 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
-import logging, psycopg2, json
+import logging, psycopg2, json, io
 from vgdb_torgi_gov_ru import *
 import vgdb_license_blocks_rfgf
 
@@ -144,6 +144,30 @@ async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('команда /lic выполнена')
     else:
         await update.message.reply_text('You do not have permission')
+
+
+async def get(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if context.args:
+        if context.args[0] == 'license':
+            if len(context.args) == 2:
+                with open('.pgdsn', encoding='utf-8') as dsnf:
+                    dsn = dsnf.read().replace('\n', '')
+                conn = psycopg2.connect(dsn)
+                sql = f"select json_build_object('type', 'FeatureCollection', " \
+                      f"'features', json_agg(st_asgeojson(t.*)::json)) FROM (" \
+                      f"select * from rfgf.license_blocks_rfgf_hc_active " \
+                      f"where license_block_name like '%{context.args[1]}%' limit 10) as t"
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.execute(sql)
+                        result = cur.fetchall()[0][0]
+                        io.StringIO("some initial text data")
+                        # await update.message.reply_document(json.dump(result, ensure_ascii=False))
+                        await update.message.reply_document(io.StringIO(result))
+            else:
+                await update.message.reply_text('Укажите ключевое слово')
+    else:
+        await update.message.reply_text('Укажите параметры команды')
 
 
 def main() -> None:
