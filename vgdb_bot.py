@@ -185,6 +185,7 @@ def main() -> None:
     application.add_handler(CommandHandler("vacuum", vacuum))
     application.add_handler(CommandHandler("torgi", torgi))
     application.add_handler(CommandHandler("lic", lic))
+    application.add_handler(CommandHandler("get", get))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
