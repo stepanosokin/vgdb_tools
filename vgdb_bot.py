@@ -20,6 +20,7 @@ bot.
 
 import logging, psycopg2, json
 from vgdb_torgi_gov_ru import *
+import vgdb_license_blocks_rfgf
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -125,6 +126,26 @@ async def torgi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('You do not have permission')
 
 
+async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == 165098508:
+        with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+            jdata = json.load(f)
+            bot_info = (jdata['token'], jdata['chatid'])
+        with open('.pggdal', encoding='utf-8') as gdalf:
+            gdalpgcs = gdalf.read().replace('\n', '')
+        with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
+            lb_general_webhook = f.read().replace('\n', '')
+        # download the license blocks data from Rosgeolfond
+        if vgdb_license_blocks_rfgf.download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
+            # parse the blocks from downloaded json
+            if vgdb_license_blocks_rfgf.parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+                # update license blocks on server
+                vgdb_license_blocks_rfgf.update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook)
+        await update.message.reply_text('команда /lic выполнена')
+    else:
+        await update.message.reply_text('You do not have permission')
+
+
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
@@ -139,6 +160,7 @@ def main() -> None:
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CommandHandler("vacuum", vacuum))
     application.add_handler(CommandHandler("torgi", torgi))
+    application.add_handler(CommandHandler("lic", lic))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
