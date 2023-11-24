@@ -19,6 +19,7 @@ bot.
 """
 
 import logging, psycopg2, json
+from vgdb_torgi_gov_ru import *
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -104,6 +105,26 @@ async def vacuum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text('You do not have permission')
 
+
+async def torgi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == 165098508:
+        with open('.pgdsn', encoding='utf-8') as dsnf:
+            dsn = dsnf.read().replace('\n', '')
+        with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+            jdata = json.load(f)
+            report_bot_info = (jdata['token'], jdata['chatid'])
+        with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+            jdata = json.load(f)
+            log_bot_info = (jdata['token'], jdata['chatid'])
+        with open('2023_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+            nr_ne_webhook_2023 = f.read().replace('\n', '')
+        refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info,
+                         webhook=nr_ne_webhook_2023)
+        await update.message.reply_text('команда /torgi выполнена')
+    else:
+        await update.message.reply_text('You do not have permission')
+
+
 def main() -> None:
     """Start the bot."""
     # Create the Application and pass it your bot's token.
@@ -117,6 +138,7 @@ def main() -> None:
     application.add_handler(CommandHandler("wal", wal))
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CommandHandler("vacuum", vacuum))
+    application.add_handler(CommandHandler("torgi", torgi))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
