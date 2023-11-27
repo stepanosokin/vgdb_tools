@@ -86,12 +86,13 @@ async def vacuum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             dsn = dsnf.read().replace('\n', '')
         conn = psycopg2.connect(dsn)
         conn.set_isolation_level(0)
-        commands = ['vacuum (analyze) rfgf.license_blocks_rfgf;',
-                    'vacuum (analyze) rfgf.rfgf_catalog;',
-                    'analyze rfgf.license_blocks_rfgf;',
-                    'analyze rfgf.rfgf_catalog;',
-                    'REINDEX TABLE CONCURRENTLY rfgf.license_blocks_rfgf;',
-                    'REINDEX TABLE CONCURRENTLY rfgf.rfgf_catalog;']
+        # commands = ['vacuum (analyze) rfgf.license_blocks_rfgf;',
+        #             'vacuum (analyze) rfgf.rfgf_catalog;',
+        #             'analyze rfgf.license_blocks_rfgf;',
+        #             'analyze rfgf.rfgf_catalog;',
+        #             'REINDEX TABLE CONCURRENTLY rfgf.license_blocks_rfgf;',
+        #             'REINDEX TABLE CONCURRENTLY rfgf.rfgf_catalog;']
+        commands = ['vacuum;']
         for sql in commands:
             with conn.cursor() as cur:
                 try:
