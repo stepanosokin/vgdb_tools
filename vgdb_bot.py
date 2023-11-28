@@ -148,6 +148,7 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await update.message.reply_text('You do not have permission')
 
+
 async def reindex(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id == 165098508:
         with open('.pgdsn', encoding='utf-8') as dsnf:
