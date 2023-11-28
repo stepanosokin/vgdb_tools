@@ -86,7 +86,7 @@ async def wal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 if pg_stat_rep:
                     message += f"\nReplication stat:"
                     for rep in pg_stat_rep:
-                        message += f"\n{rep['application_name']}: {rep['sent_lsn']}/{rep['write_lsn']}"
+                        message += f"\n{rep['application_name']}: {rep['sent_lsn']}->{rep['write_lsn']}"
             except:
                 pass
         conn.close()
