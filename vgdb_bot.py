@@ -84,9 +84,9 @@ async def wal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 cur.execute(sql)
                 pg_stat_rep = cur.fetchall()
                 if pg_stat_rep:
-                    message += f"\nReplication stat:"
+                    message += f"\n----------\nReplication stat:"
                     for rep in pg_stat_rep:
-                        message += f"\n\n{rep['application_name']}:" \
+                        message += f"\n{rep['application_name']}:" \
                                    f"\n{rep['sent_lsn']} -> {rep['write_lsn']}" \
                                    f"\nlag: {rep['write_lag']}"
             except:
