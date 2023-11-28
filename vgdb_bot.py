@@ -123,6 +123,51 @@ async def vacuum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('You do not have permission')
 
 
+async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == 165098508:
+        with open('.pgdsn', encoding='utf-8') as dsnf:
+            dsn = dsnf.read().replace('\n', '')
+        conn = psycopg2.connect(dsn)
+        conn.set_isolation_level(0)
+        commands = ['analyze rfgf.license_blocks_rfgf;',
+                    'analyze rfgf.rfgf_catalog;']
+        for sql in commands:
+            with conn.cursor() as cur:
+                try:
+                    conn.commit()
+                    conn.set_isolation_level(0)
+                    cur.execute(sql)
+                    await update.message.reply_text(f"{cur.statusmessage}")
+                except:
+                    await update.message.reply_text(f"Error query '{sql}': {cur.connection.info.error_message}")
+        await update.message.reply_text('команды /analyze выполнены')
+        conn.close()
+    else:
+        await update.message.reply_text('You do not have permission')
+
+async def reindex(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == 165098508:
+        with open('.pgdsn', encoding='utf-8') as dsnf:
+            dsn = dsnf.read().replace('\n', '')
+        conn = psycopg2.connect(dsn)
+        conn.set_isolation_level(0)
+        commands = ['REINDEX TABLE CONCURRENTLY rfgf.license_blocks_rfgf;',
+                    'REINDEX TABLE CONCURRENTLY rfgf.rfgf_catalog;']
+        for sql in commands:
+            with conn.cursor() as cur:
+                try:
+                    conn.commit()
+                    conn.set_isolation_level(0)
+                    cur.execute(sql)
+                    await update.message.reply_text(f"{cur.statusmessage}")
+                except:
+                    await update.message.reply_text(f"Error query '{sql}': {cur.connection.info.error_message}")
+        await update.message.reply_text('команды /reindex выполнены')
+        conn.close()
+    else:
+        await update.message.reply_text('You do not have permission')
+
+
 async def torgi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id == 165098508:
         with open('.pgdsn', encoding='utf-8') as dsnf:
@@ -212,6 +257,8 @@ def main() -> None:
     application.add_handler(CommandHandler("wal", wal))
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CommandHandler("vacuum", vacuum))
+    application.add_handler(CommandHandler("analyze", analyze))
+    application.add_handler(CommandHandler("reindex", reindex))
     application.add_handler(CommandHandler("torgi", torgi))
     application.add_handler(CommandHandler("lic", lic))
     application.add_handler(CommandHandler("get", get))
