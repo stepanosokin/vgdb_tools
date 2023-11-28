@@ -19,6 +19,7 @@ bot.
 """
 
 import logging, psycopg2, json, io
+from psycopg2.extras import DictCursor
 from vgdb_torgi_gov_ru import *
 import vgdb_license_blocks_rfgf
 
@@ -68,15 +69,29 @@ async def wal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             dsn = dsnf.read().replace('\n', '')
         conn = psycopg2.connect(dsn)
         with conn:
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=DictCursor)
             sql = 'select pg_size_pretty(sum(size)) as Total_WAL_disk_usage from pg_ls_waldir();'
+            message = ''
             try:
                 cur.execute(sql)
-                result = cur.fetchall()[0][0]
+                walsize = cur.fetchall()[0]['total_wal_disk_usage']
+                message += f"WAL size: {walsize}"
+                sql = 'select pg_current_wal_lsn();'
+                cur.execute(sql)
+                wal_lsn = cur.fetchall()[0]['pg_current_wal_lsn']
+                message += f"\nCurrent wal lsn: {wal_lsn}"
+                sql = 'select * from pg_stat_replication;'
+                cur.execute(sql)
+                pg_stat_rep = cur.fetchall()
+                if pg_stat_rep:
+                    message += f"\nReplication stat:"
+                    for rep in pg_stat_rep:
+                        message += f"\n{rep['application_name']}: {rep['sent_lsn']}/{rep['write_lsn']}"
             except:
                 pass
         conn.close()
-        await update.message.reply_text(f"Synology WAL size is {result}")
+        # await update.message.reply_text(f"Synology WAL size is {walsize}")
+        await update.message.reply_text(message)
     else:
         await update.message.reply_text('You do not have permission')
 
