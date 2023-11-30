@@ -238,12 +238,12 @@ async def get(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                 json.dump(result, rfile, ensure_ascii=False)
                             with open('Лицензионные участки.json', 'rb') as sfile:
                                 await update.message.reply_document(sfile, caption=context.args[1])
-
-
                 else:
                     await update.message.reply_text('Запрещенные символы')
             else:
-                await update.message.reply_text('Укажите ключевое слово')
+                await update.message.reply_text('Укажите часть названия участка как второй параметр')
+        else:
+            await update.message.reply_text('Укажите корректный параметр.')
     else:
         await update.message.reply_text('Укажите параметры команды:\nlicense - лицензионные участки в geojson (макс.10)')
 
