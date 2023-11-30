@@ -366,8 +366,8 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
                         if gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions):
                             message = f"Выполнено оновление лицензионных участков РФГФ в базе данных vgdb"
                             log_message(s, logf, bot_info, message)
-                            if webhook:
-                                send_to_teams(webhook, message, logf)
+                            # if webhook:
+                            #     send_to_teams(webhook, message, logf)
                         else:
                             message = f"LicenseBlockUpdater: Update Rosgeolfond license blocks table on server FAILED"
                             log_message(s, logf, bot_info, message)
