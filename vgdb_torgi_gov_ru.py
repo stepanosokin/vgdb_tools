@@ -242,7 +242,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         pgconn.commit()
                         message = ''
                         chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
-                        for i, change in enumerate([x for x in changes if change['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
+                        for i, change in enumerate([x for x in changes if x['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
                             logmessage = f"logging lotcard change: {change['id']} -> {change['field']} -> {str(change['new'])}"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                 log_message(s, logf, log_bot_info, logmessage)
