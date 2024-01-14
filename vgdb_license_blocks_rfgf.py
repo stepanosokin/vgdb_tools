@@ -51,7 +51,7 @@ def download_rfgf_blocks(json_request, json_result, folder='rfgf_blocks', bot_in
                         response = s.post(url, headers=headers, json=json_object, verify=False)
 
                 except:
-                    message = 'LicenseBlockUpdater: Download License blocks data from Rosgeolfond FAILED after i tries, error making HTTP request'
+                    message = f'LicenseBlockUpdater: Download License blocks data from Rosgeolfond FAILED after {i} tries, error making HTTP request'
                     log_message(s, logf, bot_info, message)
                 data = response.json()
                 if response.status_code == 200:
