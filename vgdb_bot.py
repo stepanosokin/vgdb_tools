@@ -98,6 +98,16 @@ async def wal(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('You do not have permission')
 
 
+async def jerks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    secs = datetime.now().isocalendar().week * 10 + 140
+    if secs > 240:
+        secs = 240
+    message = f'Зарядка на сегодня:\n\n' \
+              f'Приседания:\nhttps://open.spotify.com/track/0jpk88zk40MjQ63ljrq7V2?si=cePmfWfpTcuqDM4G-XIvKA\n\n' \
+              f'Планка: {str(secs // 60)}:{str(secs % 60)}'
+    await update.message.reply_text(message)
+
+
 async def vacuum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id == 165098508:
         with open('.pgdsn', encoding='utf-8') as dsnf:
@@ -266,6 +276,7 @@ def main() -> None:
     application.add_handler(CommandHandler("torgi", torgi))
     application.add_handler(CommandHandler("lic", lic))
     application.add_handler(CommandHandler("get", get))
+    application.add_handler(CommandHandler("jerks", jerks))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
