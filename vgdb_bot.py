@@ -103,7 +103,7 @@ async def jerks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if secs > 240:
         secs = 240
     message = f'Зарядка на сегодня:\n\n' \
-              f'Приседания:\nhttps://open.spotify.com/track/0jpk88zk40MjQ63ljrq7V2?si=cePmfWfpTcuqDM4G-XIvKA\n\n' \
+              f'Приседания:\nhttps://youtu.be/6A2V9Bu80J4?si=h-UUwQpZ1KRo4d7Q\n\n' \
               f'Планка: {str(secs // 60)}:{str(secs % 60)}'
     await update.message.reply_text(message)
 
