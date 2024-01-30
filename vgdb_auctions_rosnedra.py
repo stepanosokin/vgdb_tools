@@ -908,7 +908,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         # If new blocks contain any HCS blocks, send report to telegram            success = True
         new_hcs_blocks_list = [x for x in new_blocks_list if any(['нефт' in str(x['resource_type']).lower(), 'газ' in str(x['resource_type']).lower(), 'конденсат' in str(x['resource_type']).lower()])]
         new_np_blocks_list = [x for x in new_hcs_blocks_list if
-                              'для геологического изучения недр' in str(x['source_name']).lower()]
+                              'для геологического изучения недр' in str(x['source_name']).lower()
+                              and 'для разведки и добычи полезных ископаемых' not in str(x['source_name']).lower()]
         new_nr_ne_blocks_list = [x for x in new_hcs_blocks_list if
                               'для разведки и добычи полезных ископаемых' in str(x['source_name']).lower()]
 
@@ -935,7 +936,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 send_to_teams(blocks_nr_ne_webhook, message, logf, button_text='Открыть объявление', button_link=new_nr_ne_block['source_url'])
 
         if new_hcs_blocks_list:
-            message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о выставлении участков УВС на аукционы:\n"
+            message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о включении участков УВС в перечни Роснедра:\n"
             for j, hcs_block in enumerate(new_hcs_blocks_list):
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
                 message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; " \
