@@ -59,14 +59,14 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                                         print(f"attempt {str(i - 1)} to translate data to layer {schema}.{table}")
                                         success = gdal.VectorTranslate(f"PG:{new_ext_pgdsn}", f"PG:{local_pgdsn}", options=myoptions)
                                     except:
-                                        pass
+                                        print(f"failed attempt {str(i - 1)} of 10 to translate data to layer {schema}.{table}")
                                 if success:
                                     print(f'table {schema}.{table} synchronized successfully')
                                 else:
                                     print(f'table {schema}.{table} synchronization failed after f{str(i - 1)} tries')
                             else:
                                 print('process aborted - delete from dest operation failed')
-        pass
+
 
 if __name__ == '__main__':
     with open('.ext_pgdsn', encoding='utf-8') as f:
