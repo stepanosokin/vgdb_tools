@@ -26,7 +26,7 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
             log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
-                ssh_conn = Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
             except:
                 log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
@@ -153,7 +153,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
             log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
-                ssh_conn = Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
             except:
                 log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
