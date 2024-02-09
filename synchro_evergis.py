@@ -135,10 +135,15 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
     ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
     new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
     new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+
+    # chmod 0600 ~/.pgpass
     with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
         f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+    os.chmod('.new_ext_pgpass', 0o600)
+
     with open('.local_pgpass', 'w', encoding='utf-8') as f:
         f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
+    os.chmod('.local_pgpass', 0o600)
 
     current_directory = os.getcwd()
     # create a pathname for the logfile
