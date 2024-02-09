@@ -1,10 +1,14 @@
 from vgdb_auctions_rosnedra import *
 from datetime import datetime, timedelta
 import json, psycopg2
+from synchro_evergis import *
 
 # read the postgres login credentials in dsn format from file
 with open('.pgdsn', encoding='utf-8') as dsnf:
     dsn = dsnf.read().replace('\n', '')
+
+with open('.ext_pgdsn', encoding='utf-8') as edsnf:
+    ext_dsn = edsnf.read().replace('\n', '')
 
 # read the postgres login credentials for gdal from file
 with open('.pggdal', encoding='utf-8') as gdalf:
@@ -56,6 +60,7 @@ if lastdt_result[0]:
         #                             pgconn=pgconn):
             # # load new blocks to the database
             update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+            # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn)
             pass
 lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
 if lastdt_result[0]:
