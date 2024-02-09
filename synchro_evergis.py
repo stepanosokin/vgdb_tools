@@ -4,11 +4,12 @@ import requests
 from psycopg2.extras import *
 from osgeo import ogr, gdal
 from fabric import Connection
+from vgdb_general import *
 
 
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                   ssh_host='45.139.25.199', ssh_user='dockeruser',
-                  local_port_for_ext_pg=5433, bot_info=('token', 'id')):
+                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis'):
 
     ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
     new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
@@ -18,19 +19,39 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     # now we open the logfile and start logging
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
-
-        with Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
-                                                               remote_port=int(ext_pgdsn_dict['port'])):
-
-            local_conn = ogr.Open(f"PG:{local_pgdsn}")
-
+        log_message(s, logf, bot_info, 'Начинаю синхронизацию слоев с Evergis...')
+        j = 1
+        ssh_conn = None
+        while not ssh_conn and j <= 10:
+            log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
+            try:
+                j += 1
+                ssh_conn = Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+                                                                   remote_port=int(ext_pgdsn_dict['port']))
+            except:
+                log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+        if not ssh_conn:
+            log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
+            return False
+        # with Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+        #                                                        remote_port=int(ext_pgdsn_dict['port'])):
+        with ssh_conn:
+            log_message(s, logf, bot_info, 'Подключение установлено')
+            try:
+                log_message(s, logf, bot_info, 'Установка подключения к локальному postgres...', to_telegram=False)
+                local_conn = ogr.Open(f"PG:{local_pgdsn}")
+            except:
+                log_message(s, logf, bot_info, 'Ошибка подключения к локальному postgres')
+                return False
             for (schema, tables) in list(schemas_tables):
                 for table in tables:
+                    log_message(s, logf, bot_info, f'Начинаю синхронизацию слоя {schema}.{table}...')
                     source_layer = None
                     try:
                         source_layer = local_conn.GetLayer(f"{schema}.{table}")
                     except:
-                        print('error connecting to source database')
+                        log_message(s, logf, bot_info, f'Ошибка получения исходного слоя {schema}.{table}')
+                        # print('error connecting to source database')
                     if source_layer:
                         feature = source_layer.GetNextFeature()
                         if feature:
@@ -40,15 +61,20 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                                 with pgconn:
                                     with pgconn.cursor() as cur:
                                         sql = f'DELETE FROM {schema}.{table};'
-                                        print(f'attempting to delete data from layer {schema}.{table} on dest')
+                                        log_message(s, logf, bot_info,
+                                                    f'Удаляю данные из слоя {schema}.{table} на удаленном сервере...')
+                                        # print(f'attempting to delete data from layer {schema}.{table} on dest')
                                         cur.execute(sql)
                                         status = cur.statusmessage
                                 pgconn.close()
                             except:
-                                print('error deleting old data from destination layer')
+                                log_message(s, logf, bot_info, f'Ошибка удаления старых данных из слоя {schema}.{table}')
+                                # print('error deleting old data from destination layer')
                             if status:
                                 if 'DELETE' in status:
-                                    print(f'successfully deleted data from layer {schema}.{table} on dest')
+                                    log_message(s, logf, bot_info,
+                                                'Удаление старых данных из конечного слоя - успешно', to_telegram=False)
+                                    # print(f'successfully deleted data from layer {schema}.{table} on dest')
                                     source_layer_geom_type = feature.GetGeometryRef().GetGeometryName()
                                     source_layer_crs = source_layer.GetSpatialRef()
                                     myoptions = gdal.VectorTranslateOptions(
@@ -64,21 +90,40 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                                     while not success and i <= 10:
                                         i += 1
                                         try:
-                                            print(f"attempt {str(i - 1)} to translate data to layer {schema}.{table}")
+                                            log_message(s, logf, bot_info,
+                                                        f'Перенос данных в слой {schema}.{table} - попытка {str(i - 1)} из 10')
+                                            # print(f"attempt {str(i - 1)} to translate data to layer {schema}.{table}")
                                             success = gdal.VectorTranslate(f"PG:{new_ext_pgdsn}", f"PG:{local_pgdsn}", options=myoptions)
                                         except:
-                                            print(f"failed attempt {str(i - 1)} of 10 to translate data to layer {schema}.{table}")
+                                            log_message(s, logf, bot_info,
+                                                        f'Ошибка переноса данных в слой {schema}.{table} (попытка {str(i - 1)} из 10)')
                                     if success:
-                                        print(f'table {schema}.{table} synchronized successfully')
+                                        log_message(s, logf, bot_info,
+                                                    f'Слой {schema}.{table} синхронизирован успешно')
+                                        # print(f'table {schema}.{table} synchronized successfully')
                                     else:
-                                        print(f'table {schema}.{table} synchronization failed after f{str(i - 1)} tries')
+                                        log_message(s, logf, bot_info,
+                                                    f'Ошибка синхронизации слоя {schema}.{table} после {str(i - 1)} попыток')
+                                        # print(f'table {schema}.{table} synchronization failed after {str(i - 1)} tries')
                                 else:
-                                    print('process aborted - delete from dest operation failed')
+                                    log_message(s, logf, bot_info,
+                                                f'Операция прервана - ошибка удаления данных из конечного слоя {schema}.{table}')
+                                    # print('process aborted - delete from dest operation failed')
+                            else:
+                                log_message(s, logf, bot_info, f'Ошибка получения статуса операции удаления данных из слоя {schema}.{table}')
+                        else:
+                            log_message(s, logf, bot_info, f'слой {schema}.{table} пуст')
+                    else:
+                        log_message(s, logf, bot_info, f'слой {schema}.{table} не существует')
+            local_conn = None
+        ssh_conn = None
+        log_message(s, logf, bot_info, f'Синхронизация слоев с Evergis завершена')
+        return True
 
 
 def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                   ssh_host='45.139.25.199', ssh_user='dockeruser',
-                  local_port_for_ext_pg=5433):
+                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis'):
 
     with open(ext_pgdsn_path, encoding='utf-8') as f:
         ext_pgdsn = f.read()
@@ -95,48 +140,132 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
     with open('.local_pgpass', 'w', encoding='utf-8') as f:
         f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
 
-    with Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
-                                                           remote_port=int(ext_pgdsn_dict['port'])):
-        my_env = os.environ.copy()
-        my_env["PGPASSFILE"] = '.local_pgpass'
-        # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
-        for (schema, tables) in list(schemas_tables):
-            # each 'tables' is a list. loop through it now.
-            for table in tables:
-                # launch pg_dump to dump the current table
-                subprocess.run(['pg_dump', '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
-                                '-d', local_pgdsn_dict['dbname'], '-U',
-                                local_pgdsn_dict['user'], '--inserts', '-t', f'{schema}.{table}', '--no-publications',
-                                '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
-                                f'data/vgdb_5432_{schema}_{table}.dump'],
-                               env=my_env)
-        # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
-        my_env["PGPASSFILE"] = '.new_ext_pgpass'
-        for (schema, tables) in list(schemas_tables):
-            # each 'tables' is a list. loop through it now.
-            for table in tables:
-                # launch psql to delete rows from current table. use my_env as env parameter.
-                subprocess.run(
-                    ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
-                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
-                     '-w', '-c', f'delete from {schema}.{table};'],
-                    env=my_env)
-                # launch psql to insert data to current table. use my_env as env parameter.
-                subprocess.run(
-                    ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
-                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
-                     '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
-                    env=my_env)
+    current_directory = os.getcwd()
+    # create a pathname for the logfile
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    # now we open the logfile and start logging
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        log_message(s, logf, bot_info, 'Начинаю синхронизацию таблиц с Evergis...')
+
+        j = 1
+        ssh_conn = None
+        while not ssh_conn and j <= 10:
+            log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
+            try:
+                j += 1
+                ssh_conn = Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+                                                                   remote_port=int(ext_pgdsn_dict['port']))
+            except:
+                log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+        if not ssh_conn:
+            log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
+            return False
+
+        with ssh_conn:
+            log_message(s, logf, bot_info, f'Подключение установлено')
+            my_env = os.environ.copy()
+            my_env["PGPASSFILE"] = '.local_pgpass'
+            # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
+            log_message(s, logf, bot_info, f'Начинаю копирование данных из исходных таблиц...')
+            for (schema, tables) in list(schemas_tables):
+                # each 'tables' is a list. loop through it now.
+                for table in tables:
+                    status = -1
+                    i = 1
+                    # launch pg_dump to dump the current table
+                    while status != 0 and i <= 10:
+                        try:
+                            log_message(s, logf, bot_info, f'Копирование данных из таблицы {schema}.{table}, попытка {str(i)}...', to_telegram=False)
+                            i += 1
+                            result = subprocess.run(['pg_dump', '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
+                                            '-d', local_pgdsn_dict['dbname'], '-U',
+                                            local_pgdsn_dict['user'], '--inserts', '-t', f'{schema}.{table}', '--no-publications',
+                                            '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
+                                            f'data/vgdb_5432_{schema}_{table}.dump'],
+                                           env=my_env)
+                            status = result.returncode
+                        except:
+                            log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
+                    if status != 0:
+                        log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} после 10 попыток')
+            # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
+            my_env["PGPASSFILE"] = '.new_ext_pgpass'
+            log_message(s, logf, bot_info, f'Начинаю загрузку данных в целевые таблицы...')
+            for (schema, tables) in list(schemas_tables):
+                # each 'tables' is a list. loop through it now.
+                for table in tables:
+                    # launch psql to delete rows from current table. use my_env as env parameter.
+                    filepath = os.path.join(current_directory, 'data', f"vgdb_5432_{schema}_{table}.dump")
+                    if os.path.exists(filepath):
+                        i = 1
+                        status = -1
+                        while status != 0 and i <= 10:
+                            try:
+                                log_message(s, logf, bot_info,
+                                            f'Удаление данных из внешней таблицы {schema}.{table}, попытка {str(i)}...',
+                                            to_telegram=False)
+                                i += 1
+                                result = subprocess.run(
+                                    ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                     '-w', '-c', f'delete from {schema}.{table};'],
+                                    env=my_env)
+                                status = result.returncode
+                            except:
+                                log_message(s, logf, bot_info,
+                                            f'Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
+                        if status != 0:
+                            log_message(s, logf, bot_info,
+                                        f'Ошибка удаления данных из внешней таблицы {schema}.{table} после 10 попыток. Пропускаю запись данных в таблицу.')
+                        else:
+                            i = 1
+                            status = -1
+                            while status != 0 and i <= 10:
+                                try:
+                                    log_message(s, logf, bot_info,
+                                                f'Запись данных во внешнюю таблицу {schema}.{table}, попытка {str(i)}...',
+                                                to_telegram=False)
+                                    i += 1
+                                    # launch psql to insert data to current table. use my_env as env parameter.
+                                    result = subprocess.run(
+                                        ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                         '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                         '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
+                                        env=my_env)
+                                    status = result.returncode
+                                except:
+                                    log_message(s, logf, bot_info,
+                                                f'Ошибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
+                            if status != 0:
+                                log_message(s, logf, bot_info,
+                                            f'Ошибка записи данных во внешнюю таблицу {schema}.{table} после 10 попыток.')
+                            else:
+                                log_message(s, logf, bot_info, f'Таблица {schema}.{table} синхронизирована')
+
+            for (schema, tables) in list(schemas_tables):
+                for table in tables:
+                    filepath = os.path.join(current_directory, 'data', f"vgdb_5432_{schema}_{table}.dump")
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+
+        ssh_conn = None
+        log_message(s, logf, bot_info, f'Синхронизация таблиц с Evergis завершена')
+        return True
 
 
 
 
 if __name__ == '__main__':
+    # read the telegram bot credentials
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        bot_info = (jdata['token'], jdata['chatid'])
+
     with open('.ext_pgdsn', encoding='utf-8') as f:
         ext_pgdsn = f.read()
 
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn)
-    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn')
+    # synchro_layer([('culture', ['test2'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    synchro_table([('culture', ['test'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
