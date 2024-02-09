@@ -267,5 +267,5 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    # synchro_layer([('culture', ['test2'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    synchro_layer([('culture', ['test2'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     synchro_table([('culture', ['test'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
