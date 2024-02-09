@@ -172,6 +172,20 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
             my_env["PGPASSFILE"] = '.local_pgpass'
             # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
             log_message(s, logf, bot_info, f'Начинаю копирование данных из исходных таблиц...')
+
+            from sys import platform
+            if platform == "linux" or platform == "linux2":
+                pg_dump = '/usr/lib/postgresql/15/bin/pg_dump'
+                psql = '/usr/lib/postgresql/15/bin/psql'
+            elif platform == "darwin":
+                # OS X
+                pg_dump = 'pg_dump'
+                psql = 'psql'
+            elif platform == "win32":
+                # Windows...
+                pg_dump = 'pg_dump'
+                psql = 'psql'
+
             for (schema, tables) in list(schemas_tables):
                 # each 'tables' is a list. loop through it now.
                 for table in tables:
@@ -182,7 +196,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                         try:
                             log_message(s, logf, bot_info, f'Копирование данных из таблицы {schema}.{table}, попытка {str(i)}...', to_telegram=False)
                             i += 1
-                            result = subprocess.run(['pg_dump', '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
+                            result = subprocess.run([pg_dump, '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
                                             '-d', local_pgdsn_dict['dbname'], '-U',
                                             local_pgdsn_dict['user'], '--inserts', '-t', f'{schema}.{table}', '--no-publications',
                                             '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
@@ -211,7 +225,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                             to_telegram=False)
                                 i += 1
                                 result = subprocess.run(
-                                    ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                    [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
                                      '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
                                      '-w', '-c', f'delete from {schema}.{table};'],
                                     env=my_env)
@@ -233,7 +247,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                     i += 1
                                     # launch psql to insert data to current table. use my_env as env parameter.
                                     result = subprocess.run(
-                                        ['psql', '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                        [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
                                          '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
                                          '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
                                         env=my_env)
