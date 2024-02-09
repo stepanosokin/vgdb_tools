@@ -306,10 +306,12 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
                 message = f"LicenseBlockUpdater: Backup of rfgf.license_blocks_rfgf table FAILED - skipping database update.."
                 log_message(s, logf, bot_info, message)
                 backup_success = False
+                return False
         except:
             message = f"LicenseBlockUpdater: Backup of rfgf.license_blocks_rfgf table FAILED - skipping database update.."
             log_message(s, logf, bot_info, message)
             backup_success = False
+            return False
 
         # create a path to the geopackage
         sourcepath = os.path.join(current_directory, folder, gpkg)
@@ -320,9 +322,11 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
             if not os.path.exists(sourcepath):
                 message = f"LicenseBlockUpdater: Source package does not exist. Skipping update."
                 log_message(s, logf, bot_info, message)
+                return False
             elif not sourceds.GetLayer(layer):
                 message = f"LicenseBlockUpdater: Source layer does not exist. Skipping update."
                 log_message(s, logf, bot_info, message)
+                return False
             else:
                 try:
                     with psycopg2.connect(gdalpgcs[3:]) as pgconn:
@@ -371,9 +375,12 @@ def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', laye
                         else:
                             message = f"LicenseBlockUpdater: Update Rosgeolfond license blocks table on server FAILED"
                             log_message(s, logf, bot_info, message)
+                            return False
                     except:
                         message = f"LicenseBlockUpdater: Update Rosgeolfond license blocks table on server FAILED"
                         log_message(s, logf, bot_info, message)
+                        return False
+    return True
 
 
 

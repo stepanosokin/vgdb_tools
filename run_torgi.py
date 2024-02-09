@@ -1,5 +1,6 @@
 from vgdb_torgi_gov_ru import *
 from datetime import datetime, timedelta
+from synchro_evergis import *
 
 # read the postgres login credentials in dsn format from file
 with open('.pgdsn', encoding='utf-8') as dsnf:
@@ -22,3 +23,5 @@ with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
 
 refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023)
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
+
+synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', bot_info=log_bot_info)

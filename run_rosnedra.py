@@ -61,7 +61,7 @@ if lastdt_result[0]:
             # # load new blocks to the database
             if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
                 pass
-                # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+                synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
 
 lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
 if lastdt_result[0]:
