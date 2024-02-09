@@ -1,3 +1,4 @@
+import os, sys, subprocess
 import psycopg2
 from psycopg2.extras import *
 from osgeo import ogr, gdal
@@ -66,6 +67,43 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                                     print(f'table {schema}.{table} synchronization failed after f{str(i - 1)} tries')
                             else:
                                 print('process aborted - delete from dest operation failed')
+
+
+def synchro_table(schemas_tables, local_pgdsn_path='.pgdsn', ext_pgdsn_path='.ext_pgdsn',
+                  ssh_host='45.139.25.199', ssh_user='dockeruser',
+                  local_port_for_ext_pg=5433):
+
+    with open(ext_pgdsn_path, encoding='utf-8') as f:
+        ext_pgdsn = f.read()
+
+    with open(local_pgdsn_path, encoding='utf-8') as f:
+        local_pgdsn = f.read()
+
+    local_pgdsn_dict = dict([x.split('=') for x in local_pgdsn.split(' ')])
+    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+    with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
+        f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}{new_ext_pgdsn_dict['password']}")
+    with open('.local_pgpass', 'w', encoding='utf-8') as f:
+        f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}{local_pgdsn_dict['password']}")
+
+    with Connection(ssh_host, user=ssh_user).forward_local(local_port_for_ext_pg,
+                                                           remote_port=int(ext_pgdsn_dict['port'])):
+        my_env = os.environ.copy()
+        my_env["PGPASSFILE"] = local_pgdsn_path
+        # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
+        for (schema, tables) in list(schemas_tables):
+            # each 'tables' is a list. loop through it now.
+            for table in tables:
+                # launch pg_dump to dump the current table
+                subprocess.run(['pg_dump', '-h', '192.168.117.3', '-p', '5432', '-d', 'vgdb', '-U',
+                                's.osokin', '--inserts', '-t', f'{schema}.{table}', '--no-publications',
+                                '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
+                                f'D:/BACKUP/POSTGRES/for_evergis/vgdb_5432_{schema}_{table}.dump'],
+                               env=my_env)
+
+
 
 
 if __name__ == '__main__':
