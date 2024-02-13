@@ -1,10 +1,33 @@
 import os, sys, subprocess
 import psycopg2
 import requests
+import json
 from psycopg2.extras import *
 from osgeo import ogr, gdal
 from fabric import Connection
 from vgdb_general import *
+
+
+def login_to_evergis(name, passd):
+    s = requests.Session()
+    payload = {'username': name, 'password': passd, 'remember': 1,}
+    res = s.post('https://geomercury.ru/sp/account/login', json=payload)
+    # print(res)
+    return s
+
+
+def link_view(user, pwd, views, schema):
+    with login_to_evergis(user, pwd) as session:
+        url = f'https://geomercury.ru/sp/tables/map-table?type=View&dataProvider={schema}'
+        for view in views:
+            payload = {
+                "name": f"os.{view}",
+                "alias": f"{schema}__{view}",
+                "owner": "os"
+            }
+            r = session.post(url, json=payload)
+            print(r.content)
+
 
 
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
@@ -286,5 +309,11 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    synchro_layer([('culture', ['test2'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    synchro_table([('culture', ['test'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('culture', ['parcels_planning_pts'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_table([('dm', ['companies', 'contracts', 'parcels_to_contracts', 'parcel_contract_types'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+
+    login = 'os'
+    password = '*********'
+
+    link_view(login, password, ['parcels_planning_pts_tpgk_view'], 'culture')
