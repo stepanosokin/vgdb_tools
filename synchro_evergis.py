@@ -314,6 +314,6 @@ if __name__ == '__main__':
     # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
     login = 'os'
-    password = '*********'
+    password = '**********'
 
     link_view(login, password, ['parcels_planning_pts_tpgk_view'], 'culture')
