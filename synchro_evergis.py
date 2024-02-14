@@ -16,6 +16,27 @@ def login_to_evergis(name, passd):
     return s
 
 
+def link_layer(user, pwd, tables, schema):
+    with login_to_evergis(user, pwd) as session:
+        url = f'https://geomercury.ru/sp/tables/map-table?dataProvider={schema}'
+        for table in tables:
+            payload = {
+                "name": f"os.{table}",
+                "alias": f"{schema}__{table}",
+                "owner": "os"
+            }
+            r = session.post(url, json=payload)
+            print(r.content)
+
+
+def unlink_layer(user, pwd, tables):
+    with login_to_evergis(user, pwd) as session:
+        for table in tables:
+            url = f'https://geomercury.ru/sp/tables/map-table/os.{table}'
+            d = session.delete(url)
+            print(d.content)
+
+
 def link_view(user, pwd, views, schema):
     with login_to_evergis(user, pwd) as session:
         url = f'https://geomercury.ru/sp/tables/map-table?type=View&dataProvider={schema}'
@@ -27,7 +48,6 @@ def link_view(user, pwd, views, schema):
             }
             r = session.post(url, json=payload)
             print(r.content)
-
 
 
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
@@ -295,6 +315,152 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
         return True
 
 
+def synchro_schema(schemas, local_pgdsn_path, ext_pgdsn_path,
+                  ssh_host='45.139.25.199', ssh_user='dockeruser',
+                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis', recreate=False):
+
+    with open(ext_pgdsn_path, encoding='utf-8') as f:
+        ext_pgdsn = f.read()
+
+    with open(local_pgdsn_path, encoding='utf-8') as f:
+        local_pgdsn = f.read()
+
+    local_pgdsn_dict = dict([x.split('=') for x in local_pgdsn.split(' ')])
+    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+
+    # chmod 0600 ~/.pgpass
+    with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
+        f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+    os.chmod('.new_ext_pgpass', 0o600)
+
+    with open('.local_pgpass', 'w', encoding='utf-8') as f:
+        f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
+    os.chmod('.local_pgpass', 0o600)
+
+    current_directory = os.getcwd()
+    # create a pathname for the logfile
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    # now we open the logfile and start logging
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        log_message(s, logf, bot_info, 'Начинаю синхронизацию схем с Evergis...')
+
+        j = 1
+        ssh_conn = None
+        while not ssh_conn and j <= 10:
+            log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
+            try:
+                j += 1
+                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
+                                                                   remote_port=int(ext_pgdsn_dict['port']))
+            except:
+                log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+        if not ssh_conn:
+            log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
+            return False
+
+        with ssh_conn:
+            log_message(s, logf, bot_info, f'Подключение установлено')
+            my_env = os.environ.copy()
+            my_env["PGPASSFILE"] = '.local_pgpass'
+            # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
+            log_message(s, logf, bot_info, f'Начинаю копирование структуры исходных схем...')
+
+            from sys import platform
+            if platform == "linux" or platform == "linux2":
+                pg_dump = '/usr/lib/postgresql/15/bin/pg_dump'
+                psql = '/usr/lib/postgresql/15/bin/psql'
+            elif platform == "darwin":
+                # OS X
+                pg_dump = 'pg_dump'
+                psql = 'psql'
+            elif platform == "win32":
+                # Windows...
+                pg_dump = 'pg_dump'
+                psql = 'psql'
+
+            for schema in list(schemas):
+                status = -1
+                i = 1
+                # launch pg_dump to dump the current table
+                while status != 0 and i <= 10:
+                    try:
+                        log_message(s, logf, bot_info, f'Копирование структуры схемы {schema}, попытка {str(i)}...', to_telegram=False)
+                        i += 1
+                        result = subprocess.run([pg_dump, '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
+                                        '-d', local_pgdsn_dict['dbname'], '-U',
+                                        local_pgdsn_dict['user'], '--inserts', '--no-publications', '-n', schema,
+                                        '--quote-all-identifiers', '-v', '-s', '-w', '-F', 'p', '-f',
+                                        f'data/vgdb_5432_schema_{schema}.dump'],
+                                       env=my_env)
+                        status = result.returncode
+                    except:
+                        log_message(s, logf, bot_info, f'Ошибка копирования структуры схемы {schema} (попытка {str(i - 1)} из 10)')
+                if status != 0:
+                    log_message(s, logf, bot_info, f'Ошибка копирования структуры схемы {schema} после 10 попыток')
+            # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
+            my_env["PGPASSFILE"] = '.new_ext_pgpass'
+            log_message(s, logf, bot_info, f'Начинаю обновление структуры целевых схем...')
+            for schema in list(schemas):
+                # launch psql to delete rows from current table. use my_env as env parameter.
+                filepath = os.path.join(current_directory, 'data', f"vgdb_5432_schema_{schema}.dump")
+                if os.path.exists(filepath):
+                    status = 0
+                    if recreate:
+                        i = 1
+                        status = -1
+                        while status != 0 and i <= 10:
+                            try:
+                                log_message(s, logf, bot_info,
+                                            f'Удаление внешней схемы {schema}, попытка {str(i)}...',
+                                            to_telegram=False)
+                                i += 1
+                                result = subprocess.run(
+                                    [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                     '-w', '-c', f'drop schema {schema} CASCADE;'],
+                                    env=my_env)
+                                status = result.returncode
+                            except:
+                                log_message(s, logf, bot_info,
+                                            f'Ошибка удаления внешней схемы {schema} (попытка {str(i - 1)} из 10)')
+                    if status != 0:
+                        log_message(s, logf, bot_info,
+                                    f'Ошибка удаления внешней схемы {schema} после 10 попыток. Пропускаю запись данных в таблицу.')
+                    else:
+                        i = 1
+                        status = -1
+                        while status != 0 and i <= 10:
+                            try:
+                                log_message(s, logf, bot_info,
+                                            f'Обновление внешней схемы {schema}, попытка {str(i)}...',
+                                            to_telegram=False)
+                                i += 1
+
+                                result = subprocess.run(
+                                    [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                     '-w', '-f', f'data/vgdb_5432_schema_{schema}.dump'],
+                                    env=my_env)
+                                status = result.returncode
+                            except:
+                                log_message(s, logf, bot_info,
+                                            f'Ошибка обновления внешней схемы {schema} (попытка {str(i - 1)} из 10)')
+                        if status != 0:
+                            log_message(s, logf, bot_info,
+                                        f'Ошибка обновления внешней схемы {schema} после 10 попыток.')
+                        else:
+                            log_message(s, logf, bot_info, f'Схема {schema} синхронизирована')
+
+            for schema in list(schemas):
+                filepath = os.path.join(current_directory, 'data', f"vgdb_5432_schema_{schema}.dump")
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+
+        ssh_conn = None
+        log_message(s, logf, bot_info, f'Синхронизация схем с Evergis завершена')
+        return True
 
 
 if __name__ == '__main__':
@@ -309,11 +475,13 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
+    with open('.egdsn', 'r', encoding='utf-8') as f:
+        egdata = json.load(f)
+        pass
+
     # synchro_layer([('culture', ['parcels_planning_pts'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('dm', ['companies', 'contracts', 'parcels_to_contracts', 'parcel_contract_types'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_schema(['vmap0_russia'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
-    login = 'os'
-    password = '**********'
-
-    link_view(login, password, ['parcels_planning_pts_tpgk_view'], 'culture')
+    # link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'], 'culture')
