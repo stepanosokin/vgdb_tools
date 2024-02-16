@@ -63,12 +63,12 @@ if lastdt_result[0]:
                 pass
                 synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
 
-lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
-if lastdt_result[0]:
-    startdt = lastdt_result[1] + timedelta(days=1)
-    clear_folder('rosnedra_auc_results')
-    if download_auc_results(start=startdt, end=datetime.now(),
-                            search_string='Информация об итогах проведения аукциона на право пользования недрами',
-                            folder='rosnedra_auc_results', bot_info=bot_info):
-        update_postgres_auc_results_table(pgconn, bot_info=bot_info)
+#lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
+#if lastdt_result[0]:
+#    startdt = lastdt_result[1] + timedelta(days=1)
+#    clear_folder('rosnedra_auc_results')
+#    if download_auc_results(start=startdt, end=datetime.now(),
+#                            search_string='Информация об итогах проведения аукциона на право пользования недрами',
+#                            folder='rosnedra_auc_results', bot_info=bot_info):
+#        update_postgres_auc_results_table(pgconn, bot_info=bot_info)
 pgconn.close()
