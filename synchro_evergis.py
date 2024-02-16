@@ -479,9 +479,11 @@ if __name__ == '__main__':
         egdata = json.load(f)
         pass
 
-    # synchro_layer([('culture', ['parcels_planning_pts'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_table([('dm', ['companies', 'contracts', 'parcels_to_contracts', 'parcel_contract_types'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_schema(['vmap0_russia'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
-    # link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'], 'culture')
+    link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'], 'culture')
+
+    # unlink_layer(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'])
