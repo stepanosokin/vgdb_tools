@@ -23,6 +23,7 @@ from psycopg2.extras import DictCursor
 from vgdb_torgi_gov_ru import *
 import vgdb_license_blocks_rfgf
 from synchro_evergis import *
+from vgdb_auctions_rosnedra import *
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -227,6 +228,48 @@ async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text('You do not have permission')
 
 
+async def rosnedra(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id == 165098508:
+        with open('.pgdsn', encoding='utf-8') as f:
+            local_pgdsn = f.read()
+        with open('.ext_pgdsn', encoding='utf-8') as f:
+            ext_pgdsn = f.read()
+        with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+            jdata = json.load(f)
+            report_bot_info = (jdata['token'], jdata['chatid'])
+        with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+            jdata = json.load(f)
+            bot_info = (jdata['token'], jdata['chatid'])
+        with open('.pggdal', encoding='utf-8') as gdalf:
+            gdalpgcs = gdalf.read().replace('\n', '')
+        with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
+            lb_general_webhook = f.read().replace('\n', '')
+        with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+            blocks_nr_ne_webhook = f.read().replace('\n', '')
+        with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
+            blocks_np_webhook = f.read().replace('\n', '')
+
+        pgconn = psycopg2.connect(local_pgdsn)
+        lastdt_result = get_latest_order_date_from_synology(pgconn)
+        if lastdt_result[0]:
+            startdt = lastdt_result[1] + timedelta(days=1)
+            clear_folder('rosnedra_auc')
+            if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
+                               folder='rosnedra_auc', bot_info=bot_info):
+                if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                            bot_info=bot_info, report_bot_info=report_bot_info,
+                                            blocks_np_webhook=blocks_np_webhook,
+                                            blocks_nr_ne_webhook=blocks_nr_ne_webhook,
+                                            pgconn=pgconn):
+                    if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
+                        synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn,
+                                      bot_info=bot_info)
+            pgconn.close()
+        await update.message.reply_text('команда /lic выполнена')
+    else:
+        await update.message.reply_text('You do not have permission')
+
+
 async def get(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.args:
         if context.args[0] == 'license':
@@ -280,6 +323,7 @@ def main() -> None:
     application.add_handler(CommandHandler("analyze", analyze))
     application.add_handler(CommandHandler("reindex", reindex))
     application.add_handler(CommandHandler("torgi", torgi))
+    application.add_handler(CommandHandler("rosnedra", rosnedra))
     application.add_handler(CommandHandler("lic", lic))
     application.add_handler(CommandHandler("get", get))
     application.add_handler(CommandHandler("jerks", jerks))
