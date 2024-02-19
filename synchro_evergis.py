@@ -484,6 +484,6 @@ if __name__ == '__main__':
     # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_schema(['vmap0_russia'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
-    link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'], 'culture')
+    link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_yamal_view'], 'culture')
 
     # unlink_layer(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'])

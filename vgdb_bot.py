@@ -22,6 +22,7 @@ import logging, psycopg2, json, io
 from psycopg2.extras import DictCursor
 from vgdb_torgi_gov_ru import *
 import vgdb_license_blocks_rfgf
+from synchro_evergis import *
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
@@ -203,6 +204,10 @@ async def torgi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id == 165098508:
+        with open('.pgdsn', encoding='utf-8') as f:
+            local_pgdsn = f.read()
+        with open('.ext_pgdsn', encoding='utf-8') as f:
+            ext_pgdsn = f.read()
         with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
             jdata = json.load(f)
             bot_info = (jdata['token'], jdata['chatid'])
@@ -215,7 +220,8 @@ async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             # parse the blocks from downloaded json
             if vgdb_license_blocks_rfgf.parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
                 # update license blocks on server
-                vgdb_license_blocks_rfgf.update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook)
+                if vgdb_license_blocks_rfgf.update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+                    synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
         await update.message.reply_text('команда /lic выполнена')
     else:
         await update.message.reply_text('You do not have permission')
