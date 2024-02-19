@@ -265,7 +265,7 @@ async def rosnedra(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn,
                                       bot_info=bot_info)
             pgconn.close()
-        await update.message.reply_text('команда /lic выполнена')
+        await update.message.reply_text('команда /rosnedra выполнена')
     else:
         await update.message.reply_text('You do not have permission')
 
