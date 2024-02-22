@@ -2,6 +2,7 @@ import requests
 import json
 from bs4 import BeautifulSoup
 
+# samples from: https://github.com/RapidScada/scada-community/blob/master/Samples/WebApiClientSample/WebApiClientSample/Program.cs
 
 def load_from_scada(objects_fields, scada_login):
 
@@ -18,7 +19,11 @@ def load_from_scada(objects_fields, scada_login):
                 except Exception as err:
                     print(err)
             if code == 200:
-                data = response.json()
+                data = response.json()  # пример текущих данных, полученных по первой в списке скважине
+                data_fields = ['Давление трубное', 'Температура газа', 'Давление затрубное',
+                               'Давление газа на входе сепаратора (после штуцера)',
+                               'Температура газа на входе сепаратора (после штуцера)',
+                               'Давление в дренажной линии сепаратора', 'Уровень в сепараторе', 'Test1']
                 True
 
 
