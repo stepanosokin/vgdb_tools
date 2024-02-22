@@ -479,11 +479,13 @@ if __name__ == '__main__':
         egdata = json.load(f)
         pass
 
-    # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+
+    # synchro_schema(['culture', 'dm'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('culture', ['wells_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_table([('dm', ['parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_schema(['vmap0_russia'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
-    link_view(egdata["user"], egdata["password"], ['parcels_planning_pts_yamal_view'], 'culture')
 
-    # unlink_layer(egdata["user"], egdata["password"], ['parcels_planning_pts_tpgk_view'])
+    # link_view(egdata["user"], egdata["password"], ['wells_planning_gin_view'], 'culture')
+
+    # unlink_layer(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
