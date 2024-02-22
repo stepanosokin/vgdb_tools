@@ -24,7 +24,6 @@ def load_from_scada(objects_fields, scada_login):
                                'Давление газа на входе сепаратора (после штуцера)',
                                'Температура газа на входе сепаратора (после штуцера)',
                                'Давление в дренажной линии сепаратора', 'Уровень в сепараторе', 'Test1']
-                True
 
 
 def login_to_scada(s, host, user, password, port=80):
