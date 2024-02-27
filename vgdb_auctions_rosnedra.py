@@ -11,6 +11,7 @@ import psycopg2
 from psycopg2.extras import *
 import json
 from vgdb_general import send_to_telegram, send_to_teams
+from synchro_evergis import *
 # from timezonefinder import TimezoneFinder
 # from tzdata import *
 
@@ -1044,15 +1045,16 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
         )
         try:
             i = 1
-            while i < 10:
+            translate = False
+            while not translate and i < 10:
                 # try to do the conversion
-                if gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions):
+                translate = gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
+                if translate:
                     success = True
                     # if OK, then send the log message
                     message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated successfully."
                     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                     send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                    break
                 else:
                     i += 1
                     message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated FAILED, retrying (attempt {i} of 10)..."
@@ -1125,29 +1127,40 @@ def clear_folder(folder):
             shutil.rmtree(os.path.join(root, d))
 
 
-# with open('.pgdsn', encoding='utf-8') as dsnf:
-#     dsn = dsnf.read().replace('\n', '')
-#
-# with psycopg2.connect(dsn) as pgconn:
-#     startdt = get_latest_order_date_from_synology(pgconn) + timedelta(days=1)
-#
-# with open('.pggdal', encoding='utf-8') as gdalf:
-#     gdalpgcs = gdalf.read().replace('\n', '')
-#
-# # This is telegram credentials to send message to stepanosokin
-# with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
-#     jdata = json.load(f)
-#     bot_info = (jdata['token'], jdata['chatid'])
-#
-# # This is telegram credentials to send message to the 'VG Database Techinfo' group
-# # with open('bot_info_vgdb_bot_toGroup.json', 'r', encoding='utf-8') as f:
-# #     jdata = json.load(f)
-# #     bot_info = (jdata['token'], jdata['chatid'])
-# #
-# clear_folder('rosnedra_auc')
-# #
-# download_orders(start=datetime(2023, 5, 13), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info)
-# #
-# parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', bot_info=bot_info)
-#
-# update_synology_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+if __name__ == '__main__':
+    with open('.pgdsn', encoding='utf-8') as dsnf:
+        dsn = dsnf.read().replace('\n', '')
+    with open('.ext_pgdsn', encoding='utf-8') as edsnf:
+        ext_dsn = edsnf.read().replace('\n', '')
+    with open('.pggdal', encoding='utf-8') as gdalf:
+        gdalpgcs = gdalf.read().replace('\n', '')
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        bot_info = (jdata['token'], jdata['chatid'])
+    with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        report_bot_info = (jdata['token'], jdata['chatid'])
+    with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+        blocks_nr_ne_webhook = f.read().replace('\n', '')
+    with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
+        blocks_np_webhook = f.read().replace('\n', '')
+    pgconn = psycopg2.connect(dsn)
+    lastdt_result = get_latest_order_date_from_synology(pgconn)
+    if lastdt_result[0]:
+        print('lastdt_result success')
+        startdt = lastdt_result[1] + timedelta(days=1)
+        clear_folder('rosnedra_auc')
+        if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
+                           folder='rosnedra_auc', bot_info=bot_info):
+            print('download_orders success')
+            if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                        bot_info=bot_info, report_bot_info=report_bot_info,
+                                        blocks_np_webhook=blocks_np_webhook,
+                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook,
+                                        pgconn=pgconn):
+                success = False
+                success = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+                print('update success')
+                if success:
+                    pass
+                    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)

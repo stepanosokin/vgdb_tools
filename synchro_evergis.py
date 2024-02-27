@@ -80,11 +80,16 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
         #                                                        remote_port=int(ext_pgdsn_dict['port'])):
         with ssh_conn:
             log_message(s, logf, bot_info, 'Подключение установлено')
-            try:
-                log_message(s, logf, bot_info, 'Установка подключения к локальному postgres...', to_telegram=False)
-                local_conn = ogr.Open(f"PG:{local_pgdsn}")
-            except:
-                log_message(s, logf, bot_info, 'Ошибка подключения к локальному postgres')
+            local_conn = None
+            i = 1
+            while not local_conn and i <= 10:
+                i += 1
+                try:
+                    log_message(s, logf, bot_info, f'Установка подключения к локальному postgres, попытка {str(i - 1)}...', to_telegram=True)
+                    local_conn = ogr.Open(f"PG:{local_pgdsn}")
+                except:
+                    log_message(s, logf, bot_info, 'Ошибка подключения к локальному postgres')
+            if not local_conn:
                 return False
             for (schema, tables) in list(schemas_tables):
                 for table in tables:
@@ -481,7 +486,8 @@ if __name__ == '__main__':
 
 
     # synchro_schema(['culture', 'dm'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_layer([('culture', ['wells_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
