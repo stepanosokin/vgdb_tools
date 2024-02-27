@@ -37,15 +37,13 @@ with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
     blocks_np_webhook = f.read().replace('\n', '')
 
 # get the latest rosnedra order announce date from postgres
-pgconn = psycopg2.connect(dsn)
+# pgconn = psycopg2.connect(dsn)
 # with psycopg2.connect(dsn) as pgconn:
-lastdt_result = get_latest_order_date_from_synology(pgconn)
+lastdt_result = get_latest_order_date_from_synology(dsn)
 if lastdt_result[0]:
     startdt = lastdt_result[1] + timedelta(days=1)
     # clear any previous results from folder
-
     clear_folder('rosnedra_auc')
-
     # # download newly announced Rosnedra orders since last loaded to database
     if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info):
     # if True:
@@ -54,13 +52,9 @@ if lastdt_result[0]:
                                     bot_info=bot_info, report_bot_info=report_bot_info,
                                     blocks_np_webhook=blocks_np_webhook,
                                     blocks_nr_ne_webhook=blocks_nr_ne_webhook,
-                                    pgconn=pgconn):
-        # if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-        #                             bot_info=bot_info, report_bot_info=bot_info,
-        #                             pgconn=pgconn):
+                                    dsn=dsn):
             # # load new blocks to the database
             if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
-                pass
                 synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
 
 #lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
@@ -71,4 +65,3 @@ if lastdt_result[0]:
 #                            search_string='Информация об итогах проведения аукциона на право пользования недрами',
 #                            folder='rosnedra_auc_results', bot_info=bot_info):
 #        update_postgres_auc_results_table(pgconn, bot_info=bot_info)
-pgconn.close()

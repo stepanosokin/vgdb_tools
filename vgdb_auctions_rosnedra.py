@@ -546,7 +546,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                              bot_info=('token', 'id'), report_bot_info=('token', 'id'),
-                             blocks_np_webhook='', blocks_nr_ne_webhook='', pgconn=None):
+                             blocks_np_webhook='', blocks_nr_ne_webhook='', dsn=None, pgconn=None):
     '''
     This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
@@ -771,23 +771,61 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             blocks_parsed += 1
 
                             #####################################################################
-                            if pgconn:
-                                cur_block_geom_wkb = cur_block_geom.ExportToWkb()
-                                sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
-                                regions = ''
-                                with pgconn:
+                            # if pgconn:
+                            #     cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                            #     sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                            #     regions = ''
+                            #     with pgconn:
+                            #         try:
+                            #             with pgconn.cursor() as cur:
+                            #                 cur.execute(sql, [cur_block_geom_wkb])
+                            #                 regions = ', '.join([x[0] for x in cur.fetchall()])
+                            #             if regions:
+                            #                 attrs_dict['regions'] = regions
+                            #                 feature.SetField('regions', regions)
+                            #         except:
+                            #             message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                            #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            #             send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                            #                              logdateformat=logdateformat)
+                            if dsn:
+                                i = 1
+                                pgconn = None
+                                while not pgconn and i <= 10:
+                                    i += 1
+                                    message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
+                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                     logdateformat=logdateformat)
                                     try:
-                                        with pgconn.cursor() as cur:
-                                            cur.execute(sql, [cur_block_geom_wkb])
-                                            regions = ', '.join([x[0] for x in cur.fetchall()])
-                                        if regions:
-                                            attrs_dict['regions'] = regions
-                                            feature.SetField('regions', regions)
-                                    except:
-                                        message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                        pgconn = psycopg2.connect(dsn)
+                                        message = f"Подключение к БД для парсинга участка установлено"
                                         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                                         send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                                          logdateformat=logdateformat)
+                                    except:
+                                        message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                         logdateformat=logdateformat)
+                                if pgconn:
+                                    cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                                    sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                                    regions = ''
+                                    with pgconn:
+                                        try:
+                                            with pgconn.cursor() as cur:
+                                                cur.execute(sql, [cur_block_geom_wkb])
+                                                regions = ', '.join([x[0] for x in cur.fetchall()])
+                                            if regions:
+                                                attrs_dict['regions'] = regions
+                                                feature.SetField('regions', regions)
+                                        except:
+                                            message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                             logdateformat=logdateformat)
+                                    pgconn.close()
 
                             #####################################################################
 
@@ -862,22 +900,60 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     feature.SetGeometry(cur_block_geom)
 
                     ##############################################################
-                    if pgconn:
-                        cur_block_geom_wkb = cur_block_geom.ExportToWkb()
-                        sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
-                        with pgconn:
+                    # if pgconn:
+                    #     cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                    #     sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                    #     with pgconn:
+                    #         try:
+                    #             with pgconn.cursor() as cur:
+                    #                 cur.execute(sql, [cur_block_geom_wkb])
+                    #                 regions = ', '.join([x[0] for x in cur.fetchall()])
+                    #             if regions:
+                    #                 attrs_dict['regions'] = regions
+                    #                 feature.SetField('regions', regions)
+                    #         except:
+                    #             message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                    #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                    #             send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                    #                              logdateformat=logdateformat)
+                    if dsn:
+                        i = 1
+                        pgconn = None
+                        while not pgconn and i <= 10:
+                            i += 1
+                            message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                             logdateformat=logdateformat)
                             try:
-                                with pgconn.cursor() as cur:
-                                    cur.execute(sql, [cur_block_geom_wkb])
-                                    regions = ', '.join([x[0] for x in cur.fetchall()])
-                                if regions:
-                                    attrs_dict['regions'] = regions
-                                    feature.SetField('regions', regions)
-                            except:
-                                message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                pgconn = psycopg2.connect(dsn)
+                                message = f"Подключение к БД для парсинга участка установлено"
                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                                 send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                                  logdateformat=logdateformat)
+                            except:
+                                message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
+                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                 logdateformat=logdateformat)
+                        if pgconn:
+                            cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                            sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                            regions = ''
+                            with pgconn:
+                                try:
+                                    with pgconn.cursor() as cur:
+                                        cur.execute(sql, [cur_block_geom_wkb])
+                                        regions = ', '.join([x[0] for x in cur.fetchall()])
+                                    if regions:
+                                        attrs_dict['regions'] = regions
+                                        feature.SetField('regions', regions)
+                                except:
+                                    message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                     logdateformat=logdateformat)
+                            pgconn.close()
                     ##############################################################
 
                     # add an item to the list of new blocks for telegram report
@@ -905,6 +981,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # and add a new feature to the layer.
                     out_layer.CreateFeature(feature)
                     # and set function result to success if we've added at least 1 feature
+                    success = True
 
         # If new blocks contain any HCS blocks, send report to telegram            success = True
         new_hcs_blocks_list = [x for x in new_blocks_list if any(['нефт' in str(x['resource_type']).lower(), 'газ' in str(x['resource_type']).lower(), 'конденсат' in str(x['resource_type']).lower()])]
@@ -957,22 +1034,30 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         return success
 
 
-def get_latest_order_date_from_synology(pgconn):
+def get_latest_order_date_from_synology(dsn):
     '''
     This function returns the latest Rosnedra order announce date recorded to the \n
     rosnedra.license_blocks_rosnedra_orders table inside the specified database.
     :param pgconn: psycopg2 connection object to the postgres database
     :return: tuple of 2 elements: (bool_success, datetime_object)
     '''
-    try:
-        with pgconn:
+    i = 1
+    pgconn = None
+    result = False
+    while not pgconn and i <= 10:
+        i += 1
+        try:
+            pgconn = psycopg2.connect(dsn)
             with pgconn.cursor() as cur:
                 cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
                 ldate = cur.fetchall()[0][0]
                 ldatetime = datetime(ldate.year, ldate.month, ldate.day)
-                return (True, ldatetime)
-    except:
-        return (False, None)
+                result = True
+        except:
+            print(f'Ошибка получения даты последнего участка из перечней Роснедра (попытка {str(i - 1)})')
+    if pgconn:
+        pgconn.close()
+    return (result, ldatetime)
 
 
 def get_latest_auc_result_date_from_synology(pgconn):
@@ -1047,6 +1132,7 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
             i = 1
             translate = False
             while not translate and i < 10:
+                i += 1
                 # try to do the conversion
                 translate = gdal.VectorTranslate(gdalpgcs, sourceds, options=myoptions)
                 if translate:
@@ -1056,8 +1142,7 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
                     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                     send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
                 else:
-                    i += 1
-                    message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated FAILED, retrying (attempt {i} of 10)..."
+                    message = f"AuctionBlocksUpdater: Synology table rosnedra.license_blocks_rosnedra_orders updated FAILED, retrying (attempt {str(i - 1)} of 10)..."
                     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                     send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
             if i > 10:
@@ -1144,23 +1229,19 @@ if __name__ == '__main__':
         blocks_nr_ne_webhook = f.read().replace('\n', '')
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
-    pgconn = psycopg2.connect(dsn)
-    lastdt_result = get_latest_order_date_from_synology(pgconn)
+    # pgconn = psycopg2.connect(dsn)
+    lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
-        print('lastdt_result success')
         startdt = lastdt_result[1] + timedelta(days=1)
         clear_folder('rosnedra_auc')
         if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
                            folder='rosnedra_auc', bot_info=bot_info):
-            print('download_orders success')
             if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                         bot_info=bot_info, report_bot_info=report_bot_info,
                                         blocks_np_webhook=blocks_np_webhook,
-                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook,
-                                        pgconn=pgconn):
-                success = False
-                success = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-                print('update success')
-                if success:
-                    pass
-                    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook, dsn=dsn):
+
+
+                if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
+                    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+    # pgconn.close()
