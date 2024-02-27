@@ -487,7 +487,7 @@ if __name__ == '__main__':
 
     # synchro_schema(['culture', 'dm'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    synchro_layer([('culture', ['wells_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
