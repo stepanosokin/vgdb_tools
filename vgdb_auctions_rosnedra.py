@@ -1240,8 +1240,6 @@ if __name__ == '__main__':
                                         bot_info=bot_info, report_bot_info=report_bot_info,
                                         blocks_np_webhook=blocks_np_webhook,
                                         blocks_nr_ne_webhook=blocks_nr_ne_webhook, dsn=dsn):
-
-
                 if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
                     synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     # pgconn.close()
