@@ -10,7 +10,7 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
     bot_info = (jdata['token'], jdata['chatid'])
 
-data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login)
+data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login, bot_info=bot_info)
 if data:
     channels_dict = {
         "101": "Давление трубное",
@@ -22,5 +22,5 @@ if data:
         "107": "Уровень в сепараторе",
         "108": "Test1"
     }
-    if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict):
+    if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
         synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
