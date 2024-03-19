@@ -107,7 +107,7 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         pgdsn = f.read()
 
-    data = load_from_scada([('Интинская-14', 'Скважина', ['101-108'])], scada_login)
+    data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login)
     if data:
         channels_dict = {
             "101": "Давление трубное",

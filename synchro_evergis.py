@@ -487,11 +487,11 @@ if __name__ == '__main__':
 
     # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_table([('dm', ['well_attributes', 'data_quality'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
 
-    # link_view(egdata["user"], egdata["password"], ['seismic_planning_3d_gin_view'], 'culture')
+    link_view(egdata["user"], egdata["password"], ['well_attributes_view'], 'dm')
 
     # unlink_layer(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
