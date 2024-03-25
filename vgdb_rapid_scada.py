@@ -123,7 +123,7 @@ if __name__ == '__main__':
         bot_info = (jdata['token'], jdata['chatid'])
 
     # data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login, bot_info=bot_info)
-    data = load_from_scada([('Интинская-18', 'ДЭЛ-150', ['101-108'])], scada_login, bot_info=bot_info)
+    data = load_from_scada([('Интинская-18', 'ДЭЛ-150', ['110-123'])], scada_login, bot_info=bot_info)
     if data:
         # channels_dict = {
         #     "101": "Давление трубное",
@@ -153,4 +153,3 @@ if __name__ == '__main__':
         }
         if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
             synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-
