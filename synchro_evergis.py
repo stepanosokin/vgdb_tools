@@ -492,6 +492,6 @@ if __name__ == '__main__':
     # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
 
-    link_view(egdata["user"], egdata["password"], ['well_attributes_view'], 'dm')
+    # link_view(egdata["user"], egdata["password"], ['wells_telemetry_view'], 'culture')
 
     # unlink_layer(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
