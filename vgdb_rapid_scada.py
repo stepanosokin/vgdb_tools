@@ -8,12 +8,13 @@ from synchro_evergis import *
 
 # samples from: https://github.com/RapidScada/scada-community/blob/master/Samples/WebApiClientSample/WebApiClientSample/Program.cs
 
-def load_from_scada(objects_fields, scada_login, folder='scada', bot_info=('token', 'id')):
+def load_from_scada(objects_fields, scada_login, folder='scada', bot_info=('token', 'id'), log=False):
     result = []
     current_directory = os.getcwd()
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
-        log_message(s, logf, bot_info, f'vgdb_scada: Начинаю обновление телеметрии по объектам: {", ".join([x[0] for x in objects_fields])}')
+        if log:
+            log_message(s, logf, bot_info, f'vgdb_scada: Начинаю обновление телеметрии по объектам: {", ".join([x[0] for x in objects_fields])}')
         if login_to_scada(s, scada_login['host'], scada_login['user'], scada_login['password'], logf, bot_info=bot_info):
             for object_fields in objects_fields:
                 url = f"https://{scada_login['host']}/Api/Main/GetCurData?cnlNums={','.join(object_fields[2])}"
@@ -27,7 +28,8 @@ def load_from_scada(objects_fields, scada_login, folder='scada', bot_info=('toke
                     except Exception as err:
                         print(err)
                 if code == 200:
-                    log_message(s, logf, bot_info, f'vgdb_scada: Получены данные по объекту {object_fields[0]}')
+                    if log:
+                        log_message(s, logf, bot_info, f'vgdb_scada: Получены данные по объекту {object_fields[0]}')
                     data = response.json()
                     result.append((object_fields[0], object_fields[1], data['data']))
                 else:
@@ -39,7 +41,7 @@ def load_from_scada(objects_fields, scada_login, folder='scada', bot_info=('toke
         return None
 
 
-def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'id')):
+def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'id'), log=False):
     result = None
     i = 1
     code = 0
@@ -65,20 +67,24 @@ def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'i
             except Exception as err:
                 print(err, f'login request {str(i - 1)} failed')
         if code in [200, 302]:
-            log_message(s, logf, bot_info, 'vgdb_scada: Подключение к SCADA установлено')
+            if log:
+                log_message(s, logf, bot_info, 'vgdb_scada: Подключение к SCADA установлено')
             return True
         else:
-            log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к SCADA')
+            if log:
+                log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к SCADA')
             return False
-    log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к SCADA')
+    if log:
+        log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к SCADA')
     return False
 
 
-def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=('token', 'id')):
+def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=('token', 'id'), log=False):
     current_directory = os.getcwd()
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
-        log_message(s, logf, bot_info, 'vgdb_scada: Начинаю загрузку данных SCADA в Postgres')
+        if log:
+            log_message(s, logf, bot_info, 'vgdb_scada: Начинаю загрузку данных SCADA в Postgres')
         i = 1
         pgconn = None
         while not pgconn and i <= 10:
@@ -101,13 +107,16 @@ def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=(
                         message = cur.statusmessage
             pgconn.close()
             if i > 10:
-                log_message(s, logf, bot_info, 'vgdb_scada: Ошибка отправки данных в Postgres')
+                if log:
+                    log_message(s, logf, bot_info, 'vgdb_scada: Ошибка отправки данных в Postgres')
                 return False
             else:
-                log_message(s, logf, bot_info, 'vgdb_scada: Данные успешно загружены в Postgres')
+                if log:
+                    log_message(s, logf, bot_info, 'vgdb_scada: Данные успешно загружены в Postgres')
                 return True
         else:
-            log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к Postgres')
+            if log:
+                log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к Postgres')
             return False
 
 

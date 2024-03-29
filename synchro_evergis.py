@@ -171,7 +171,7 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
 
 def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                   ssh_host='45.139.25.199', ssh_user='dockeruser',
-                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis'):
+                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis', log=True):
 
     with open(ext_pgdsn_path, encoding='utf-8') as f:
         ext_pgdsn = f.read()
@@ -198,28 +198,34 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     # now we open the logfile and start logging
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
-        log_message(s, logf, bot_info, 'Начинаю синхронизацию таблиц с Evergis...')
+        if log:
+            log_message(s, logf, bot_info, 'Начинаю синхронизацию таблиц с Evergis...')
 
         j = 1
         ssh_conn = None
         while not ssh_conn and j <= 10:
-            log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
+            if log:
+                log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
                 ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
             except:
-                log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+                if log:
+                    log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
         if not ssh_conn:
-            log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
+            if log:
+                log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
             return False
 
         with ssh_conn:
-            log_message(s, logf, bot_info, f'Подключение установлено')
+            if log:
+                log_message(s, logf, bot_info, f'Подключение установлено')
             my_env = os.environ.copy()
             my_env["PGPASSFILE"] = '.local_pgpass'
             # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
-            log_message(s, logf, bot_info, f'Начинаю копирование данных из исходных таблиц...')
+            if log:
+                log_message(s, logf, bot_info, f'Начинаю копирование данных из исходных таблиц...')
 
             from sys import platform
             if platform == "linux" or platform == "linux2":
@@ -242,7 +248,8 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                     # launch pg_dump to dump the current table
                     while status != 0 and i <= 10:
                         try:
-                            log_message(s, logf, bot_info, f'Копирование данных из таблицы {schema}.{table}, попытка {str(i)}...', to_telegram=False)
+                            if log:
+                                log_message(s, logf, bot_info, f'Копирование данных из таблицы {schema}.{table}, попытка {str(i)}...', to_telegram=False)
                             i += 1
                             result = subprocess.run([pg_dump, '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
                                             '-d', local_pgdsn_dict['dbname'], '-U',
@@ -252,12 +259,15 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                            env=my_env)
                             status = result.returncode
                         except:
-                            log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
+                            if log:
+                                log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
                     if status != 0:
-                        log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} после 10 попыток')
+                        if log:
+                            log_message(s, logf, bot_info, f'Ошибка копирования данных из таблицы {schema}.{table} после 10 попыток')
             # loop through the specified schemas/tables tuples. list() used to allow multiple loops through schemas_tables.
             my_env["PGPASSFILE"] = '.new_ext_pgpass'
-            log_message(s, logf, bot_info, f'Начинаю загрузку данных в целевые таблицы...')
+            if log:
+                log_message(s, logf, bot_info, f'Начинаю загрузку данных в целевые таблицы...')
             for (schema, tables) in list(schemas_tables):
                 # each 'tables' is a list. loop through it now.
                 for table in tables:
@@ -268,7 +278,8 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                         status = -1
                         while status != 0 and i <= 10:
                             try:
-                                log_message(s, logf, bot_info,
+                                if log:
+                                    log_message(s, logf, bot_info,
                                             f'Удаление данных из внешней таблицы {schema}.{table}, попытка {str(i)}...',
                                             to_telegram=False)
                                 i += 1
@@ -279,17 +290,20 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                     env=my_env)
                                 status = result.returncode
                             except:
-                                log_message(s, logf, bot_info,
+                                if log:
+                                    log_message(s, logf, bot_info,
                                             f'Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
                         if status != 0:
-                            log_message(s, logf, bot_info,
+                            if log:
+                                log_message(s, logf, bot_info,
                                         f'Ошибка удаления данных из внешней таблицы {schema}.{table} после 10 попыток. Пропускаю запись данных в таблицу.')
                         else:
                             i = 1
                             status = -1
                             while status != 0 and i <= 10:
                                 try:
-                                    log_message(s, logf, bot_info,
+                                    if log:
+                                        log_message(s, logf, bot_info,
                                                 f'Запись данных во внешнюю таблицу {schema}.{table}, попытка {str(i)}...',
                                                 to_telegram=False)
                                     i += 1
@@ -301,13 +315,16 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                         env=my_env)
                                     status = result.returncode
                                 except:
-                                    log_message(s, logf, bot_info,
+                                    if log:
+                                        log_message(s, logf, bot_info,
                                                 f'Ошибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
                             if status != 0:
-                                log_message(s, logf, bot_info,
+                                if log:
+                                    log_message(s, logf, bot_info,
                                             f'Ошибка записи данных во внешнюю таблицу {schema}.{table} после 10 попыток.')
                             else:
-                                log_message(s, logf, bot_info, f'Таблица {schema}.{table} синхронизирована')
+                                if log:
+                                    log_message(s, logf, bot_info, f'Таблица {schema}.{table} синхронизирована')
 
             for (schema, tables) in list(schemas_tables):
                 for table in tables:
@@ -316,7 +333,8 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                         os.remove(filepath)
 
         ssh_conn = None
-        log_message(s, logf, bot_info, f'Синхронизация таблиц с Evergis завершена')
+        if log:
+            log_message(s, logf, bot_info, f'Синхронизация таблиц с Evergis завершена')
         return True
 
 
@@ -487,10 +505,12 @@ if __name__ == '__main__':
 
     # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('culture', ['bathymetry_contours'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-
-    # link_view(egdata["user"], egdata["password"], ['wells_telemetry_view'], 'culture')
-
+    #
+    # link_view(egdata["user"], egdata["password"], ['del_telemetry_view'], 'culture')
+    #
     # unlink_layer(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
+    #
+    # link_layer(egdata["user"], egdata["password"], ['bathymetry_contours'], 'culture')
