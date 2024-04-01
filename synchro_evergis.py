@@ -503,7 +503,7 @@ if __name__ == '__main__':
         pass
 
 
-    # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_schema(['rosnedra'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_layer([('culture', ['bathymetry_contours'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)

@@ -5,6 +5,7 @@ import psycopg2
 from datetime import datetime
 from vgdb_general import *
 from synchro_evergis import *
+import time
 
 # samples from: https://github.com/RapidScada/scada-community/blob/master/Samples/WebApiClientSample/WebApiClientSample/Program.cs
 
@@ -25,6 +26,7 @@ def load_from_scada(objects_fields, scada_login, folder='scada', bot_info=('toke
                         i += 1
                         response = s.get(url, verify=False)
                         code = response.status_code
+                        time.sleep(10)
                     except Exception as err:
                         print(err)
                 if code == 200:
