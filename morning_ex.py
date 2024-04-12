@@ -11,6 +11,6 @@ with open('jerks.log', 'w', encoding='utf-8') as f, requests.Session() as s:
     if secs > 240:
         secs = 240
     message = f'Пора на зарядку!\n\n' \
-              f'https://open.spotify.com/track/0jpk88zk40MjQ63ljrq7V2?si=cePmfWfpTcuqDM4G-XIvKA\n\n' \
+              f'https://www.youtube.com/watch?v=lGMSpgrv6Jw\n\n' \
               f'Планка {str(secs // 60)}:{str(secs % 60)}'
     send_to_telegram(s, f, bot_info=bot_info, message=message, logdateformat='%Y-%m-%d %H:%M:%S')

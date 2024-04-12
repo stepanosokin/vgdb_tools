@@ -31,8 +31,8 @@ def get_nearest(points, keywords, token):
             for place in data['places']:
                 # if ('газоперерабатывающий' in place['title'].lower() or 'гпз' in place['title'].lower()) and \
                 #         'polygon' in place.keys():
-                if any(x in place['title'].lower() for x in keywords) and 'polygon' in place.keys():
-                # if 'polygon' in place.keys():
+                # if any(x in place['title'].lower() for x in keywords) and 'polygon' in place.keys():
+                if 'polygon' in place.keys():
                     feature = {
                         "type": "Feature",
                         "geometry": {
@@ -89,19 +89,22 @@ if __name__ == '__main__':
     with open('wikimapia_token', encoding='utf-8') as f:
         token = f.read()
 
-    keywords = ['гпз', 'укпг', 'упн', 'псн', 'упсв', 'гтэс', 'бкнс',
-                'газоперерабатывающ', 'подготовки газа', 'подготовки нефти',
-                'сдачи нефти', 'сброса воды', 'газотурбин', 'насосная']
+    # keywords = ['гпз', 'укпг', 'упн', 'псн', 'упсв', 'гтэс', 'бкнс',
+    #             'газоперерабатывающ', 'подготовки газа', 'подготовки нефти',
+    #             'сдачи нефти', 'сброса воды', 'газотурбин', 'насосная']
 
-    # keywords = ['кувандык']
+    keywords = ['Оренбургский']
 
-    with open('sibur_gpz.geojson', encoding='utf-8') as f:
+    # with open('sibur_gpz.geojson', encoding='utf-8') as f:
+    #     points = json.load(f)
+
+    with open('burtin_step.geojson', encoding='utf-8') as f:
         points = json.load(f)
 
 
-    get_by_id('16683066', token)
+    # get_by_id('16683066', token)
 
-    # get_nearest(points, keywords, token)
+    get_nearest(points, keywords, token)
 
 
 
