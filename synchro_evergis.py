@@ -41,15 +41,19 @@ def unlink_layer(user, pwd, tables):
             print(d.content)
 
 
-def link_view(user, pwd, views, schema):
+def link_view(user, pwd, views, schema=None):
     with login_to_evergis(user, pwd) as session:
-        url = f'https://geomercury.ru/sp/tables/map-table?type=View&dataProvider={schema}'
+        url = f'https://geomercury.ru/sp/tables/map-table?type=View'
+        if schema:
+            url += f"&dataProvider={schema}"
         for view in views:
             payload = {
                 "name": f"os.{view}",
-                "alias": f"{schema}__{view}",
+                "alias": f"{view}",
                 "owner": "os"
             }
+            if schema:
+                payload['alias'] = f"{schema}__{view}"
             r = session.post(url, json=payload)
             print(r.content)
 
@@ -507,15 +511,15 @@ if __name__ == '__main__':
         pass
 
 
-    # synchro_schema(['aanii'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_layer([('aanii', ['gen_pnt', 'gen_pol', 'gen_cls'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_layer([('culture', ['misc_points'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_schema(['kern_vnigni_ru'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('kern_vnigni_ru', ['wellsgeom'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
     # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     # synchro_table([('dm', ['seismic_pols_processed_3d'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     #
-    # link_view(egdata["user"], egdata["password"], ['license_planning_pts_view'], 'culture')
+    link_view(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
     #
     # unlink_layer(egdata["user"], egdata["password"], ['del_telemetry_view'])
     #
-    link_layer(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
+    # link_layer(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
     # link_layer(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
