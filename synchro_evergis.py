@@ -16,15 +16,19 @@ def login_to_evergis(name, passd):
     return s
 
 
-def link_layer(user, pwd, tables, schema):
+def link_layer(user, pwd, tables, schema=None):
     with login_to_evergis(user, pwd) as session:
-        url = f'https://geomercury.ru/sp/tables/map-table?dataProvider={schema}'
+        url = f'https://geomercury.ru/sp/tables/map-table'
+        if schema:
+            url += f'?dataProvider={schema}'
         for table in tables:
             payload = {
                 "name": f"os.{table}",
-                "alias": f"{schema}__{table}",
+                "alias": f"{table}",
                 "owner": "os"
             }
+            if schema:
+                payload["alias"] = f"{schema}__{table}"
             r = session.post(url, json=payload)
             print(r.content)
 
@@ -503,14 +507,15 @@ if __name__ == '__main__':
         pass
 
 
-    # synchro_schema(['rosnedra'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_layer([('culture', ['pipes_planning', 'points_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_layer([('culture', ['bathymetry_contours'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_table([('dm', ['expert_conclusions', 'exploration_projects'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_schema(['aanii'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_layer([('aanii', ['gen_pnt', 'gen_pol', 'gen_cls'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_layer([('culture', ['misc_points'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+    # synchro_table([('dm', ['seismic_pols_processed_3d'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
     #
-    # link_view(egdata["user"], egdata["password"], ['del_telemetry_view'], 'culture')
+    # link_view(egdata["user"], egdata["password"], ['license_planning_pts_view'], 'culture')
     #
-    # unlink_layer(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
+    # unlink_layer(egdata["user"], egdata["password"], ['del_telemetry_view'])
     #
-    # link_layer(egdata["user"], egdata["password"], ['bathymetry_contours'], 'culture')
+    link_layer(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
+    # link_layer(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
