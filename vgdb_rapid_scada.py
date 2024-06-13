@@ -182,7 +182,7 @@ if __name__ == '__main__':
             "122": "CH4_3 [% НКПР]",
             "123": "H2S_4 [мг/м3]"
         }
-        send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info)
-    synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+        if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
+            synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
     
