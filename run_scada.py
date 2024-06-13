@@ -25,7 +25,12 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
 #     if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
 #         synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
-data = load_from_scada([('Интинская-18', 'ДЭЛ-150', ['110-123'])], scada_login, bot_info=bot_info)
+# data = load_from_scada([(751, 'Интинская-18', 'ДЭЛ-150', ['110-123'])], scada_login, bot_info=bot_info)
+data = load_from_scada(
+    [{"obj_id": 751, "obj_name": 'Интинская-18',  "obj_type": 'ДЭЛ-150',  "channels": ['110-123']}],
+    scada_login,
+    bot_info=bot_info
+)
 if data:
     channels_dict = {
         "110": "Нагрузка на крюк [тс]",
