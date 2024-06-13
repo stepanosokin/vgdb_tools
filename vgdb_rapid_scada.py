@@ -81,7 +81,7 @@ def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'i
     return False
 
 
-def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=('token', 'id'), log=False):
+def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=('token', 'id'), log=False, shrink=True):
     current_directory = os.getcwd()
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
@@ -107,8 +107,16 @@ def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=(
                         i += 1
                         cur.execute(sql)
                         message = cur.statusmessage
+                    sql = f"delete from {table} where timezone('UTC', timezone('UTC', current_timestamp)) - timezone('UTC', timezone('UTC', datetime)) > make_interval(days => 1);"
+                    if shrink:
+                        message = ''
+                        j = 1
+                        while 'DELETE' not in message and j <= 10:
+                            j += 1
+                            cur.execute(sql)
+                            message = cur.statusmessage
             pgconn.close()
-            if i > 10:
+            if i > 10 or j > 10:
                 if log:
                     log_message(s, logf, bot_info, 'vgdb_scada: Ошибка отправки данных в Postgres')
                 return False
@@ -165,3 +173,5 @@ if __name__ == '__main__':
             }
             send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info)
     synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+
+    
