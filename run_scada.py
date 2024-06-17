@@ -49,4 +49,5 @@ if data:
         "123": "H2S_4 [мг/м3]"
     }
     if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
-        synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info, log=False)
+        pass
+        # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info, log=False)
