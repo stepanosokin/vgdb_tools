@@ -48,7 +48,7 @@ if data:
         "122": "CH4_3 [% НКПР]",
         "123": "H2S_4 [мг/м3]"
     }
-    if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
-
-        pass
+    timestamp = datetime.utcnow()
+    if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info):
+        send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info)
         # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info, log=False)

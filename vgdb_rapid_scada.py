@@ -7,6 +7,7 @@ from vgdb_general import *
 from synchro_evergis import *
 import time
 from collections import namedtuple
+from fabric import Connection
 
 # samples from: https://github.com/RapidScada/scada-community/blob/master/Samples/WebApiClientSample/WebApiClientSample/Program.cs
 
@@ -86,7 +87,94 @@ def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'i
     return False
 
 
-def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=('token', 'id'), log=False, shrink=True):
+def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, ssh_host='45.139.25.199', ssh_user='dockeruser',
+                         local_port_for_ext_pg=5434, bot_info=('token', 'id'), folder='scada', log=False, shrink=True):
+    with open(ext_pgdsn_path, encoding='utf-8') as f:
+        ext_pgdsn = f.read()
+
+    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+
+    current_directory = os.getcwd()
+    new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
+    with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
+        f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+    os.chmod(new_ext_pgpass, 0o600)
+    log_file = os.path.join(current_directory, folder, 'ssh_logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        if log:
+            log_message(s, logf, bot_info, '<send_to_ssh_postgres> Начинаю синхронизацию таблиц с Evergis...')
+        j = 1
+        ssh_conn = None
+        while not ssh_conn and j <= 2:
+            if log:
+                log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
+            try:
+                j += 1
+                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg, remote_port=int(ext_pgdsn_dict['port']))
+            except:
+                if log:
+                    log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+        if not ssh_conn:
+            if log:
+                log_message(s, logf, bot_info, '<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH')
+            result = False
+
+        with ssh_conn:
+            if log:
+                log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Подключение SSH установлено')
+            my_env = os.environ.copy()
+            my_env["PGPASSFILE"] = new_ext_pgpass
+            i = 1
+            pgconn = None
+            while not pgconn and i <= 2:
+                i += 1
+                try:
+                    pgconn = psycopg2.connect(new_ext_pgdsn)
+                except:
+                    pass
+            if pgconn:
+                with pgconn:
+                    with pgconn.cursor() as cur:
+                        vals = [str(x.obj_id) + ", '" + x.obj_name + "', '" + x.obj_type + "', '{" + ", ".join(
+                            [chr(34) + channels_dict.get(
+                                str(y["cnlNum"]), str(y["cnlNum"])) + chr(34) + ": " + str(y["val"]) for y in
+                             x.data]) + "}', '" + datetime.strftime(
+                            timestamp, "%Y-%m-%d %H:%M:%S") + "+00" + "'" for x in data]
+                        sql = f"insert into {table}(object_id, object_name, object_type, attrs, datetime) values({'), ('.join(vals)});"
+                        message = ''
+                        i = 1
+                        while message != 'INSERT 0 1' and i <= 2:
+                            i += 1
+                            cur.execute(sql)
+                            message = cur.statusmessage
+                        sql = f"delete from {table} where timezone('UTC', timezone('UTC', current_timestamp)) - timezone('UTC', timezone('UTC', datetime)) > make_interval(days => 1);"
+                        if shrink:
+                            message = ''
+                            j = 1
+                            while 'DELETE' not in message and j <= 2:
+                                j += 1
+                                cur.execute(sql)
+                                message = cur.statusmessage
+                pgconn.close()
+                if i > 2 or j > 2:
+                    if log:
+                        log_message(s, logf, bot_info, '<send_to_ssh_postgres>: Ошибка отправки данных в Postgres')
+                    result = False
+                else:
+                    if log:
+                        log_message(s, logf, bot_info, '<send_to_ssh_postgres>: Данные успешно загружены в Postgres')
+                    result = True
+            else:
+                if log:
+                    log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к Postgres')
+                result = False
+        ssh_conn = None
+    return result
+
+
+def send_to_postgres(dsn, table, data, channels_dict, timestamp, folder='scada', bot_info=('token', 'id'), log=False, shrink=True):
     current_directory = os.getcwd()
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
@@ -102,7 +190,7 @@ def send_to_postgres(dsn, table, data, channels_dict, folder='scada', bot_info=(
                 pass
         if pgconn:
             with pgconn:
-                timestamp = datetime.utcnow()
+                # timestamp = datetime.utcnow()
                 with pgconn.cursor() as cur:
                     # vals = [str(x[0]) + ", '" + x[1] + "', '" + x[2] + "', '{" + ", ".join([chr(34) + channels_dict.get(str(y["cnlNum"]), str(y["cnlNum"])) + chr(34) + ": " + str(y["val"]) for y in x[3]]) + "}', '" + datetime.strftime(timestamp, "%Y-%m-%d %H:%M:%S") + "+00" + "'" for x in data]
                     vals = [str(x.obj_id) + ", '" + x.obj_name + "', '" + x.obj_type + "', '{" + ", ".join([chr(34) + channels_dict.get(
@@ -182,7 +270,9 @@ if __name__ == '__main__':
             "122": "CH4_3 [% НКПР]",
             "123": "H2S_4 [мг/м3]"
         }
-        if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, bot_info=bot_info):
-            synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+        timestamp = datetime.utcnow()
+        if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info):
+            send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info)
+            # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
     
