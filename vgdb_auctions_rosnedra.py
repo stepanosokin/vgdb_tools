@@ -572,7 +572,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     # create a pathname for the logfile
     log_file = os.path.join(current_directory, folder, 'logfile.txt')
     # now we open the logfile and start logging
-    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+    with (open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s):
         # send message to log
         message = 'AuctionBlocksUpdater: Rosnedra data parsing started!'
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
@@ -732,7 +732,13 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # now we check if we are at a block's first row.
                     # We check that a block number column has some value, and that the row has digital coordinates
 
-                    if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                    if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' \
+                        and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 \
+                        and excel_col_nums['point_num'] > 0 \
+                        and str(df.iloc[nrow, excel_col_nums['point_num']]) \
+                        and str(df.iloc[nrow, excel_col_nums['point_num']]) != 'nan':
+                        # and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() \
+                        # and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
 
                         # if this is not the first block,
                         if block_id > 0:
@@ -1224,7 +1230,7 @@ if __name__ == '__main__':
     with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
         jdata = json.load(f)
         bot_info = (jdata['token'], jdata['chatid'])
-    with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
         jdata = json.load(f)
         report_bot_info = (jdata['token'], jdata['chatid'])
     with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
@@ -1234,18 +1240,20 @@ if __name__ == '__main__':
     # pgconn = psycopg2.connect(dsn)
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
-        startdt = lastdt_result[1] + timedelta(days=1)
-        # clear_folder('rosnedra_auc')
-        download = download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
+        # startdt = lastdt_result[1] + timedelta(days=1)
+        startdt = datetime.strptime('2023-01-01', '%Y-%m-%d')
+        # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
+        enddt = datetime.now()
+        clear_folder('rosnedra_auc')
+        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
                            folder='rosnedra_auc', bot_info=bot_info)
         if download:
             parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-                                        bot_info=bot_info, report_bot_info=report_bot_info,
-                                        blocks_np_webhook=blocks_np_webhook,
-                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook, dsn=dsn)
+                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
             if parse:
-                update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-                if update:
-                    pass
+                pass
+                # update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+                # if update:
+                #     pass
                     # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     # pgconn.close()

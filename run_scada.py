@@ -10,6 +10,9 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
     bot_info = (jdata['token'], jdata['chatid'])
 
+with open('.egssh', 'r', encoding='utf-8') as f:
+    egssh = json.load(f)
+
 # data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login, bot_info=bot_info)
 # if data:
 #     channels_dict = {
@@ -50,5 +53,5 @@ if data:
     }
     timestamp = datetime.utcnow()
     if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info):
-        send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info)
+        send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
         # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info, log=False)

@@ -25,10 +25,13 @@ with open('.ext_pgdsn', encoding='utf-8') as f:
 with open('.pgdsn', encoding='utf-8') as f:
     local_pgdsn = f.read()
 
+with open('.egssh', 'r', encoding='utf-8') as f:
+    egssh = json.load(f)
+
 # download the license blocks data from Rosgeolfond
 if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
     # parse the blocks from downloaded json
     if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
         # update license blocks on server
         if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
-            synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+            synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)

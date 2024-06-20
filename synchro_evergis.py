@@ -16,7 +16,7 @@ def login_to_evergis(name, passd):
     return s
 
 
-def link_layer(user, pwd, tables, schema=None):
+def map_table(user, pwd, tables, schema=None):
     with login_to_evergis(user, pwd) as session:
         url = f'https://geomercury.ru/sp/tables/map-table'
         if schema:
@@ -33,7 +33,8 @@ def link_layer(user, pwd, tables, schema=None):
             print(r.content)
 
 
-def unlink_layer(user, pwd, tables):
+
+def unmap_table(user, pwd, tables):
     with login_to_evergis(user, pwd) as session:
         for table in tables:
             url = f'https://geomercury.ru/sp/tables/map-table/os.{table}'
@@ -41,7 +42,7 @@ def unlink_layer(user, pwd, tables):
             print(d.content)
 
 
-def link_view(user, pwd, views, schema=None):
+def map_table_view(user, pwd, views, schema=None):
     with login_to_evergis(user, pwd) as session:
         url = f'https://geomercury.ru/sp/tables/map-table?type=View'
         if schema:
@@ -59,7 +60,7 @@ def link_view(user, pwd, views, schema=None):
 
 
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
-                  ssh_host='45.139.25.199', ssh_user='dockeruser',
+                  ssh_host='', ssh_user='',
                   local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis'):
 
     ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
@@ -178,7 +179,7 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
 
 
 def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
-                  ssh_host='45.139.25.199', ssh_user='dockeruser',
+                  ssh_host='', ssh_user='',
                   local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis', log=True):
 
     with open(ext_pgdsn_path, encoding='utf-8') as f:
@@ -347,7 +348,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
 
 
 def synchro_schema(schemas, local_pgdsn_path, ext_pgdsn_path,
-                  ssh_host='45.139.25.199', ssh_user='dockeruser',
+                  ssh_host='', ssh_user='',
                   local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis', recreate=False):
 
     with open(ext_pgdsn_path, encoding='utf-8') as f:
@@ -510,16 +511,22 @@ if __name__ == '__main__':
         egdata = json.load(f)
         pass
 
+    with open('.egssh', 'r', encoding='utf-8') as f:
+        egssh = json.load(f)
 
-    # synchro_schema(['kern_vnigni_ru'], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_layer([('kern_vnigni_ru', ['wellsgeom'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
-    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
-    # synchro_table([('dm', ['seismic_pols_processed_3d'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
+
+    # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     #
-    link_view(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
+    # map_table_view(egdata["user"], egdata["password"], ['wells_planning_gin_view'], schema='culture')
     #
-    # unlink_layer(egdata["user"], egdata["password"], ['del_telemetry_view'])
+    # unmap_table(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
     #
-    # link_layer(egdata["user"], egdata["password"], ['del_telemetry_view_fdw'])
-    # link_layer(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
+    # map_table(egdata["user"], egdata["password"], ['wells_kern_view'])
+    # map_table(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
+
+    

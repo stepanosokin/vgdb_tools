@@ -87,7 +87,7 @@ def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'i
     return False
 
 
-def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, ssh_host='45.139.25.199', ssh_user='dockeruser',
+def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, ssh_host='', ssh_user='',
                          local_port_for_ext_pg=5434, bot_info=('token', 'id'), folder='scada', log=False, shrink=True):
     with open(ext_pgdsn_path, encoding='utf-8') as f:
         ext_pgdsn = f.read()
@@ -237,6 +237,9 @@ if __name__ == '__main__':
         jdata = json.load(f)
         bot_info = (jdata['token'], jdata['chatid'])
 
+    with open('.egssh', 'r', encoding='utf-8') as f:
+        egssh = json.load(f)
+
     # data = load_from_scada([('Интинская-18', 'Скважина', ['101-108'])], scada_login, bot_info=bot_info)
     data = load_from_scada(
         [{"obj_id": 751, "obj_name": 'Интинская-18',  "obj_type": 'ДЭЛ-150',  "channels": ['110-123']}],
@@ -272,7 +275,7 @@ if __name__ == '__main__':
         }
         timestamp = datetime.utcnow()
         if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info):
-            send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info)
+            send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
             # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info)
 
     

@@ -36,6 +36,9 @@ with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
 with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
     blocks_np_webhook = f.read().replace('\n', '')
 
+with open('.egssh', 'r', encoding='utf-8') as f:
+    egssh = json.load(f)
+
 # get the latest rosnedra order announce date from postgres
 # pgconn = psycopg2.connect(dsn)
 # with psycopg2.connect(dsn) as pgconn:
@@ -55,7 +58,7 @@ if lastdt_result[0]:
                                     dsn=dsn):
             # # load new blocks to the database
             if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
-                synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+                synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
 #lastdt_result = get_latest_auc_result_date_from_synology(pgconn)
 #if lastdt_result[0]:
