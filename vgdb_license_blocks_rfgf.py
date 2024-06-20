@@ -3,6 +3,7 @@ import requests, json, os, psycopg2
 from datetime import datetime
 from vgdb_general import log_message, send_to_teams
 from osgeo import ogr, osr, gdal
+from synchro_evergis import *
 
 
 def download_rfgf_blocks(json_request, json_result, folder='rfgf_blocks', bot_info=(None, None)):
@@ -441,4 +442,11 @@ if __name__ == '__main__':
     with open('.pggdal', encoding='utf-8') as gdalf:
         gdalpgcs = gdalf.read().replace('\n', '')
 
-    # update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook)
+    with open('.ext_pgdsn', encoding='utf-8') as f:
+        ext_pgdsn = f.read()
+
+    with open('.pgdsn', encoding='utf-8') as f:
+        local_pgdsn = f.read()
+
+    if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+        synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
