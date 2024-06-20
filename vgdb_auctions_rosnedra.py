@@ -204,7 +204,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                         is_order = False
                         if cur_h1_tags:
                             for h1_tag in cur_h1_tags:
-                                if 'Приказ Роснедр от' in h1_tag.text:
+                                if 'Приказ Роснедр от' in ' '.join(h1_tag.text.split()):
                                     is_order = True
                                     announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
                                     ord_i = announcement.find('Приказ Роснедр от')
@@ -476,7 +476,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
                         is_auc_result = False
                         if cur_h1_tags:
                             for h1_tag in cur_h1_tags:
-                                if 'Информация об итогах проведения аукциона' in h1_tag.text:
+                                if 'Информация об итогах проведения аукциона' in ' '.join(h1_tag.text.split()):
                                     is_auc_result = True
                                     announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
                         # if we know that we've found an auc result and if it contains Content elements
@@ -546,7 +546,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                              bot_info=('token', 'id'), report_bot_info=('token', 'id'),
-                             blocks_np_webhook='', blocks_nr_ne_webhook='', dsn=None, pgconn=None):
+                             blocks_np_webhook='', blocks_nr_ne_webhook='', dsn=None):
     '''
     This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
@@ -556,10 +556,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     :param folder: name of the folder with the results of download_orders function at the same location with the script;
     :param gpkg: name of the geopackage to store the parsed results, OVERWRITING the file if it exists;
     :param bot_info: tuple containing two strings. This is the credentials to use to send log messages to a Telegram chat from a telegram bot. First string is a telegram token of a bot, second string is an id of a chat to send messages to. You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, then go to https://api.telegram.org/bot<Bot Token>/getUpdates page and look for something like "chat":{"id": 1234567 ...}. The id parameter is the chat id.
-    :param pgconn: psycopg2 connection to select regions geometry;
-    :return: None
+    :param blocks_np_webhook: URL of MS Teams webhook to send messages about parsed NP licenses;
+    :param blocks_nr_ne_webhook: URL of MS Teams webhook to send messages about parsed NR & NE licenses
+    :param dsn: Postgres connection string used for checking the intersections of licenses with regions
+    :return: Bool: True if success, False if fail
     '''
-    # variable for function returna success
+    # variable for function return success
     success = False
     # get the current working directory
     current_directory = os.getcwd()
@@ -709,7 +711,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # excel_col_nums dictionary populated with excel column numbers for each field, or zeros
                     # if a field keywords haven't been found
 
-                    # at each row, we populate point_n and y_d variables with values in according with excel_col_nums
+                    # at each row, we populate point_n and y_d variables with values in accordance with excel_col_nums
                     point_n = df.iloc[nrow, excel_col_nums['point_num']]
                     y_d = df.iloc[nrow, excel_col_nums['y_d']]
                     # if we have a point with number 1 OR if we have text in point_n column,
@@ -1233,13 +1235,17 @@ if __name__ == '__main__':
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
         startdt = lastdt_result[1] + timedelta(days=1)
-        clear_folder('rosnedra_auc')
-        if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
-                           folder='rosnedra_auc', bot_info=bot_info):
-            if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+        # clear_folder('rosnedra_auc')
+        download = download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр',
+                           folder='rosnedra_auc', bot_info=bot_info)
+        if download:
+            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                         bot_info=bot_info, report_bot_info=report_bot_info,
                                         blocks_np_webhook=blocks_np_webhook,
-                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook, dsn=dsn):
-                if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
-                    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+                                        blocks_nr_ne_webhook=blocks_nr_ne_webhook, dsn=dsn)
+            if parse:
+                update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+                if update:
+                    pass
+                    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     # pgconn.close()
