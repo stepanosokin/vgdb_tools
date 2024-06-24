@@ -283,57 +283,75 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                     # launch psql to delete rows from current table. use my_env as env parameter.
                     filepath = os.path.join(current_directory, 'data', f"vgdb_5432_{schema}_{table}.dump")
                     if os.path.exists(filepath):
+
+
                         i = 1
-                        status = -1
-                        while status != 0 and i <= 10:
+                        # status = -1
+                        status = None
+                        # while status != 0 and i <= 10:
+                        while not status and i <= 10:
                             try:
                                 if log:
                                     log_message(s, logf, bot_info,
                                             f'Удаление данных из внешней таблицы {schema}.{table}, попытка {str(i)}...',
                                             to_telegram=False)
                                 i += 1
-                                result = subprocess.run(
-                                    [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
-                                     '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
-                                     '-w', '-c', f'delete from {schema}.{table};'],
-                                    env=my_env)
-                                status = result.returncode
+                                pgconn = psycopg2.connect(new_ext_pgdsn)
+                                with pgconn:
+                                    with pgconn.cursor() as cur:
+                                        sql = f'DELETE FROM {schema}.{table};'
+                                        log_message(s, logf, bot_info,
+                                                    f'Удаляю данные из таблицы {schema}.{table} на удаленном сервере...')
+                                        cur.execute(sql)
+                                        status = cur.statusmessage
+                                pgconn.close()
+                                # result = subprocess.run(
+                                #     [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                #      '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                #      '-w', '-c', f'delete from {schema}.{table};'],
+                                #     env=my_env)
+                                # status = result.returncode
                             except:
                                 if log:
                                     log_message(s, logf, bot_info,
                                             f'Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
-                        if status != 0:
-                            if log:
-                                log_message(s, logf, bot_info,
-                                        f'Ошибка удаления данных из внешней таблицы {schema}.{table} после 10 попыток. Пропускаю запись данных в таблицу.')
-                        else:
-                            i = 1
-                            status = -1
-                            while status != 0 and i <= 10:
-                                try:
-                                    if log:
-                                        log_message(s, logf, bot_info,
-                                                f'Запись данных во внешнюю таблицу {schema}.{table}, попытка {str(i)}...',
-                                                to_telegram=False)
-                                    i += 1
-                                    # launch psql to insert data to current table. use my_env as env parameter.
-                                    result = subprocess.run(
-                                        [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
-                                         '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
-                                         '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
-                                        env=my_env)
-                                    status = result.returncode
-                                except:
-                                    if log:
-                                        log_message(s, logf, bot_info,
-                                                f'Ошибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
-                            if status != 0:
+
+
+                        # if status != 0:
+                        if status:
+                            if 'DELETE' not in status:
                                 if log:
                                     log_message(s, logf, bot_info,
-                                            f'Ошибка записи данных во внешнюю таблицу {schema}.{table} после 10 попыток.')
+                                            f'Ошибка удаления данных из внешней таблицы {schema}.{table} после 10 попыток. Пропускаю запись данных в таблицу.')
+
                             else:
-                                if log:
-                                    log_message(s, logf, bot_info, f'Таблица {schema}.{table} синхронизирована')
+                                i = 1
+                                status = -1
+                                while status != 0 and i <= 10:
+                                    try:
+                                        if log:
+                                            log_message(s, logf, bot_info,
+                                                    f'Запись данных во внешнюю таблицу {schema}.{table}, попытка {str(i)}...',
+                                                    to_telegram=False)
+                                        i += 1
+                                        # launch psql to insert data to current table. use my_env as env parameter.
+                                        result = subprocess.run(
+                                            [psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                             '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                             '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
+                                            env=my_env)
+                                        status = result.returncode
+                                    except:
+                                        if log:
+                                            log_message(s, logf, bot_info,
+                                                    f'Ошибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
+                                if status != 0:
+                                    if log:
+                                        log_message(s, logf, bot_info,
+                                                f'Ошибка записи данных во внешнюю таблицу {schema}.{table} после 10 попыток.')
+                                else:
+                                    if log:
+                                        log_message(s, logf, bot_info, f'Таблица {schema}.{table} синхронизирована')
 
             for (schema, tables) in list(schemas_tables):
                 for table in tables:
@@ -516,10 +534,10 @@ if __name__ == '__main__':
 
 
     # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     #
     # map_table_view(egdata["user"], egdata["password"], ['wells_planning_gin_view'], schema='culture')
