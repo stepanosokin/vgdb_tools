@@ -315,10 +315,10 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                 #      '-w', '-c', f'delete from {schema}.{table};'],
                                 #     env=my_env)
                                 # status = result.returncode
-                            except:
+                            except Exception as err:
                                 if log:
                                     log_message(s, logf, bot_info,
-                                            f'Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
+                                            f'{err} Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
 
 
                         # if status != 0:
