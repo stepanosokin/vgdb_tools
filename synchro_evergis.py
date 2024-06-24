@@ -294,13 +294,13 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                 if log:
                                     log_message(s, logf, bot_info,
                                             f'Удаление данных из внешней таблицы {schema}.{table}, попытка {str(i)}...',
-                                            to_telegram=True)
+                                            to_telegram=False)
                                 i += 1
                                 pgconn = psycopg2.connect(new_ext_pgdsn)
                                 if log:
                                     log_message(s, logf, bot_info,
                                             f'Подключение к внешней базе создано',
-                                            to_telegram=True)
+                                            to_telegram=False)
                                 with pgconn:
                                     with pgconn.cursor() as cur:
                                         sql = f'DELETE FROM {schema}.{table};'
@@ -318,7 +318,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                             except Exception as err:
                                 if log:
                                     log_message(s, logf, bot_info,
-                                            f'{err} Ошибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
+                                            f'{err}\nОшибка удаления данных из внешней таблицы {schema}.{table} (попытка {str(i - 1)} из 10)')
 
 
                         # if status != 0:
@@ -345,10 +345,10 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                              '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
                                             env=my_env)
                                         status = result.returncode
-                                    except:
+                                    except Exception as err:
                                         if log:
                                             log_message(s, logf, bot_info,
-                                                    f'Ошибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
+                                                    f'{err}\nОшибка записи данных во внешнюю таблицу {schema}.{table} (попытка {str(i - 1)} из 10)')
                                 if status != 0:
                                     if log:
                                         log_message(s, logf, bot_info,

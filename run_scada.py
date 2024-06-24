@@ -53,5 +53,5 @@ if data:
     }
     timestamp = datetime.utcnow()
     if send_to_postgres(pgdsn, 'culture.from_scada', data, channels_dict, timestamp, bot_info=bot_info):
-        send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+        send_to_ssh_postgres('.ext_pgdsn', 'culture.from_scada', data, channels_dict, timestamp, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info, local_port_for_ext_pg=5434)
         # synchro_table([('culture', ['from_scada'])], '.pgdsn', '.ext_pgdsn', bot_info=bot_info, log=False)
