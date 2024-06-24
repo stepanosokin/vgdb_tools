@@ -196,8 +196,12 @@ async def torgi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             log_bot_info = (jdata['token'], jdata['chatid'])
         with open('2023_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
             nr_ne_webhook_2023 = f.read().replace('\n', '')
+        with open('.egssh', 'r', encoding='utf-8') as f:
+            egssh = json.load(f)
         refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info,
                          webhook=nr_ne_webhook_2023)
+        synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn',
+                      ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
         await update.message.reply_text('команда /torgi выполнена')
     else:
         await update.message.reply_text('You do not have permission')
@@ -216,13 +220,16 @@ async def lic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             gdalpgcs = gdalf.read().replace('\n', '')
         with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
             lb_general_webhook = f.read().replace('\n', '')
+        with open('.egssh', 'r', encoding='utf-8') as f:
+            egssh = json.load(f)
         # download the license blocks data from Rosgeolfond
         if vgdb_license_blocks_rfgf.download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
             # parse the blocks from downloaded json
             if vgdb_license_blocks_rfgf.parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
                 # update license blocks on server
                 if vgdb_license_blocks_rfgf.update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
-                    synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+                    synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn,
+                                  ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
         await update.message.reply_text('команда /lic выполнена')
     else:
         await update.message.reply_text('You do not have permission')
@@ -249,6 +256,9 @@ async def rosnedra(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
             blocks_np_webhook = f.read().replace('\n', '')
 
+        with open('.egssh', 'r', encoding='utf-8') as f:
+            egssh = json.load(f)
+
         pgconn = psycopg2.connect(local_pgdsn)
         lastdt_result = get_latest_order_date_from_synology(pgconn)
         if lastdt_result[0]:
@@ -262,7 +272,8 @@ async def rosnedra(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                             blocks_nr_ne_webhook=blocks_nr_ne_webhook,
                                             pgconn=pgconn):
                     if update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info):
-                        synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn,
+                        synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn
+                                      , ssh_host=egssh["host"], ssh_user=egssh["user"],
                                       bot_info=bot_info)
             pgconn.close()
         await update.message.reply_text('команда /rosnedra выполнена')

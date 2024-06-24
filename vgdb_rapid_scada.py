@@ -88,19 +88,21 @@ def login_to_scada(s, host, user, password, logf, port=80, bot_info=('token', 'i
 
 
 def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, ssh_host='', ssh_user='',
-                         local_port_for_ext_pg=5434, bot_info=('token', 'id'), folder='scada', log=False, shrink=True):
+                         bot_info=('token', 'id'), folder='scada', log=False, shrink=True):
     with open(ext_pgdsn_path, encoding='utf-8') as f:
         ext_pgdsn = f.read()
 
     ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
-    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
-    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+    # new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+
 
     current_directory = os.getcwd()
-    new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
-    with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
-        f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
-    os.chmod(new_ext_pgpass, 0o600)
+
+    # new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+    # new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
+    # with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
+    #     f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+    # os.chmod(new_ext_pgpass, 0o600)
     log_file = os.path.join(current_directory, folder, 'ssh_logfile.txt')
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
         if log:
@@ -112,7 +114,18 @@ def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, 
                 log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
-                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg, remote_port=int(ext_pgdsn_dict['port']))
+                local_port_for_ext_pg = get_free_port((5433, 5440))
+
+                if local_port_for_ext_pg:
+                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                      f"port={str(local_port_for_ext_pg)}")
+                    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+                    new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
+                    with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
+                        f.write(
+                            f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+                    os.chmod(new_ext_pgpass, 0o600)
+                    ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg, remote_port=int(ext_pgdsn_dict['port']))
             except:
                 if log:
                     log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
@@ -131,6 +144,8 @@ def send_to_ssh_postgres(ext_pgdsn_path, table, data, channels_dict, timestamp, 
             while not pgconn and i <= 2:
                 i += 1
                 try:
+                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                      f"port={str(local_port_for_ext_pg)}")
                     pgconn = psycopg2.connect(new_ext_pgdsn)
                 except:
                     pass

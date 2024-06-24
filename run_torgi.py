@@ -27,5 +27,7 @@ with open('.egssh', 'r', encoding='utf-8') as f:
 refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023)
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
 
+
+
 synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn',
-              ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info, local_port_for_ext_pg=5435)
+              ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)

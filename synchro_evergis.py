@@ -6,6 +6,7 @@ from psycopg2.extras import *
 from osgeo import ogr, gdal
 from fabric import Connection
 from vgdb_general import *
+import socket, errno
 
 
 def login_to_evergis(name, passd):
@@ -60,11 +61,10 @@ def map_table_view(user, pwd, views, schema=None):
 
 
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
-                  ssh_host='', ssh_user='',
-                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis'):
+                  ssh_host='', ssh_user='', bot_info=('token', 'id'), folder='evergis'):
 
-    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
-    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+    # ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+    # new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
 
     current_directory = os.getcwd()
     # create a pathname for the logfile
@@ -78,7 +78,12 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
             log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
-                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
+                local_port_for_ext_pg = get_free_port((5433, 5440))
+                if local_port_for_ext_pg:
+                    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                      f"port={str(local_port_for_ext_pg)}")
+                    ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
             except:
                 log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
@@ -179,8 +184,7 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
 
 
 def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
-                  ssh_host='', ssh_user='',
-                  local_port_for_ext_pg=5433, bot_info=('token', 'id'), folder='evergis', log=True):
+                  ssh_host='', ssh_user='', bot_info=('token', 'id'), folder='evergis', log=True):
 
     with open(ext_pgdsn_path, encoding='utf-8') as f:
         ext_pgdsn = f.read()
@@ -188,19 +192,19 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
     with open(local_pgdsn_path, encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    local_pgdsn_dict = dict([x.split('=') for x in local_pgdsn.split(' ')])
-    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
-    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
-    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
-
-    # chmod 0600 ~/.pgpass
-    with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
-        f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
-    os.chmod('.new_ext_pgpass', 0o600)
-
-    with open('.local_pgpass', 'w', encoding='utf-8') as f:
-        f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
-    os.chmod('.local_pgpass', 0o600)
+    # local_pgdsn_dict = dict([x.split('=') for x in local_pgdsn.split(' ')])
+    # ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+    # new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
+    # new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+    #
+    # # chmod 0600 ~/.pgpass
+    # with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
+    #     f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+    # os.chmod('.new_ext_pgpass', 0o600)
+    #
+    # with open('.local_pgpass', 'w', encoding='utf-8') as f:
+    #     f.write(f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
+    # os.chmod('.local_pgpass', 0o600)
 
     current_directory = os.getcwd()
     # create a pathname for the logfile
@@ -217,7 +221,25 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                 log_message(s, logf, bot_info, f'Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
             try:
                 j += 1
-                ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
+                local_port_for_ext_pg = get_free_port((5433, 5440))
+                if local_port_for_ext_pg:
+                    local_pgdsn_dict = dict([x.split('=') for x in local_pgdsn.split(' ')])
+                    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                      f"port={str(local_port_for_ext_pg)}")
+                    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+
+                    # chmod 0600 ~/.pgpass
+                    with open('.new_ext_pgpass', 'w', encoding='utf-8') as f:
+                        f.write(
+                            f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+                    os.chmod('.new_ext_pgpass', 0o600)
+
+                    with open('.local_pgpass', 'w', encoding='utf-8') as f:
+                        f.write(
+                            f"{local_pgdsn_dict['host']}:{local_pgdsn_dict['port']}:{local_pgdsn_dict['dbname']}:{local_pgdsn_dict['user']}:{local_pgdsn_dict['password']}")
+                    os.chmod('.local_pgpass', 0o600)
+                    ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
             except:
                 if log:
@@ -367,6 +389,18 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
         if log:
             log_message(s, logf, bot_info, f'Синхронизация таблиц с Evergis завершена')
         return True
+
+
+def get_free_port(ports_range: tuple[int, int]):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    port = None
+    for p in range(ports_range[0], ports_range[1] + 1):
+        try:
+            s.bind(("127.0.0.1", p))
+            port = p
+        except:
+            pass
+    return port
 
 
 def synchro_schema(schemas, local_pgdsn_path, ext_pgdsn_path,
@@ -538,10 +572,11 @@ if __name__ == '__main__':
 
 
     # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])],
+                  local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     #
     # map_table_view(egdata["user"], egdata["password"], ['wells_planning_gin_view'], schema='culture')
@@ -551,4 +586,4 @@ if __name__ == '__main__':
     # map_table(egdata["user"], egdata["password"], ['wells_kern_view'])
     # map_table(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
 
-    
+    # print(get_free_port((5432, 5434)))
