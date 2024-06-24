@@ -297,6 +297,10 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                             to_telegram=True)
                                 i += 1
                                 pgconn = psycopg2.connect(new_ext_pgdsn)
+                                if log:
+                                    log_message(s, logf, bot_info,
+                                            f'Подключение к внешней базе создано',
+                                            to_telegram=True)
                                 with pgconn:
                                     with pgconn.cursor() as cur:
                                         sql = f'DELETE FROM {schema}.{table};'
