@@ -294,7 +294,7 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                 if log:
                                     log_message(s, logf, bot_info,
                                             f'Удаление данных из внешней таблицы {schema}.{table}, попытка {str(i)}...',
-                                            to_telegram=False)
+                                            to_telegram=True)
                                 i += 1
                                 pgconn = psycopg2.connect(new_ext_pgdsn)
                                 with pgconn:
