@@ -563,9 +563,9 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    with open('.egdsn', 'r', encoding='utf-8') as f:
-        egdata = json.load(f)
-        pass
+    # with open('.egdsn', 'r', encoding='utf-8') as f:
+    #     egdata = json.load(f)
+    #     pass
 
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
