@@ -571,8 +571,8 @@ if __name__ == '__main__':
         egssh = json.load(f)
 
 
-    # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])],
+    # synchro_schema(['vnigni'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_layer([('vnigni', ['struct01_24_merc'])],
                   local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
