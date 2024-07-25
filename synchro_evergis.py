@@ -563,27 +563,42 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    # with open('.egdsn', 'r', encoding='utf-8') as f:
-    #     egdata = json.load(f)
-    #     pass
+    with open('.egdsn', 'r', encoding='utf-8') as f:
+        egdata = json.load(f)
+        pass
 
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
 
 
-    # synchro_schema(['vnigni'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_layer([('vnigni', ['struct01_24_merc'])],
-                  local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_schema(['osm'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['roads'])],
+    #               local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('geology', ['field_points'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+
+    # synchro_table([('dm', ['datasets_to_geometries'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('dm', ['seismic_lines_processed_2d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
+    #               ssh_user=egssh["user"], bot_info=bot_info)
+
     #
-    # map_table_view(egdata["user"], egdata["password"], ['wells_planning_gin_view'], schema='culture')
+    # map_table_view(egdata["user"], egdata["password"], ['osm_gas_pipes_v',
+    #                                                     'osm_oil_pipes_v',
+    #                                                     'osm_fuel_pipes_v'], schema='osm')
     #
-    # unmap_table(egdata["user"], egdata["password"], ['wells_planning_gin_view'])
+    # unmap_table(egdata["user"], egdata["password"], ['struct01_24'])
     #
-    # map_table(egdata["user"], egdata["password"], ['wells_kern_view'])
-    # map_table(egdata["user"], egdata["password"], ['gen_pol'], 'aanii')
+    # map_table(egdata["user"], egdata["password"], ['struct01_24_merc'], 'vnigni')
+    # map_table(egdata["user"], egdata["password"], ['field_points'], 'geology')
 
     # print(get_free_port((5432, 5434)))
+
+    # hello from vscode
+
+    # vnigni.struct01_24_new_props_and_geom;
+    # vnigni.struct01_24_old_geom_new_props;
+    # vnigni.struct01_24_old_props_and_geom;
+    # vnigni.struct01_24_old_props_new_geom;
+    # vnigni.struct01_24_removed_geom_mv;
