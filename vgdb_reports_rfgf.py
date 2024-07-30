@@ -339,58 +339,58 @@ def get_pages_number():
 
 
 def check_report(pgconn, table, report):
-    with pgconn:
-        with pgconn.cursor() as cur:
-            cur.execute(f"Select * FROM {table} LIMIT 0")
-            fields = [desc[0] for desc in cur.description]
-            doc_type = report['Вид документа'].replace("'", "''").lower()
-            doc_name = report['Название документа'].replace("'", "''").lower()
-            res_type = report['Полезные ископаемые'].lower()
-            sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and LOWER(\"Вид документа\") = '{doc_type}' and LOWER(\"Название документа\") = '{doc_name}';"
-            # sql = f"select * from {table} where \"№ п/п\" = '{report['№ п/п']}';"
-            cur.execute(sql)
-            result = cur.fetchall()
-            if result:
-                changes = []
-                for i, value in enumerate(list(report.values())):
-                    if str(result[0][1:][i]).lower() != value.lower():
-                        if i != 0 and any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):  # If the field is not "№ п/п" (it changes all the time)
-                            change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
-                            changes.append(change)
-                        value = str(value).replace("'", "''")
-                        sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and LOWER(\"Вид документа\") = '{doc_type}'and LOWER(\"Название документа\") = '{doc_name}';"
-                        # sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"№ п/п\" = '{report['№ п/п']}';"
-                        cur.execute(sql)
-                        # pgconn.commit()
-                if changes:
-                    return {
-                        "update_type": "report_changed",
-                        "update_info": {
-                            "report_sn": report['Инвентарный номер'],
-                            "report_name": report['Название документа'],
-                            "report_type": report['Вид документа'],
-                            "report_url": report['Ссылка'],
-                            "report_study_area": report['Изучаемая территория'],
-                            "changes": changes
-                        }
+    # with pgconn:
+    with pgconn.cursor() as cur:
+        cur.execute(f"Select * FROM {table} LIMIT 0")
+        fields = [desc[0] for desc in cur.description]
+        doc_type = report['Вид документа'].replace("'", "''").lower()
+        doc_name = report['Название документа'].replace("'", "''").lower()
+        res_type = report['Полезные ископаемые'].lower()
+        sql = f"select * from {table} where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and LOWER(\"Вид документа\") = '{doc_type}' and LOWER(\"Название документа\") = '{doc_name}';"
+        # sql = f"select * from {table} where \"№ п/п\" = '{report['№ п/п']}';"
+        cur.execute(sql)
+        result = cur.fetchall()
+        if result:
+            changes = []
+            for i, value in enumerate(list(report.values())):
+                if str(result[0][1:][i]).lower() != value.lower():
+                    if i != 0 and any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):  # If the field is not "№ п/п" (it changes all the time)
+                        change = {"field": list(report.keys())[i], "old_value": str(result[0][1:][i]), "new_value": value}
+                        changes.append(change)
+                    value = str(value).replace("'", "''")
+                    sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"Инвентарный номер\" = '{report['Инвентарный номер']}' and LOWER(\"Вид документа\") = '{doc_type}'and LOWER(\"Название документа\") = '{doc_name}';"
+                    # sql = f"update {table} set \"{fields[1:][i]}\" = '{str(value)}' where \"№ п/п\" = '{report['№ п/п']}';"
+                    cur.execute(sql)
+                    # pgconn.commit()
+            if changes:
+                return {
+                    "update_type": "report_changed",
+                    "update_info": {
+                        "report_sn": report['Инвентарный номер'],
+                        "report_name": report['Название документа'],
+                        "report_type": report['Вид документа'],
+                        "report_url": report['Ссылка'],
+                        "report_study_area": report['Изучаемая территория'],
+                        "changes": changes
                     }
-                else:
-                    return False
+                }
             else:
-                fields_to_update = ['"' + x + '"' for x in fields]
-                values_to_insert = ["'" + x.replace("'", "''") + "'" for x in report.values()]
-                sql = f"insert into {table}({', '.join(fields_to_update[1:])}) values({', '.join(values_to_insert)});"
-                cur.execute(sql)
-                # pgconn.commit()
-                if any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):
-                    return {"update_type": "new_report",
-                            "update_info": {"report_sn": report['Инвентарный номер'],
-                                            "report_name": report['Название документа'],
-                                            "report_type": report['Вид документа'],
-                                            "report_study_area": report['Изучаемая территория'],
-                                            "report_url": report['Ссылка']}}
-                else:
-                    return False
+                return False
+        else:
+            fields_to_update = ['"' + x + '"' for x in fields]
+            values_to_insert = ["'" + x.replace("'", "''") + "'" for x in report.values()]
+            sql = f"insert into {table}({', '.join(fields_to_update[1:])}) values({', '.join(values_to_insert)});"
+            cur.execute(sql)
+            # pgconn.commit()
+            if any(['нефт' in res_type, 'газ' in res_type, 'конденсат' in res_type, 'углеводород' in res_type]):
+                return {"update_type": "new_report",
+                        "update_info": {"report_sn": report['Инвентарный номер'],
+                                        "report_name": report['Название документа'],
+                                        "report_type": report['Вид документа'],
+                                        "report_study_area": report['Изучаемая территория'],
+                                        "report_url": report['Ссылка']}}
+            else:
+                return False
 
 
 def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='all_new', bot_info=('token', 'chatid')):
@@ -495,6 +495,9 @@ def refresh_rfgf_reports(pgdsn,
             for j, report in enumerate(reports):
 
                 update = check_report(pgconnection, table=table, report=report)
+
+                if (j + 1) % 1000 == 0:
+                    pgconnection.commit()
 
                 if (j + 1) % 10000 == 0:
                     with requests.Session() as s:
