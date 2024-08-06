@@ -2,6 +2,7 @@ import requests, json, psycopg2, os
 from datetime import datetime, timedelta
 from vgdb_general import send_to_telegram, log_message, send_to_teams
 from psycopg2.extras import *
+from synchro_evergis import *
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -104,7 +105,10 @@ def parse_lotcard(lotcard):
                         lotcard_dict['resourcePotential'] = f"'{resourcePotential}'"
                 if charstic.get('code') == 'resourceAreaId':
                     if charstic.get('characteristicValue'):
-                        lotcard_dict['resourceAreaId'] = charstic['characteristicValue']['value']
+                        if isinstance(charstic['characteristicValue'], str):
+                            lotcard_dict['resourceAreaId'] = charstic['characteristicValue']
+                        elif charstic['characteristicValue'].get('value'):
+                            lotcard_dict['resourceAreaId'] = charstic['characteristicValue']['value']
         if lotcard.get('currencyCode'):
             currencyCode = lotcard['currencyCode'].replace("'", "''")
             lotcard_dict['currencyCode'] = f"'{currencyCode}'"
@@ -324,3 +328,18 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
         message = f"Новых лотов: {str(new)}\nИзменено лотов: {str(updated)}"
         with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
             log_message(s, logf, log_bot_info, message)
+
+
+if __name__ == '__main__':
+    with open('.pgdsn', encoding='utf-8') as dsnf:
+        dsn = dsnf.read().replace('\n', '')
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        log_bot_info = (jdata['token'], jdata['chatid'])
+        report_bot_info = (jdata['token'], jdata['chatid'])
+    with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+        nr_ne_webhook_2023 = f.read().replace('\n', '')
+    with open('.egssh', 'r', encoding='utf-8') as f:
+        egssh = json.load(f)
+    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023)
+    synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
