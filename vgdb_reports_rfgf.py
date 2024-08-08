@@ -506,8 +506,8 @@ def refresh_rfgf_reports(pgdsn,
                             send_to_telegram(s, f, bot_info=log_bot_info, message=message)
                 if update:
                     updates_report.append(update)
-                if updates_report and len(updates_report) % 100 == 0:
-                    pgconnection.commit()
+                # if updates_report and len(updates_report) % 100 == 0:
+                #     pgconnection.commit()
             pgconnection.commit()
             pgconnection.close()
             if send_updates and updates_report:
