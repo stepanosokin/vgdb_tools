@@ -496,7 +496,7 @@ def refresh_rfgf_reports(pgdsn,
 
                 update = check_report(pgconnection, table=table, report=report)
 
-                if (j + 1) % 10000 == 0:
+                if (j + 1) % 5000 == 0:
                     pgconnection.commit()
 
                 if (j + 1) % 10000 == 0:
