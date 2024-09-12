@@ -71,10 +71,14 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         # create url string for the main search request
-        url = 'https://www.rosnedra.gov.ru/index.fcgi'
+        # url = 'https://www.rosnedra.gov.ru/index.fcgi'
+        # params = {
+        #     'page': 'search',
+        #     'step': '1',
+        #     'q': search_string
+        # }
+        url = 'https://rosnedra.gov.ru/search/'
         params = {
-            'page': 'search',
-            'step': '1',
             'q': search_string
         }
         headers = {
@@ -107,9 +111,15 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         # create a beutifulsoup from the first search results page
         first_soup = BeautifulSoup(search_result.text, 'html.parser')
         # find the Pager element, which contains the number of pages with search results, and convert it to a list
-        pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
+        # pages = first_soup.find(attrs={'class': 'Pager'}).find_all('a')
+        pagination = first_soup.find(attrs={'class': 'pagination'})
+        p_num_active = pagination.find(attrs={'class': 'num active'})
+        p_next_nums = pagination.find_all(attrs={'class': 'num fw-light'})
+        pass
         # convert page numbers to text
-        pages = [p.text for p in pages if p.text != '']
+        # pages = [p.text for p in pages if p.text != '']
+        pages = [p.text for p in p_num_active if p.text != '']
+        pages += [p.text for p in p_next_nums if p.text != '']
         # start the downloaded results counter
         results_downloaded = 0
 
@@ -121,20 +131,31 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
             for page in pages:
                 # for each page number, create an url, params (see the 'part' parameter) and try to make get request,
                 # including error handling
-                url = 'https://www.rosnedra.gov.ru/index.fcgi'
-                params={
-                    'page': 'search',
-                    'from_day': '28',
-                    'from_month': '04',
-                    'from_year': '2012',
-                    'till_day': datetime.now().strftime('%d'),
-                    'till_month': datetime.now().strftime('%m'),
-                    'till_year': datetime.now().strftime('%Y'),
+                
+                # url = 'https://www.rosnedra.gov.ru/index.fcgi'
+                # params={
+                #     'page': 'search',
+                #     'from_day': '28',
+                #     'from_month': '04',
+                #     'from_year': '2012',
+                #     'till_day': datetime.now().strftime('%d'),
+                #     'till_month': datetime.now().strftime('%m'),
+                #     'till_year': datetime.now().strftime('%Y'),
+                #     'q': search_string,
+                #     'step': '1',
+                #     'order': '2',
+                #     'part': page
+                # }
+                url = 'https://rosnedra.gov.ru/search/'
+                params = {
                     'q': search_string,
-                    'step': '1',
-                    'order': '2',
-                    'part': page
+                    'how': 'r',
+                    'where': '',
+                    'from': '01.03.2005',
+                    'to': datetime.now().strftime('%d.%m.%Y'),
+                    'PAGE_N': page
                 }
+
                 try:
                     page_result = s.get(url, params=params, headers=headers, verify=False)
                     i = 1
@@ -152,11 +173,13 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                 # create a beautifulsoup from the current search results page
                 cur_search_results_page_soup = BeautifulSoup(page_result.text, 'html.parser')
                 # find all search-result-item tags and put them to the list
-                for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
+                # for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'search-result-list'}).find_all(attrs={'class': 'search-result-item'}):
+                for search_result_item in cur_search_results_page_soup.find(attrs={'class': 'result-el'}).find_all(attrs={'class': 'result-item'}):
                     # set the locale to russian to be able to work with the item's date
                     locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
                     # loop through search-result-link-info-item tags
-                    for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
+                    # for search_result_link_info_item in search_result_item.find_all(attrs={'class': 'search-result-link-info-item'}):
+                    for search_result_link_info_item in search_result_item.find(attrs={'class': 'result-item__legend'}).find_all('div'):
                         # if the search-result-link-info-item tag contains 'Дата' word, it's a datestamp
                         if 'Дата' in search_result_link_info_item.text:
                             # use a custom function to put the month name to nominative form
@@ -167,14 +190,16 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             # extract the datestamp of the document
                             item_date = item_date.replace(u'\xa0', u' ')
                             item_date = item_date.replace('  ', ' ')
-                            item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
+                            # item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d %B %Y')
+                            item_date = datetime.strptime(item_date.title(), 'Дата Документа: %d.%m.%Y')
                             pass
                             # item_date = datetime.strptime(item_date.title(), 'Дата Документа:\xa0\xa0%d\xa0%B\xa0%Y')
 
                     # check if the datestamp matches the given time period
                     if start <= item_date <= end:
                         # find the search-result-link tag inside the current search-result-item and extract url from it
-                        url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
+                        # url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
+                        url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find('a')['href']}".replace('//', '/')
                         # make a standard process of requesting a page for the current search-result-item
                         try:
                             item_page_result = s.get(url)
@@ -196,7 +221,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                         # create a beautifulsoup from search-result-item's webpage
                         cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
                         # find a content tag inside the page. It contents the links to the downloadable files.
-                        cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                        # cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                        cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'textgraph'})
                         # find all h1 tags to obtain the full document name and check if it contains the
                         # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
                         # order, not some other trash
@@ -209,6 +235,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
                                     ord_i = announcement.find('Приказ Роснедр от')
                                     order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
+                                    pass
 
                         # if we know that we've found an order and if it contains Content elements
                         if cur_content_tags and is_order:
@@ -229,7 +256,8 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             # write order announce date to metadata_dict
                             metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
                             # extract the full name of a hyperlink and store it to the metadata_dict dictionary.
-                            name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                            # name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                            name = search_result_item.find('a').text
                             metadata_dict['name'] = name
                             # store the order_date to metadata_dict
                             metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
@@ -270,7 +298,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                             for item_doc_p_tag in cur_content_tags.find_all('p'):
                                 # if there are 'Последний срок приема' words in a <p> tag
                                 # (which means that there is a deadline deascribed on a webpage):
-                                if 'последнийсрокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
+                                if 'срокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
                                     deadlinestr = item_doc_p_tag.text
                                     deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
                                     # if we are on Windows, replace month names from genitive to nominative
@@ -279,33 +307,41 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                     else:
                                         deadlinestr = deadlinestr.lower()
                                     # now we try to use several templates to parse the appliction deadline
-                                    try:
-                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.')
-                                    except:
+
+                                    templates = [
+                                        'Последний Срок Приема Заявок: До %d %B %Y Г (Включительно).',
+                                        'Срок Приема Заявок: До %d %B %Y Г.',
+                                        'Срок Приема Заявок: До %d %B %Y Г.)',
+                                        'Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.',
+                                        'Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г (Включительно).',
+                                        'Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.',
+                                        'Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)',
+                                        'Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)',
+                                        'Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г (Включительно).',
+                                        'Последний Срок Приема Заявок: До %d %B %Y Г.',
+                                        'Последний Срок Приема Заявок: До %d %B %Y Г.)',
+                                        'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.',
+                                        'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)',
+                                        'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.',
+                                        'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)',
+                                        'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г (Включительно).',
+                                        'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г (Включительно).'
+                                    ]
+                                    deadline = None
+                                    for t in templates:
                                         try:
-                                            deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %d %B %Y Г.)')
+                                            deadline = datetime.strptime(deadlinestr.title(), t)
                                         except:
-                                            try:
-                                                deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.')
-                                            except:
-                                                try:
-                                                    deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H:%M (Местное Время) %d %B %Y Г.)')
-                                                except:
-                                                    try:
-                                                        deadline = datetime.strptime(deadlinestr.title(), 'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.')
-                                                        pass
-                                                    except:
-                                                        try:
-                                                            deadline = datetime.strptime(deadlinestr.title(),'Последний Срок Приема Заявок: До %H.%M (Местное Время) %d %B %Y Г.)')
-                                                        except:
-                                                            # if none of our templates matched, then use 1970-01-01 as a fake deadline
-                                                            deadline = datetime(1970, 1, 1)
-                                                            # and send an error message to the log
-                                                            message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
-                                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                                            send_to_telegram(s, logf, bot_info=bot_info,
-                                                                             message=message,
-                                                                             logdateformat=logdateformat)
+                                            pass
+                                    if not deadline:
+                                        # if none of our templates matched, then use 1970-01-01 as a fake deadline
+                                        deadline = datetime(1970, 1, 1)
+                                        # and send an error message to the log
+                                        message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info,
+                                                        message=message,
+                                                        logdateformat=logdateformat)
                                     # now record the deadline to the metadata_dict. We don't use the time, just the date.
                                     # To use the time correctly we need to resolve the issue with timezones, because
                                     # Python uses local time zone by default.
@@ -1241,7 +1277,7 @@ if __name__ == '__main__':
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
         # startdt = lastdt_result[1] + timedelta(days=1)
-        startdt = datetime.strptime('2023-01-01', '%Y-%m-%d')
+        startdt = datetime.strptime('2024-08-01', '%Y-%m-%d')
         # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
         enddt = datetime.now()
         clear_folder('rosnedra_auc')
