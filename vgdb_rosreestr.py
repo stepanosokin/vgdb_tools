@@ -148,7 +148,20 @@ def show_cadnum_new(x, y):
 def show_cadnum_sel(x, y):
     driver_exe = 'edgedriver'
     options = Options()
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
+
+    # Eldar Mamedov's Selenium options:
+    options.add_argument("--headless=new")  # Запуск браузера в безголовом режиме
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument("--disable-infobars")
+    options.add_argument("--start-maximized")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
     driver = webdriver.Edge(options=options)
     # driver.get('https://egrp365.ru')
     driver.get(f'https://pkk.rosreestr.ru/api/features/1/?sq=%7B%22type%22%3A%22Point%22%2C%22coordinates%22%3A%5B{x}%2C{y}%5D%7D&tolerance=1&limit=11')
@@ -159,6 +172,8 @@ def show_cadnum_sel(x, y):
     message = ''
     for f in data.get('features'):
         message += f.get('attrs').get('cn') + '\n'
+    if not message:
+        message = 'Ошибка запроса кадастрового номера'
     print(message)
     
 
