@@ -40,27 +40,52 @@ def download_rfgf_blocks(json_request, json_result, folder='rfgf_blocks', bot_in
                            # 'cookie': '_ym_uid=1656406763932208622; _ym_d=1656406763; _ym_isad=2',
                            'dnt': '1'
                            }
-                try:
-                    i = 1
-                    response = s.post(url, headers=headers, json=json_object, verify=False)
-                    while response.status_code != 200:
+                response = None
+                data = None
+                err_code = 0
+                i = 1
+                while err_code != 200 and i <= 10:
+                # try:
+                    try:
                         i += 1
-                        if i >= 10:
-                            message = f'Download License blocks data from Rosgeolfond FAILED after 10 tries, status code {response.status_code}'
-                            log_message(s, logf, bot_info, message)
-                            break
                         response = s.post(url, headers=headers, json=json_object, verify=False)
-
-                except:
-                    message = f'LicenseBlockUpdater: Download License blocks data from Rosgeolfond FAILED after {i} tries, error making HTTP request'
+                        err_code = response.status_code                        
+                        # if i >= 10:
+                        #     message = f'Download License blocks data from Rosgeolfond FAILED after 10 tries, status code {response.status_code}'
+                        #     log_message(s, logf, bot_info, message)
+                        #     break
+                        # response = s.post(url, headers=headers, json=json_object, verify=False)
+                    except:
+                        message = f'LicenseBlockUpdater: Download License blocks data from Rosgeolfond attempt {i} FAILED , error making HTTP request. Retrying...'
+                        log_message(s, logf, bot_info, message)
+                if err_code == 200 and response:
+                    try:
+                        data = response.json()                        
+                    except:
+                        pass
+                    if data:
+                        if data.get('result').get('data').get('rows'):
+                            with open(os.path.join(current_directory, folder, json_result), "w", encoding='utf-8') as a_file:
+                                json.dump(data, a_file, ensure_ascii=False)
+                            message = f"LicenseBlockUpdater: Downloaded License blocks data from Rosgeolfond successfully, {len(data['result']['data']['rows'])} records downloaded"
+                            log_message(s, logf, bot_info, message)
+                            success = True
+                            pass
+                        else:
+                            message = f"LicenseBlockUpdater: Downloaded empty or NULL result, skipping update..."
+                            log_message(s, logf, bot_info, message)
+                    else:
+                        message = f"LicenseBlockUpdater: Downloaded empty or NULL result, skipping update..."
+                        log_message(s, logf, bot_info, message)
+                else:
+                    message = f'LicenseBlockUpdater: Download License blocks data from Rosgeolfond FAILED after {i} tries, error making HTTP request. Skipping update.'
                     log_message(s, logf, bot_info, message)
-                data = response.json()
-                if response.status_code == 200:
-                    message = f"LicenseBlockUpdater: Downloaded License blocks data from Rosgeolfond successfully, {len(data['result']['data']['rows'])} records downloaded"
-                    log_message(s, logf, bot_info, message)
-                with open(os.path.join(current_directory, folder, json_result), "w", encoding='utf-8') as a_file:
-                    json.dump(data, a_file, ensure_ascii=False)
-                success = True
+                # if response.status_code == 200:
+                #     message = f"LicenseBlockUpdater: Downloaded License blocks data from Rosgeolfond successfully, {len(data['result']['data']['rows'])} records downloaded"
+                #     log_message(s, logf, bot_info, message)
+                # with open(os.path.join(current_directory, folder, json_result), "w", encoding='utf-8') as a_file:
+                #     json.dump(data, a_file, ensure_ascii=False)
+                # success = True
     except:
         success = False
         message = f"LicenseBlockUpdater: Download license blocks from Rosgeolfond FAILED"
@@ -432,15 +457,17 @@ if __name__ == '__main__':
     #         # update license blocks on server
     #         update_postgres_table(gdalpgcs, bot_info=bot_info)
 
-    with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
-        lb_general_webhook = f.read().replace('\n', '')
     # read the telegram bot credentials
     with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
         jdata = json.load(f)
         bot_info = (jdata['token'], jdata['chatid'])
+
     # read the postgres login credentials for gdal from file
     with open('.pggdal', encoding='utf-8') as gdalf:
         gdalpgcs = gdalf.read().replace('\n', '')
+
+    with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
+        lb_general_webhook = f.read().replace('\n', '')
 
     with open('.ext_pgdsn', encoding='utf-8') as f:
         ext_pgdsn = f.read()
@@ -448,5 +475,15 @@ if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as f:
         local_pgdsn = f.read()
 
-    if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
-        synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, bot_info=bot_info)
+    with open('.egssh', 'r', encoding='utf-8') as f:
+        egssh = json.load(f)
+
+    # download the license blocks data from Rosgeolfond
+    if download_rfgf_blocks('rfgf_request_noFilter_100.json', 'rfgf_result_100.json', bot_info=bot_info):
+        pass
+        # parse the blocks from downloaded json
+        if parse_rfgf_blocks('rfgf_result_100.json', bot_info=bot_info):
+            pass
+        #     # update license blocks on server
+        #     if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+        #         synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
