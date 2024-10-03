@@ -5,6 +5,8 @@ from psycopg2.extras import *
 from synchro_evergis import *
 # from mapbox import Static
 import polyline
+import urllib.parse
+from requests.utils import quote
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -355,7 +357,7 @@ def get_lot_on_mapbox_png(lot, ofile, token):
             try:
                 i += 1
                 response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
-                status = respone.status_code
+                status = response.status_code
                 jd = response.json()
             except:
                 pass
@@ -365,33 +367,57 @@ def get_lot_on_mapbox_png(lot, ofile, token):
             # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
             # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
             # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
-            points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
-            # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
-            points_tuples = [(point[1], point[0]) for point in points]
-            encoded_polyline = polyline.encode(points_tuples, 5)
-            # https://docs.mapbox.com/api/maps/styles/
-            styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
-                    'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
-            url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
-                f"path-5+c00-0.5({encoded_polyline})/" \
-                f"auto/200x200"
-            params = {"access_token": token,
-                    "padding": '50,50,50'}
-            j = 1
-            status = 0
-            response = None
-            while (not response) and i <= 10 and status != 200:
-                try:
-                    i += 1
-                    response = s.get(url, params=params)
-                    status = response.status_code
-                except:
-                    pass
-            # add to a file
-            if response:
-                with open('ofile', 'wb') as output:
-                    _ = output.write(response.content)
-                    return True
+            if jd.get('geometry'):
+                # Вариант 1 - GeoJSON без изменений структуры, но с отбором атрибутов
+                jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
+                
+                # Вариант 2 - Если предположить, что в мультиполигоне всегда один полигон
+                jd2 = {"type": "Polygon", "coordinates": jd["geometry"]["coordinates"][0]}
+                
+                # Вариант 3 - Попытка сделать пригодный для MapBox Мультиполигон (не работает)
+                # https://docs.mapbox.com/api/maps/static-images/#example-request-retrieve-a-static-map-with-a-geojson-featurecollection-overlay
+                jd3 = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": crds}} for crds in jd["geometry"]["coordinates"]]}
+                
+                jds =json.dumps(jd2)    # Пока что будем пользоваться вариантом 2
+                # encoded = urllib.parse.urlencode(jd, safe='')
+                encoded = quote(jds.replace(' ', ''))
+                
+                # Это для варианта 1. Делаем из GeoJSON просто цепочку координат всех колец полигона. Не работает, если в полигоне есть дырки.
+                points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
+                
+                # https://docs.mapbox.com/api/maps/styles/
+                styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
+                        'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
+                
+                # # Вариант 1 - формируем URL для отображения path
+                # points_tuples = [(point[1], point[0]) for point in points]
+                # encoded_polyline = polyline.encode(points_tuples, 5)
+                # url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['streets']}/static/" \
+                #     f"path-5+c00-0.5({encoded_polyline})/" \
+                #     f"auto/200x200"
+                
+                # Вариант 2 - пока рабочий. Засылаем подходящий для MapBox GeoJSON с первым полигоном из мультиполигона.
+                url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['streets']}/static/" \
+                    f"geojson({encoded})/" \
+                    f"auto/200x200"
+                
+                params = {"access_token": token,
+                        "padding": '50,50,50'}
+                j = 1
+                status = 0
+                response = None
+                while (not response) and i <= 10 and status != 200:
+                    try:
+                        i += 1
+                        response = s.get(url, params=params)
+                        status = response.status_code
+                    except:
+                        pass
+                # add to a file
+                if response and status == 200:
+                    with open(ofile, 'wb') as output:
+                        _ = output.write(response.content)
+                        return True
     return False
 
 
@@ -417,34 +443,36 @@ if __name__ == '__main__':
 
     
     with requests.Session() as s:
-        lot = '22000033960000000024'
-        response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
-        jd = response.json()
-        # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
-        # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
-        # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
-        # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
-        # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
-        points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
-        # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
-        points_tuples = [(point[1], point[0]) for point in points]
-        encoded_polyline = polyline.encode(points_tuples, 5)
-        # https://docs.mapbox.com/api/maps/styles/
-        styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
-                  'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
-        # os.environ["MAPBOX_ACCESS_TOKEN"] = mb_token
-        url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
-              f"path-5+c00-0.5({encoded_polyline})/" \
-              f"auto/200x200"
-        params = {"access_token": mb_token,
-                  "padding": '50,50,50'}
-        response = s.get(url, params=params)
-        # add to a file
-        with open('./output_file.png', 'wb') as output:
-            _ = output.write(response.content)
+        lot = '22000039810000000042'
+
+        # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
+        # jd = response.json()
+        # # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
+        # # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+        # # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+        # # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+        # # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+        # points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
+        # # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
+        # points_tuples = [(point[1], point[0]) for point in points]
+        # encoded_polyline = polyline.encode(points_tuples, 5)
+        # # https://docs.mapbox.com/api/maps/styles/
+        # styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
+        #           'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
+        # # os.environ["MAPBOX_ACCESS_TOKEN"] = mb_token
+        # url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
+        #       f"path-5+c00-0.5({encoded_polyline})/" \
+        #       f"auto/200x200"
+        # params = {"access_token": mb_token,
+        #           "padding": '50,50,50'}
+        # response = s.get(url, params=params)
+        # # add to a file
+        # with open('./output_file.png', 'wb') as output:
+        #     _ = output.write(response.content)
         
         with open('tmp.txt', 'w') as logf:
-            message = f'[lotcard](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot})'
-            send_to_telegram(s, logf, bot_info=log_bot_info, message=message, photo='./output_file.png')
-
-
+            if get_lot_on_mapbox_png(lot, 'torgi_gov_ru/lot.png', mb_token):
+                pass
+                message = f'[lotcard GeoJSON](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot})'
+                if send_to_telegram(s, logf, bot_info=log_bot_info, message=message, photo='torgi_gov_ru/lot.png'):
+                    pass
