@@ -348,6 +348,8 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
 
 def get_lot_on_mapbox_png(lot, ofile, token):
     # https://docs.mapbox.com/api/maps/static-images/
+    # Пример на перспективу - как встраивать MapBox в HTML. Может, можно такой вставить в Telegram сообщение?
+    # https://docs.mapbox.com/mapbox-gl-js/example/simple-map/
     success = False
     with requests.Session() as s:
         # lot = '22000033960000000024'
