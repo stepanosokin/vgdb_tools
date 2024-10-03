@@ -42,7 +42,8 @@ def send_to_telegram(s: requests.Session,
                      bot_info: tuple,
                      message='Hello vrom vgdb!',
                      logdateformat='%Y-%m-%d %H:%M:%S',
-                     document=''):
+                     document='', 
+                     photo=''):
     '''
     This function sends a message to a Telegram chat from a Telegram bot. \n
     You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, \n
@@ -59,10 +60,12 @@ def send_to_telegram(s: requests.Session,
     bot_token = bot_info[0]
     bot_chatID = bot_info[1]
     # create sendmessage url
-    if not document:
-        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
-    else:
+    if document:
         telegram_url = f'https://api.telegram.org/bot{bot_token}/sendDocument'
+    elif photo:
+        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendPhoto'
+    else:
+        telegram_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
     # start tries counter
     i = 1
     # try to send the message
@@ -72,18 +75,27 @@ def send_to_telegram(s: requests.Session,
         # if we receive an http error
         while err_code != 200 and i <= 10:
             # then try again, making 10 tries
-            if not document:
-                res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
-            else:
+            i += 1
+            
+            if document:
                 with open(document, 'rb') as sf:
                     res = s.post(telegram_url,
-                                 data={'chat_id': bot_chatID, 'caption': message},
+                                 data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
                                  files={'document': sf}
                                  )
+            elif photo:
+                with open(photo, 'rb') as sf:
+                    res = s.post(telegram_url,
+                                 data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
+                                 files={'photo': sf}
+                                 )
+            else:
+                # res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+                res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message, 'parse_mode': 'MarkdownV2'})
+                pass
             err_code = res.status_code
             reason = res.reason
             res_text = res.text
-            i += 1
         if i > 10 and err_code != 200:
             # if 10 failed tries passed, send an error message to the log
             logf.write(

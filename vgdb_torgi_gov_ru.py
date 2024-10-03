@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from vgdb_general import send_to_telegram, log_message, send_to_teams
 from psycopg2.extras import *
 from synchro_evergis import *
+# from mapbox import Static
+import polyline
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -187,7 +189,7 @@ def parse_lotcard(lotcard):
 
 def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=('token', 'chatid'),
                   report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt',
-                  webhook=''):
+                  webhook='', mapbox_token=''):
     status_dict = {
         "PUBLISHED": 'Опубликован',
         "APPLICATIONS_SUBMISSION": 'Прием заявок',
@@ -272,9 +274,14 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         if message:
                             message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                                log_message(s, logf, report_bot_info, message)
+                                if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
+                                    log_message(s, logf, report_bot_info, message, to_telegram=False)
+                                    send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
+                                else:
+                                    log_message(s, logf, report_bot_info, message, to_telegram=True)
                                 if webhook:
                                     send_to_teams(webhook, message, logf)
+                                
                     pass
                 else:
                     updates = (1, 0)
@@ -302,8 +309,13 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     if lotcard_dict.get('resourcePotential'):
                         message += f"; \nРесурсы: {lotcard_dict['resourcePotential']}"
                     message += f"; \nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
+                    
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                        log_message(s, logf, report_bot_info, message)
+                        if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
+                            log_message(s, logf, report_bot_info, message, to_telegram=False)
+                            send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
+                        else:
+                            log_message(s, logf, report_bot_info, message)
                         if webhook:
                             send_to_teams(webhook, message, logf)
     else:
@@ -313,7 +325,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
     return updates
 
 
-def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt', webhook=''):
+def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), 
+                     logfile='torgi_gov_ru/logfile.txt', webhook='', mapbox_token=''):
     lotcards = download_lotcards(log_bot_info=log_bot_info, logfile=logfile)
     if lotcards and dsn:
         new, updated = 0, 0
@@ -321,7 +334,7 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
         for lotcard in lotcards:
             updates = check_lotcard(pgconn, lotcard,
                                     log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile,
-                                    webhook=webhook)
+                                    webhook=webhook, mapbox_token=mapbox_token)
             new, updated = [x + y for x, y in zip((new, updated), updates)]
         pgconn.commit()
         pgconn.close()
@@ -330,9 +343,63 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
             log_message(s, logf, log_bot_info, message)
 
 
+def get_lot_on_mapbox_png(lot, ofile, token):
+    success = False
+    with requests.Session() as s:
+        # lot = '22000033960000000024'
+        i = 1
+        status = 0
+        response = None
+        jd = None
+        while (not response) and i <= 10 and status != 200:
+            try:
+                i += 1
+                response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
+                status = respone.status_code
+                jd = response.json()
+            except:
+                pass
+        if jd:
+            # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
+            # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+            # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+            # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+            # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+            points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
+            # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
+            points_tuples = [(point[1], point[0]) for point in points]
+            encoded_polyline = polyline.encode(points_tuples, 5)
+            # https://docs.mapbox.com/api/maps/styles/
+            styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
+                    'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
+            url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
+                f"path-5+c00-0.5({encoded_polyline})/" \
+                f"auto/200x200"
+            params = {"access_token": token,
+                    "padding": '50,50,50'}
+            j = 1
+            status = 0
+            response = None
+            while (not response) and i <= 10 and status != 200:
+                try:
+                    i += 1
+                    response = s.get(url, params=params)
+                    status = response.status_code
+                except:
+                    pass
+            # add to a file
+            if response:
+                with open('ofile', 'wb') as output:
+                    _ = output.write(response.content)
+                    return True
+    return False
+
+
 if __name__ == '__main__':
     with open('.pgdsn', encoding='utf-8') as dsnf:
         dsn = dsnf.read().replace('\n', '')
+    with open('.mapbox_token', encoding='utf-8') as mbtkf:
+        mb_token = mbtkf.read().replace('\n', '')
     with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
         jdata = json.load(f)
         log_bot_info = (jdata['token'], jdata['chatid'])
@@ -341,5 +408,43 @@ if __name__ == '__main__':
         nr_ne_webhook_2023 = f.read().replace('\n', '')
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
-    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023)
-    synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
+    # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023, mapbox_token=mb_token)
+    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
+
+    # with open('tmp.txt', 'w') as logf, requests.Session() as s:
+    #     message = '[lotcard](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/22000033960000000013)'
+    #     send_to_telegram(s, logf, bot_info=log_bot_info, message=message)
+
+    
+    with requests.Session() as s:
+        lot = '22000033960000000024'
+        response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
+        jd = response.json()
+        # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
+        # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+        # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+        # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
+        # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
+        points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
+        # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
+        points_tuples = [(point[1], point[0]) for point in points]
+        encoded_polyline = polyline.encode(points_tuples, 5)
+        # https://docs.mapbox.com/api/maps/styles/
+        styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
+                  'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
+        # os.environ["MAPBOX_ACCESS_TOKEN"] = mb_token
+        url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
+              f"path-5+c00-0.5({encoded_polyline})/" \
+              f"auto/200x200"
+        params = {"access_token": mb_token,
+                  "padding": '50,50,50'}
+        response = s.get(url, params=params)
+        # add to a file
+        with open('./output_file.png', 'wb') as output:
+            _ = output.write(response.content)
+        
+        with open('tmp.txt', 'w') as logf:
+            message = f'[lotcard](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot})'
+            send_to_telegram(s, logf, bot_info=log_bot_info, message=message, photo='./output_file.png')
+
+

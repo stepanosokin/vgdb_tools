@@ -24,9 +24,15 @@ with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
 with open('.egssh', 'r', encoding='utf-8') as f:
     egssh = json.load(f)
 
-refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023)
-# refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
+with open('.mapbox_token', encoding='utf-8') as mbtkf:
+    mb_token = mbtkf.read().replace('\n', '')
 
+refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
+                 report_bot_info=report_bot_info, 
+                 webhook=nr_ne_webhook_2023, 
+                 mapbox_token=mb_token)
+
+# refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
 
 
 synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
