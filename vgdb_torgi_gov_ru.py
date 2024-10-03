@@ -5,7 +5,6 @@ from psycopg2.extras import *
 from synchro_evergis import *
 # from mapbox import Static
 import polyline
-import urllib.parse
 from requests.utils import quote
 
 
@@ -278,6 +277,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                 if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
                                     log_message(s, logf, report_bot_info, message, to_telegram=False)
+                                    message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                                     send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                                 else:
                                     log_message(s, logf, report_bot_info, message, to_telegram=True)
@@ -315,6 +315,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
                             log_message(s, logf, report_bot_info, message, to_telegram=False)
+                            message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                         else:
                             log_message(s, logf, report_bot_info, message)
@@ -346,6 +347,7 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
 
 
 def get_lot_on_mapbox_png(lot, ofile, token):
+    # https://docs.mapbox.com/api/maps/static-images/
     success = False
     with requests.Session() as s:
         # lot = '22000033960000000024'
@@ -379,7 +381,6 @@ def get_lot_on_mapbox_png(lot, ofile, token):
                 jd3 = {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Polygon", "coordinates": crds}} for crds in jd["geometry"]["coordinates"]]}
                 
                 jds =json.dumps(jd2)    # Пока что будем пользоваться вариантом 2
-                # encoded = urllib.parse.urlencode(jd, safe='')
                 encoded = quote(jds.replace(' ', ''))
                 
                 # Это для варианта 1. Делаем из GeoJSON просто цепочку координат всех колец полигона. Не работает, если в полигоне есть дырки.
