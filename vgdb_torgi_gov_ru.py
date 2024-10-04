@@ -277,7 +277,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                 if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
                                     log_message(s, logf, report_bot_info, message, to_telegram=False)
-                                    message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
+                                    # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                                     send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                                 else:
                                     log_message(s, logf, report_bot_info, message, to_telegram=True)
@@ -315,7 +315,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
                             log_message(s, logf, report_bot_info, message, to_telegram=False)
-                            message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
+                            # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                         else:
                             log_message(s, logf, report_bot_info, message)

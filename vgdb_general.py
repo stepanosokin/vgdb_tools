@@ -80,18 +80,20 @@ def send_to_telegram(s: requests.Session,
             if document:
                 with open(document, 'rb') as sf:
                     res = s.post(telegram_url,
-                                 data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
+                                 data={'chat_id': bot_chatID, 'caption': message},
+                                #  data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
                                  files={'document': sf}
                                  )
             elif photo:
                 with open(photo, 'rb') as sf:
                     res = s.post(telegram_url,
-                                 data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
+                                 data={'chat_id': bot_chatID, 'caption': message},
+                                #  data={'chat_id': bot_chatID, 'caption': message, 'parse_mode': 'MarkdownV2'},
                                  files={'photo': sf}
                                  )
             else:
-                # res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
-                res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message, 'parse_mode': 'MarkdownV2'})
+                res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message})
+                # res = s.post(telegram_url, json={'chat_id': bot_chatID, 'text': message, 'parse_mode': 'MarkdownV2'})
                 pass
             err_code = res.status_code
             reason = res.reason
