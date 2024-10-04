@@ -277,15 +277,18 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         if message:
                             message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                                if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
+                                if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token): 
+                                    if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm", token=mapbox_token):
+                                        message += f"<br><a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['id']}.htm{chr(34)}>Отобразить на карте</a>"
+                                        os.remove(f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm")
                                     log_message(s, logf, report_bot_info, message, to_telegram=False)
                                     # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                                     send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                                 else:
                                     log_message(s, logf, report_bot_info, message, to_telegram=True)
-                                if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm", token=mapbox_token):
-                                    if send_to_telegram(s, logf, bot_info=report_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm"):
-                                        os.remove(f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm")
+                                # if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm", token=mapbox_token):
+                                #     if send_to_telegram(s, logf, bot_info=report_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm"):
+                                #         os.remove(f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm")
                                 if webhook:
                                     send_to_teams(webhook, message, logf)
                                 
@@ -319,15 +322,18 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     message += f"; \nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                        if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):                                
+                        if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):
+                            if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm", token=mapbox_token):
+                                message += f"<br><a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['id']}.htm{chr(34)}>Отобразить на карте</a>"
+                                os.remove(f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm")
                             log_message(s, logf, report_bot_info, message, to_telegram=False)
                             # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
                         else:
                             log_message(s, logf, report_bot_info, message)
-                        if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm", token=mapbox_token):
-                            if send_to_telegram(s, logf, bot_info=report_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm"):
-                                os.remove(f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm")
+                        # if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm", token=mapbox_token):
+                        #     if send_to_telegram(s, logf, bot_info=report_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm"):
+                        #         os.remove(f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm")
                         if webhook:
                             send_to_teams(webhook, message, logf)
     else:
@@ -704,6 +710,6 @@ if __name__ == '__main__':
                 # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
                 # if success:
                 
-                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>'):
+                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'\ntest\n<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
                     pass
                     
