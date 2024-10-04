@@ -390,7 +390,9 @@ def generate_lot_mapbox_html(lot, ofile, token):
 <html>
 <head>
 <meta charset="utf-8">
-<title>Add a polygon to a map using a GeoJSON source</title>
+<title>'''
+            html += jd3['features'][0]['properties']['Название_лота']
+            html += '''</title>
 <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
