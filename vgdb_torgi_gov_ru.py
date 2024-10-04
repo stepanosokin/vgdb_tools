@@ -4,8 +4,10 @@ from vgdb_general import send_to_telegram, log_message, send_to_teams
 from psycopg2.extras import *
 from synchro_evergis import *
 # from mapbox import Static
-import polyline
+# import polyline
 from requests.utils import quote
+import paramiko
+from scp import SCPClient
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -516,8 +518,23 @@ body { margin: 0; padding: 0; }
 </html>
             '''
             with open(ofile, 'w', encoding='utf-8') as output:
-                        _ = output.write(html)
-            return True
+                _ = output.write(html)
+
+            def createSSHClient(server, port, user):
+                client = paramiko.SSHClient()
+                client.load_system_host_keys()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                client.connect(server, port, user)
+                return client
+            try:
+                ssh = createSSHClient('195.2.79.9', '22', 'stepan')
+                scp = SCPClient(ssh.get_transport())
+                scp.put(ofile, recursive=True, remote_path='/home/stepan/apache/htdocs')
+                scp.close()
+                return True
+            except:
+                pass
+            
     return False
     
 
@@ -665,8 +682,28 @@ if __name__ == '__main__':
         # generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token)
 
         with open('tmp.txt', 'w') as logf:
-            if generate_lot_mapbox_html(lot, f"torgi_gov_ru/Тремасовский участок недр.htm", mb_token):
+            if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
                 message = f'{lot}'
-                if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/Тремасовский участок недр.htm"):
-                    os.remove(f"torgi_gov_ru/Тремасовский участок недр.htm")
+                # success = False
+                # try:                    
+                #     def createSSHClient(server, port, user):
+                #         client = paramiko.SSHClient()
+                #         client.load_system_host_keys()
+                #         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                #         client.connect(server, port, user)
+                #         return client
+
+                #     ssh = createSSHClient('195.2.79.9', '22', 'stepan')
+                #     scp = SCPClient(ssh.get_transport())
+                #     scp.put(f"torgi_gov_ru/{lot}.html", recursive=True, remote_path='/home/stepan/apache/htdocs')
+                #     scp.close()
+                #     success = True
+                # except:
+                #     pass
+                # pass
+                # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
+                # if success:
+                
+                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>'):
                     pass
+                    
