@@ -275,7 +275,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             else:
                                 message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
                         if message:
-                            message += f"\nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false"
+                            message += f"<br><a href={chr(13)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(13)}>Карточка лота</a>"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                 if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token): 
                                     if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm", token=mapbox_token):
@@ -319,7 +319,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f" {lotcard_dict['timeZoneName']}"
                     if lotcard_dict.get('resourcePotential'):
                         message += f"; \nРесурсы: {lotcard_dict['resourcePotential']}"
-                    message += f"; \nhttps://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false"
+                    message += f";<br><a href={chr(13)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(13)}>Карточка лота</a>"
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):
@@ -712,6 +712,6 @@ if __name__ == '__main__':
                 # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
                 # if success:
                 
-                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'\ntest\n<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
+                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
                     pass
                     
