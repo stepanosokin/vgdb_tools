@@ -275,12 +275,12 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             else:
                                 message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
                         if message:
-                            message += f"<br><a href={chr(13)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(13)}>Карточка лота</a>"
+                            message += f"\n<a href={chr(34)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(34)}>Карточка лота</a>"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                                if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token): 
-                                    if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm", token=mapbox_token):
-                                        message += f"<br><a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['id']}.htm{chr(34)}>Отобразить на карте</a>"
-                                        os.remove(f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm")
+                                if get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token): 
+                                    if generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token):
+                                        message += f"\n<a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm{chr(34)}>Отобразить на карте</a>"
+                                        os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                                     log_message(s, logf, report_bot_info, message, to_telegram=False)
                                     # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                                     send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
@@ -319,13 +319,13 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f" {lotcard_dict['timeZoneName']}"
                     if lotcard_dict.get('resourcePotential'):
                         message += f"; \nРесурсы: {lotcard_dict['resourcePotential']}"
-                    message += f";<br><a href={chr(13)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(13)}>Карточка лота</a>"
+                    message += f";\n<a href={chr(34)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(34)}>Карточка лота</a>"
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
-                        if get_lot_on_mapbox_png(lotcard_dict['id'], 'torgi_gov_ru/lot.png', mapbox_token):
-                            if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm", token=mapbox_token):
-                                message += f"<br><a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['id']}.htm{chr(34)}>Отобразить на карте</a>"
-                                os.remove(f"torgi_gov_ru/{str(lotcard_dict['id'])}.htm")
+                        if get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token):
+                            if generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token):
+                                message += f"\n<a href={chr(34)}http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm{chr(34)}>Отобразить на карте</a>"
+                                os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                             log_message(s, logf, report_bot_info, message, to_telegram=False)
                             # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
                             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
@@ -375,7 +375,7 @@ def generate_lot_mapbox_html(lot, ofile, token):
                 jd = response.json()
             except:
                 pass
-        if jd:
+        if jd and status == 200:
             pass
             xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
             xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
@@ -569,7 +569,7 @@ def get_lot_on_mapbox_png(lot, ofile, token):
                 jd = response.json()
             except:
                 pass
-        if jd:
+        if jd and status == 200:
             # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
             # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
             # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
@@ -650,7 +650,7 @@ if __name__ == '__main__':
 
     
     with requests.Session() as s:
-        lot = '22000039810000000042'
+        lot = '22000039810000000086'
         # lot = '22000039810000000046'
         # lot = '22000033960000000024'
 

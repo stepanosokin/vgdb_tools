@@ -32,6 +32,11 @@ refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info,
                  webhook=nr_ne_webhook_2023, 
                  mapbox_token=mb_token)
 
+# refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
+#                  report_bot_info=report_bot_info, 
+#                  webhook='', 
+#                  mapbox_token=mb_token)
+
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
 
 
