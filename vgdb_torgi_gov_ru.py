@@ -319,7 +319,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f" {lotcard_dict['timeZoneName']}"
                     if lotcard_dict.get('resourcePotential'):
                         message += f"; \nРесурсы: {lotcard_dict['resourcePotential']}"
-                    message += f";\n<a href={chr(34)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id'][1:-1]}/(lotInfo:info)?fromRec=false{chr(34)}>Карточка лота</a>"
+                    message += f";\n<a href={chr(34)}https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false{chr(34)}>Карточка лота</a>"
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         if get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token):
