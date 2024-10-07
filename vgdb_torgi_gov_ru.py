@@ -483,7 +483,7 @@ body { margin: 0; padding: 0; }
             description += '<tr><td colspan=2>' + e.features[0].properties.Название_лота + '</td></tr>'
             description += '<tr><td colspan=2>' + e.features[0].properties.Сведения_о_запасах_и_ресурсах + '</td></tr>'
             description += '<tr><td>Срок подачи:</td><td>' + e.features[0].properties.Срок_подачи_заявок + '</td></tr>'
-            description += '<tr><td>Нач.цена:</td><td>' + e.features[0].properties.Начальная_цена + '</td></tr>'
+            description += '<tr><td>Нач.цена:</td><td>' + parseInt(e.features[0].properties.Начальная_цена).toLocaleString('ru-RU', {style: 'currency', currency: 'RUB', currencyDisplay : 'symbol', useGrouping: true}) + '</td></tr>'
             description += '<tr><td>Статус:</td><td>' + e.features[0].properties.Статус + '</td></tr>'
             description += '<tr><td colspan=2><a href="' + e.features[0].properties.url + '">Карточка лота</a></td></tr>'
             description += '</table>'
@@ -650,9 +650,14 @@ if __name__ == '__main__':
 
     
     with requests.Session() as s:
-        lot = '22000039810000000086'
+        # lot = '22000039810000000086'
         # lot = '22000039810000000046'
         # lot = '22000033960000000024'
+        # lot = '22000039810000000086'
+        # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
+        #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
+        #         '22000059140000000015','22000039810000000058']
+        lots = ['22000043270000000069']
 
         # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
         # jd = response.json()
@@ -690,28 +695,30 @@ if __name__ == '__main__':
         # generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token)
 
         with open('tmp.txt', 'w') as logf:
-            if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
-                message = f'{lot}'
-                # success = False
-                # try:                    
-                #     def createSSHClient(server, port, user):
-                #         client = paramiko.SSHClient()
-                #         client.load_system_host_keys()
-                #         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                #         client.connect(server, port, user)
-                #         return client
+            for lot in lots:
+                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token):
+                    if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
+                        message = f'{lot}'
+                        # success = False
+                        # try:                    
+                        #     def createSSHClient(server, port, user):
+                        #         client = paramiko.SSHClient()
+                        #         client.load_system_host_keys()
+                        #         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                        #         client.connect(server, port, user)
+                        #         return client
 
-                #     ssh = createSSHClient('195.2.79.9', '22', 'stepan')
-                #     scp = SCPClient(ssh.get_transport())
-                #     scp.put(f"torgi_gov_ru/{lot}.html", recursive=True, remote_path='/home/stepan/apache/htdocs')
-                #     scp.close()
-                #     success = True
-                # except:
-                #     pass
-                # pass
-                # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
-                # if success:
-                
-                if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
-                    pass
+                        #     ssh = createSSHClient('195.2.79.9', '22', 'stepan')
+                        #     scp = SCPClient(ssh.get_transport())
+                        #     scp.put(f"torgi_gov_ru/{lot}.html", recursive=True, remote_path='/home/stepan/apache/htdocs')
+                        #     scp.close()
+                        #     success = True
+                        # except:
+                        #     pass
+                        # pass
+                        # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
+                        # if success:
+                        
+                        if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML', photo=f'torgi_gov_ru/{lot}.png'):
+                            pass
                     
