@@ -483,7 +483,12 @@ body { margin: 0; padding: 0; }
             description += '<tr><td colspan=2>' + e.features[0].properties.Название_лота + '</td></tr>'
             description += '<tr><td colspan=2>' + e.features[0].properties.Сведения_о_запасах_и_ресурсах + '</td></tr>'
             description += '<tr><td>Срок подачи:</td><td>' + e.features[0].properties.Срок_подачи_заявок + '</td></tr>'
-            description += '<tr><td>Нач.цена:</td><td>' + parseInt(e.features[0].properties.Начальная_цена).toLocaleString('ru-RU', {style: 'currency', currency: 'RUB', currencyDisplay : 'symbol', useGrouping: true}) + '</td></tr>'
+            description += '<tr><td>Нач.цена:</td><td>' + parseInt(e.features[0].properties.Начальная_цена).toLocaleString('ru-RU', {
+              style: 'currency', 
+              currency: 'RUB', 
+              currencyDisplay : 'symbol', 
+              useGrouping: true
+            }) + '</td></tr>'
             description += '<tr><td>Статус:</td><td>' + e.features[0].properties.Статус + '</td></tr>'
             description += '<tr><td colspan=2><a href="' + e.features[0].properties.url + '">Карточка лота</a></td></tr>'
             description += '</table>'
@@ -606,7 +611,7 @@ def get_lot_on_mapbox_png(lot, ofile, token):
                 # Вариант 2 - пока рабочий. Засылаем подходящий для MapBox GeoJSON с первым полигоном из мультиполигона.
                 url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['streets']}/static/" \
                     f"geojson({encoded})/" \
-                    f"auto/200x200"
+                    f"auto/400x400"
                 
                 params = {"access_token": token,
                         "padding": '50,50,50'}
@@ -657,7 +662,7 @@ if __name__ == '__main__':
         # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
         #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
         #         '22000059140000000015','22000039810000000058']
-        lots = ['22000043270000000069']
+        lots = ['22000039810000000083']
 
         # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
         # jd = response.json()
