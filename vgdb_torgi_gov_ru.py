@@ -554,7 +554,7 @@ body { margin: 0; padding: 0; }
 
 
 
-def get_lot_on_mapbox_png(lot, ofile, token):
+def get_lot_on_mapbox_png(lot, ofile, token, size=400, padding=100):
     # https://docs.mapbox.com/api/maps/static-images/
     # Пример на перспективу - как встраивать MapBox в HTML. Может, можно такой вставить в Telegram сообщение?
     # https://docs.mapbox.com/mapbox-gl-js/example/simple-map/
@@ -611,10 +611,10 @@ def get_lot_on_mapbox_png(lot, ofile, token):
                 # Вариант 2 - пока рабочий. Засылаем подходящий для MapBox GeoJSON с первым полигоном из мультиполигона.
                 url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['streets']}/static/" \
                     f"geojson({encoded})/" \
-                    f"auto/400x400"
+                    f"auto/{str(size)}x{str(size)}"
                 
                 params = {"access_token": token,
-                        "padding": '50,50,50'}
+                        "padding": f'{str(padding)},{str(padding)},{str(padding)}'}
                 j = 1
                 status = 0
                 response = None
@@ -701,7 +701,7 @@ if __name__ == '__main__':
 
         with open('tmp.txt', 'w') as logf:
             for lot in lots:
-                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token):
+                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
                     if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
                         message = f'{lot}'
                         # success = False
