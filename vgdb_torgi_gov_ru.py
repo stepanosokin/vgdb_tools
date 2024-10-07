@@ -8,6 +8,7 @@ from synchro_evergis import *
 from requests.utils import quote
 import paramiko
 from scp import SCPClient
+import locale
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -234,7 +235,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             # message = f"lotcard {result[0]['id']} change detected: {field} -> {val}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, message)
-
+                    
                     if changes:
                         # print(changes)
                         updates = (0, 1)
@@ -272,6 +273,10 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     val += f' {tz}'
                             if change['field'] == 'lotStatus':
                                 message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
+                            if change['field'] == 'priceMin':
+                                locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                                message += f"\n{chfieldsdict[change['field']]}: {locale.currency(int(val), grouping=True)}"
+                                locale.setlocale(locale.LC_ALL, (''))
                             else:
                                 message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
                         if message:
@@ -307,9 +312,15 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         resourceLocation = str(lotcard_dict['resourceLocation_EA(N)']).replace("'", "")
                         message += f"; \nРасположение: {resourceLocation}"
                     if lotcard_dict.get('priceMin'):
-                        message += f"; \nНач.цена: {str(lotcard_dict['priceMin'])}"
+                        locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))                        
+                        # message += f"; \nНач.цена: {str(lotcard_dict['priceMin'])}"
+                        message += f"; \nНач.цена: {locale.currency(int(lotcard_dict['priceMin']), grouping=True)}"
+                        locale.setlocale(locale.LC_ALL, '')
                     if lotcard_dict.get('priceFin'):
-                        message += f"; \nИтог.цена: {str(lotcard_dict['priceFin'])}"
+                        locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                        # message += f"; \nИтог.цена: {str(lotcard_dict['priceFin'])}"
+                        message += f"; \nИтог.цена: {locale.currency(int(lotcard_dict['priceFin']), grouping=True)}"
+                        locale.setlocale(locale.LC_ALL, '')
                     if lotcard_dict.get('biddEndTime'):
                         endtime = datetime.strptime(lotcard_dict['biddEndTime'], "%Y-%m-%d %H:%M:%S")
                         if lotcard_dict.get('timeZoneOffset'):
