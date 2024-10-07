@@ -435,5 +435,5 @@ resources:
                   password: ${PG_PASS}
                   search_path: [torgi_gov_ru]
               id_field: 'Номер уведомления'
-              table: lotcards_spatial_view
+              table: lotcards_spatial_all
               geom_field: geom
