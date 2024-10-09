@@ -26,7 +26,7 @@ def send_to_teams(webhook, message, logf, button_text='', button_link='', title=
                 return False
             else:
                 sections_list = []
-                for section_source in sections:
+                for i, section_source in enumerate(sections):
                     section = pymsteams.cardsection()
                     section.text(section_source)
                     sections_list.append(section)
