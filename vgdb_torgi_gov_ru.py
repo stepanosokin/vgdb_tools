@@ -286,7 +286,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
                                 is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token)
                                 if is_html:
-                                    message += f" \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                                    message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                                     os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                                 log_message(s, logf, report_bot_info, message, to_telegram=False)
                                     # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
@@ -341,7 +341,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
                         is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token)
                         if is_html:
-                            message += f" \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                            message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                             os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                         log_message(s, logf, report_bot_info, message, to_telegram=False)
                             # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
@@ -757,10 +757,10 @@ if __name__ == '__main__':
                     # if send_to_teams(vgdb_bot_tests_webhook, message, logf, sections=['SECTION 1']):
                     #     pass
         
-    # This is telegram credentials to send message to the 'VG Database Techinfo' group
-    with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
-        jdata = json.load(f)
-        report_bot_info = (jdata['token'], jdata['chatid'])
+    # # This is telegram credentials to send message to the 'VG Database Techinfo' group
+    # with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
+    #     jdata = json.load(f)
+    #     report_bot_info = (jdata['token'], jdata['chatid'])
     
-    if send_to_telegram(s, logf, bot_info=report_bot_info, message=f'Простите меня, опять у меня отладка, опять спамлю! надеюсь, больше такое не повторится!', parse_mode='HTML'):
-        pass
+    # if send_to_telegram(s, logf, bot_info=report_bot_info, message=f'Простите меня, опять у меня отладка, опять спамлю! надеюсь, больше такое не повторится!', parse_mode='HTML'):
+    #     pass
