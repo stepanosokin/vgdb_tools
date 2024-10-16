@@ -213,7 +213,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     fields_to_check = ['lotStatus', 'priceMin', 'biddEndTime']
                     changes = []
                     for field, val in lotcard_dict.items():
-                        if type(val) == str:
+                        if type(val) == str and field != 'squareMR':
                             val = val[1:-1]
                             val.replace("''", "'")
                         if field in ['lotNumber', 'licensePeriod_EA(N)']:
@@ -229,9 +229,12 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         if field in ['squareMR', 'priceFin', 'priceMin']:
                             if dbval:
                                 dbval = float(dbval)
+                                val = float(val)
                             pass
                         if val != dbval:
-                            changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+                            # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+                            changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                            
                             # message = f"lotcard {result[0]['id']} change detected: {field} -> {val}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, message)
@@ -241,7 +244,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         updates = (0, 1)
                         fields_to_update = []
                         values_to_insert = []
-                        for change in changes:
+                        for change in list(changes):
                             fields_to_update.append('"' + change['field'] + '"')
                             values_to_insert.append(str(lotcard_dict[change['field']]))
 
@@ -253,7 +256,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
                         message = ''
                         chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
-                        for i, change in enumerate([x for x in changes if x['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
+                        for i, change in enumerate([x for x in list(changes) if x['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
                             # logmessage = f"logging lotcard change: {change['id']} -> {change['field']} -> {str(change['new'])}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, logmessage)
@@ -668,7 +671,8 @@ if __name__ == '__main__':
         vgdb_bot_tests_webhook = f.read().replace('\n', '')
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
-    # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=nr_ne_webhook_2023, mapbox_token=mb_token)
+    
+    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token)
     # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
 
     # with open('tmp.txt', 'w') as logf, requests.Session() as s:
@@ -685,7 +689,7 @@ if __name__ == '__main__':
         #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
         #         '22000059140000000015','22000039810000000058']
         # lots = ['22000039810000000090']
-        lots = ['22000039810000000091']
+        lots = ['22000033960000000028']
 
         # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
         # jd = response.json()
@@ -723,11 +727,15 @@ if __name__ == '__main__':
         # generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token)
 
         with open('tmp.txt', 'w') as logf:
-            for lot in lots:
-                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
-                    pass
-                if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
-                    message = f'{lot}'
+            pass
+            # for lot in lots:
+            #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
+            #         pass
+            #     if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
+            #         message = f'{lot}'
+                    
+                    
+                    
                     # success = False
                     # try:                    
                     #     def createSSHClient(server, port, user):
@@ -751,8 +759,8 @@ if __name__ == '__main__':
                     # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML', photo=f'torgi_gov_ru/{lot}.png'):
                     #     pass
 
-                    if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
-                        pass
+                    # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
+                    #     pass
 
                     # if send_to_teams(vgdb_bot_tests_webhook, message, logf, sections=['SECTION 1']):
                     #     pass
