@@ -10,10 +10,11 @@ from osgeo import ogr, osr, gdal
 import psycopg2
 from psycopg2.extras import *
 import json
-from vgdb_general import send_to_telegram, send_to_teams
+from vgdb_general import send_to_telegram, send_to_teams, smart_http_request
 from synchro_evergis import *
 # from timezonefinder import TimezoneFinder
 # from tzdata import *
+
 
 
 def rus_month_genitive_to_nominative(i_string):
@@ -90,21 +91,23 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         }
         # start the downloaded results counter
         results_downloaded = 0
-        # try to retreive the result from the search engine
-        i = 1
-        search_result = None
-        status_code = 0
-        while i <= 10 and (not search_result) and status_code != 200:
-            try:
-                i += 1
-                # make get request to the service
-                search_result = s.get(url, params=params, headers=headers, verify=False)
-                # i is a number of tries to retrieve a result
-                status_code = search_result.status_code
-            except:
-                message = f'AuctionBlocksUpdater: {str(i)}th initial request to www.rosnedra.gov.ru failed, please check your params'
-                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        # try to retreive the result from the search engine        
+        # i = 1
+        # search_result = None
+        # status_code = 0
+        # while i <= 10 and (not search_result) and status_code != 200:
+        #     try:
+        #         i += 1
+        #         # make get request to the service
+        #         search_result = s.get(url, params=params, headers=headers, verify=False)
+        #         # i is a number of tries to retrieve a result
+        #         status_code = search_result.status_code
+        #     except:
+        #         message = f'AuctionBlocksUpdater: {str(i)}th initial request to www.rosnedra.gov.ru failed, please check your params'
+        #         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        #         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        status_code, search_result = smart_http_request(s, url=url, method='get', params=params, headers=headers, verify=False)        
+        
         if (not search_result) or status_code != 200:
             # if something went wrong, write a line to ligfile
             message = 'AuctionBlocksUpdater: Initial request to www.rosnedra.gov.ru failed, please check your params'
@@ -157,16 +160,20 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                         'to': datetime.now().strftime('%d.%m.%Y'),
                         'PAGEN_1': page
                     }
-                    page_result = None
-                    resp_code = 0
-                    i = 1
-                    while (not page_result) and resp_code != 200 and i <= 10:
-                        try:
-                            i += 1
-                            page_result = s.get(url, params=params, headers=headers, verify=False)
-                            resp_code = page_result.status_code
-                        except:
-                            pass
+                    
+                    # page_result = None
+                    # resp_code = 0
+                    # i = 1
+                    # while (not page_result) and resp_code != 200 and i <= 10:
+                    #     try:
+                    #         i += 1
+                    #         page_result = s.get(url, params=params, headers=headers, verify=False)
+                    #         resp_code = page_result.status_code
+                    #     except:
+                    #         pass
+                    
+                    resp_code, page_result = smart_http_request(s, url=url, method='get', params=params, headers=headers, verify=False, tries=10)
+                                        
                     if not page_result or resp_code != 200:
                         # send log message
                         message = f'Request to www.rosnedra.gov.ru search results page {url} failed, please check your params'
@@ -204,173 +211,166 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                 # url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find(attrs={'class': 'search-result-link'})['href']}".replace('//', '/')
                                 url = 'https://' + f"rosnedra.gov.ru/{search_result_item.find('a')['href']}".replace('//', '/')
                                 # make a standard process of requesting a page for the current search-result-item
-                                try:
-                                    item_page_result = s.get(url)
-                                    i = 1
-                                    while item_page_result.status_code != 200:
-                                        page_result = s.get(url, verify=False)
-                                        i += 1
-                                        if i > 100:
-                                            # send log message
-                                            message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
-                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                            break
-                                except:
-                                    # send log message
-                                    message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
-                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                # create a beautifulsoup from search-result-item's webpage
-                                cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
-                                # find a content tag inside the page. It contents the links to the downloadable files.
-                                # cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
-                                cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'textgraph'})
-                                # find all h1 tags to obtain the full document name and check if it contains the
-                                # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
-                                # order, not some other trash
-                                cur_h1_tags = cur_item_page_result_soup.find_all('h1')
-                                is_order = False
-                                if cur_h1_tags:
-                                    for h1_tag in cur_h1_tags:
-                                        if 'Приказ Роснедр от' in ' '.join(h1_tag.text.split()):
-                                            is_order = True
-                                            announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
-                                            ord_i = announcement.find('Приказ Роснедр от')
-                                            order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
-                                            pass
-
-                                # if we know that we've found an order and if it contains Content elements
-                                if cur_content_tags and is_order:
-                                    # then we create a new folder to store the current results
-                                    final_directory = os.path.join(current_directory, folder)
-                                    final_directory = os.path.join(final_directory, f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
-                                    # if it already exists, delete it
-                                    if os.path.exists(final_directory):
-                                        shutil.rmtree(final_directory, ignore_errors=True)
-                                    # create a new folder
-                                    os.makedirs(final_directory)
-                                    # iterate the downloaded results counter
-                                    results_downloaded += 1
-                                    # create a new dictionary to store the order's metadata
-                                    metadata_dict = {}
-                                    # write order's url to metadata_dict
-                                    metadata_dict['url'] = url
-                                    # write order announce date to metadata_dict
-                                    metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
-                                    # extract the full name of a hyperlink and store it to the metadata_dict dictionary.
-                                    # name = search_result_item.find(attrs={'class': 'search-result-link'}).text
-                                    name = search_result_item.find('a').text
-                                    metadata_dict['name'] = name
-                                    # store the order_date to metadata_dict
-                                    metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
-
-                                    # find all </a> tags inside the Content element and loop through them
-                                    for item_doc_tag in cur_content_tags.find_all('a'):
-                                        # create a full url string from the current </a>
-                                        curl = f"https://www.rosnedra.gov.ru{item_doc_tag['href']}"
-                                        # extract a name of the document from the hyperlink text
-                                        cname = item_doc_tag.text
-                                        # standard process of downloading a file by the link and logging the errors.
-                                        error_code = 0
-                                        i = 1
-                                        dresult = None
-                                        while (not dresult) and error_code != 200 and i <= 10:
-                                            try:
-                                                i += 1
-                                                dresult = s.get(curl)
-                                                error_code = dresult.status_code
-                                            except:
+                                # try:
+                                #     item_page_result = s.get(url)
+                                #     i = 1
+                                #     while item_page_result.status_code != 200:
+                                #         page_result = s.get(url, verify=False)
+                                #         i += 1
+                                #         if i > 100:
+                                #             # send log message
+                                #             message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download {url} failed, please check your params"
+                                #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                #             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                #             break
+                                # except:
+                                #     # send log message
+                                #     message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to {url} failed, please check your params"
+                                #     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                #     send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                
+                                status_code, item_page_result = smart_http_request(s, url=url, method='get', tries=100, verify=False)
+                                
+                                if status_code == 200:
+                                    # create a beautifulsoup from search-result-item's webpage
+                                    cur_item_page_result_soup = BeautifulSoup(item_page_result.text, 'html.parser')
+                                    # find a content tag inside the page. It contents the links to the downloadable files.
+                                    # cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'Content'})
+                                    cur_content_tags = cur_item_page_result_soup.find(attrs={'class': 'textgraph'})
+                                    # find all h1 tags to obtain the full document name and check if it contains the
+                                    # word 'Приказ Роснедр от'. This is a test to understand that we've found a Rosnedra
+                                    # order, not some other trash
+                                    cur_h1_tags = cur_item_page_result_soup.find_all('h1')
+                                    is_order = False
+                                    if cur_h1_tags:
+                                        for h1_tag in cur_h1_tags:
+                                            if 'Приказ Роснедр от' in ' '.join(h1_tag.text.split()):
+                                                is_order = True
+                                                announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
+                                                ord_i = announcement.find('Приказ Роснедр от')
+                                                order_date = datetime.strptime(announcement[ord_i:ord_i + 28], 'Приказ Роснедр от %d.%m.%Y')
                                                 pass
-                                        
-                                        # try:
-                                        #     dresult = s.get(curl)
-                                        #     i = 1
-                                        #     while dresult.status_code != 200:
-                                        #         dresult = s.get(curl)
-                                        #         i += 1
-                                        #         if i > 100:
-                                        #             # send log message
-                                        #             message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Maximum tries to download resource {curl} exceeded, please check your params"
-                                        #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                        #             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-                                        #             break
-                                        if error_code != 200:
-                                            # send log message
-                                            message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params"
-                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)                                        
-                                        # if something has been downloaded
-                                        if error_code == 200:
-                                            # if we've downloaded at east 1 file, then function is a success
-                                            success = True
-                                            # create a new file using cname and the file extension from the curl
-                                            with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
-                                                f.write(dresult.content)
-                                                pass
-                                    # find and parse the application deadline from the item webpage
-                                    for item_doc_p_tag in cur_content_tags.find_all('p'):
-                                        # if there are 'Последний срок приема' words in a <p> tag
-                                        # (which means that there is a deadline deascribed on a webpage):
-                                        if 'срокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
-                                            deadlinestr = item_doc_p_tag.text
-                                            deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
-                                            # if we are on Windows, replace month names from genitive to nominative
-                                            if platform.system() == 'Windows':
-                                                deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
-                                            else:
-                                                deadlinestr = deadlinestr.lower()
-                                            # now we try to use several templates to parse the appliction deadline
 
-                                            templates = [                                        
-                                                'последний срок приема заявок: до %d %B %Y г (включительно).',
-                                                'срок приема заявок: до %d %B %Y г.',
-                                                'срок приема заявок: до %d %B %Y г.)',
-                                                'срок приема заявок: до %H:%M (местное время) %d %B %Y г.',
-                                                'срок приема заявок: до %H:%M (местное время) %d %B %Y г (включительно).',
-                                                'срок приема заявок: до %H.%M (местное время) %d %B %Y г.',
-                                                'срок приема заявок: до %H:%M (местное время) %d %B %Y г.)',
-                                                'срок приема заявок: до %H.%M (местное время) %d %B %Y г.)',
-                                                'срок приема заявок: до %H.%M (местное время) %d %B %Y г (включительно).',
-                                                'последний срок приема заявок: до %d %B %Y г.',
-                                                'последний срок приема заявок: до %d %B %Y г.)',
-                                                'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г.',
-                                                'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г.)',
-                                                'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г.',
-                                                'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г.)',
-                                                'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г (включительно).',
-                                                'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г (включительно).'
-                                            ]
-                                            deadline = None
-                                            for t in templates:
-                                                try:
-                                                    deadline = datetime.strptime(deadlinestr, t)
-                                                except:
-                                                    pass
-                                            if not deadline:
-                                                # if none of our templates matched, then use 1970-01-01 as a fake deadline
-                                                deadline = datetime(1970, 1, 1)
-                                                # and send an error message to the log
-                                                message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
+                                    # if we know that we've found an order and if it contains Content elements
+                                    if cur_content_tags and is_order:
+                                        # then we create a new folder to store the current results
+                                        final_directory = os.path.join(current_directory, folder)
+                                        final_directory = os.path.join(final_directory, f"{str(search_result_number)}_{item_date.strftime('%Y%m%d')}")
+                                        # if it already exists, delete it
+                                        if os.path.exists(final_directory):
+                                            shutil.rmtree(final_directory, ignore_errors=True)
+                                        # create a new folder
+                                        os.makedirs(final_directory)
+                                        # iterate the downloaded results counter
+                                        results_downloaded += 1
+                                        # create a new dictionary to store the order's metadata
+                                        metadata_dict = {}
+                                        # write order's url to metadata_dict
+                                        metadata_dict['url'] = url
+                                        # write order announce date to metadata_dict
+                                        metadata_dict['announce_date'] = item_date.strftime('%Y-%m-%d')
+                                        # extract the full name of a hyperlink and store it to the metadata_dict dictionary.
+                                        # name = search_result_item.find(attrs={'class': 'search-result-link'}).text
+                                        name = search_result_item.find('a').text
+                                        metadata_dict['name'] = name
+                                        # store the order_date to metadata_dict
+                                        metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
+
+                                        # find all </a> tags inside the Content element and loop through them
+                                        for item_doc_tag in cur_content_tags.find_all('a'):
+                                            # create a full url string from the current </a>
+                                            curl = f"https://www.rosnedra.gov.ru{item_doc_tag['href']}"
+                                            # extract a name of the document from the hyperlink text
+                                            cname = item_doc_tag.text
+                                            # standard process of downloading a file by the link and logging the errors.
+                                            # error_code = 0
+                                            # i = 1
+                                            # dresult = None
+                                            # while (not dresult) and error_code != 200 and i <= 10:
+                                            #     try:
+                                            #         i += 1
+                                            #         dresult = s.get(curl)
+                                            #         error_code = dresult.status_code
+                                            #     except:
+                                            #         pass
+                                            error_code, dresult = smart_http_request(s, url=curl, method='get', tries=10)
+                                            
+                                            if error_code != 200:
+                                                # send log message
+                                                message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {url} failed, please check your params"
                                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                                send_to_telegram(s, logf, bot_info=bot_info,
-                                                                message=message,
-                                                                logdateformat=logdateformat)
-                                            # now record the deadline to the metadata_dict. We don't use the time, just the date.
-                                            # To use the time correctly we need to resolve the issue with timezones, because
-                                            # Python uses local time zone by default.
-                                            metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
-                                    # now record all item's metadata to a json file in its folder
-                                    with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
-                                        json.dump(metadata_dict, outfile, ensure_ascii=False)
-                                else:
-                                    # if the item is not an order, then send a message to log
-                                    message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
-                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                    logdateformat=logdateformat)
-                                # iterate the search result number
-                                search_result_number += 1
+                                                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)                                        
+                                            # if something has been downloaded
+                                            if error_code == 200:
+                                                # if we've downloaded at east 1 file, then function is a success
+                                                success = True
+                                                # create a new file using cname and the file extension from the curl
+                                                with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
+                                                    f.write(dresult.content)
+                                                    pass
+                                        # find and parse the application deadline from the item webpage
+                                        for item_doc_p_tag in cur_content_tags.find_all('p'):
+                                            # if there are 'Последний срок приема' words in a <p> tag
+                                            # (which means that there is a deadline deascribed on a webpage):
+                                            if 'срокприема' in item_doc_p_tag.text.replace(' ', '').replace('\xa0', '').lower():
+                                                deadlinestr = item_doc_p_tag.text
+                                                deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
+                                                # if we are on Windows, replace month names from genitive to nominative
+                                                if platform.system() == 'Windows':
+                                                    deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
+                                                else:
+                                                    deadlinestr = deadlinestr.lower()
+                                                # now we try to use several templates to parse the appliction deadline
+
+                                                templates = [                                        
+                                                    'последний срок приема заявок: до %d %B %Y г (включительно).',
+                                                    'срок приема заявок: до %d %B %Y г.',
+                                                    'срок приема заявок: до %d %B %Y г.)',
+                                                    'срок приема заявок: до %H:%M (местное время) %d %B %Y г.',
+                                                    'срок приема заявок: до %H:%M (местное время) %d %B %Y г (включительно).',
+                                                    'срок приема заявок: до %H.%M (местное время) %d %B %Y г.',
+                                                    'срок приема заявок: до %H:%M (местное время) %d %B %Y г.)',
+                                                    'срок приема заявок: до %H.%M (местное время) %d %B %Y г.)',
+                                                    'срок приема заявок: до %H.%M (местное время) %d %B %Y г (включительно).',
+                                                    'последний срок приема заявок: до %d %B %Y г.',
+                                                    'последний срок приема заявок: до %d %B %Y г.)',
+                                                    'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г.',
+                                                    'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г.)',
+                                                    'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г.',
+                                                    'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г.)',
+                                                    'последний срок приема заявок: до %H:%M (местное время) %d %B %Y г (включительно).',
+                                                    'последний срок приема заявок: до %H.%M (местное время) %d %B %Y г (включительно).'
+                                                ]
+                                                deadline = None
+                                                for t in templates:
+                                                    try:
+                                                        deadline = datetime.strptime(deadlinestr, t)
+                                                    except:
+                                                        pass
+                                                if not deadline:
+                                                    # if none of our templates matched, then use 1970-01-01 as a fake deadline
+                                                    deadline = datetime(1970, 1, 1)
+                                                    # and send an error message to the log
+                                                    message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Could not parse application deadline from {url}, used the 1970-01-01. Please check the page content"
+                                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                    send_to_telegram(s, logf, bot_info=bot_info,
+                                                                    message=message,
+                                                                    logdateformat=logdateformat)
+                                                # now record the deadline to the metadata_dict. We don't use the time, just the date.
+                                                # To use the time correctly we need to resolve the issue with timezones, because
+                                                # Python uses local time zone by default.
+                                                metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
+                                        # now record all item's metadata to a json file in its folder
+                                        with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
+                                            json.dump(metadata_dict, outfile, ensure_ascii=False)
+                                    else:
+                                        # if the item is not an order, then send a message to log
+                                        message = f"AuctionBlocksUpdater: Result #{search_result_number}_{item_date.strftime('%Y%m%d')}. Attempt to parse items page {url} failed, please check the page content"
+                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                        logdateformat=logdateformat)
+                                    # iterate the search result number
+                                    search_result_number += 1
         # return the locale settings to the initial state
         locale.setlocale(locale.LC_ALL, locale='')
         # write log message about results downloaded count
