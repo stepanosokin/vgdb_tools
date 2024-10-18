@@ -287,7 +287,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f"; \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">Карточка лота</a>"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:                                
                                 is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
-                                is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token)
+                                is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, pgconn=pgconn)
                                 if is_html:
                                     message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                                     os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
@@ -342,7 +342,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
-                        is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token)
+                        is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, pgconn=pgconn)
                         if is_html:
                             message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                             os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
@@ -384,7 +384,7 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
             log_message(s, logf, log_bot_info, message)
 
 
-def generate_lot_mapbox_html(lot, ofile, token):
+def generate_lot_mapbox_html(lot, ofile, token, pgconn=None):
     with requests.Session() as s:
         i = 1
         status = 0
@@ -408,6 +408,32 @@ def generate_lot_mapbox_html(lot, ofile, token):
             ycenter = (ymin + ymax) / 2
             # jd2 = {"type": "Polygon", "coordinates": jd["geometry"]["coordinates"][0]}
             jd3 = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {k.replace(' ', '_'): v for k, v in jd["properties"].items()}, "geometry": {"type": "Polygon", "coordinates": crds}} for crds in jd["geometry"]["coordinates"]]}
+
+            if pgconn:
+                lic_rows = None
+                lic_j_list = []
+                with pgconn as pg:
+                    sql = f"select lb.gos_reg_num from rfgf.license_blocks_rfgf_hc_active lb " \
+                        f"where st_intersects(st_makevalid(lb.geom), " \
+                        f"(select st_buffer(st_makevalid(geom), 2) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
+                        f"where \"Номер уведомления\" = '{lot}' limit 1));"
+                    with pg.cursor() as cur:
+                        cur.execute(sql)
+                        lic_rows = cur.fetchall()
+                if lic_rows:
+                    for lic_row in lic_rows:
+                        url = f"http://192.168.117.3:5000/collections/license_blocks_rfgf_hcs_active/items/{lic_row['gos_reg_num']}?f=json"
+                        status, lic_j = smart_http_request(s, url=url)
+                        if status == 200:
+                            cur_json = lic_j.json()
+                            cur_json['properties']['gos_reg_num'] = lic_row['gos_reg_num']
+                            lic_j_list.append(cur_json)
+                            pass
+            if lic_j_list:
+                # lic_j_list = [{"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {k.replace(' ', '_'): v for k, v in lic_j["properties"].items()}, "geometry": {"type": "Polygon", "coordinates": crds}} for crds in lic_j["geometry"]["coordinates"]]} for lic_j in lic_j_list]
+                lic_j_dict = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {k.replace(' ', '_'): v for k, v in lic["properties"].items()}, "geometry": {"type": "Polygon", "coordinates": crds}} for lic in lic_j_list for crds in lic["geometry"]["coordinates"]]}
+                pass
+
             html = '''
 <!DOCTYPE html>
 <html>
@@ -466,6 +492,15 @@ body { margin: 0; padding: 0; }
             html += ' ' * 1 + jds
             html += '''
             })
+        // Add surrounding license blocks data source
+        map.addSource('license', {
+            'type': 'geojson',
+            'data':'''
+            # jds = json.dumps(jd3, indent=4)
+            jds = json.dumps(lic_j_dict, ensure_ascii=False)
+            html += ' ' * 1 + jds
+            html += '''
+            })
 
         // Add a new layer to visualize the polygon.
         map.addLayer({
@@ -489,17 +524,34 @@ body { margin: 0; padding: 0; }
                 'line-width': 3
             }
         });
+        // Add a new layer to visualize the license blocks.
+        map.addLayer({
+            'id': 'lic-fill',
+            'type': 'fill',
+            'source': 'license', // reference the data source
+            'layout': {},
+            'paint': {
+                'fill-color': '#d1bc2f', // yellow color fill
+                'fill-opacity': 0.1
+            }
+        });
+        // Add a brown outline around licenses.
+        map.addLayer({
+            'id': 'lic-outline',
+            'type': 'line',
+            'source': 'license',
+            'layout': {},
+            'paint': {
+                'line-color': '#803300',
+                'line-width': 1
+            }
+        });
+
+        // add symbol layer with labels example https://docs.mapbox.com/mapbox-gl-js/example/geojson-markers/
+
         // When a click event occurs on a feature in the places layer, open a popup at the
         // location of the feature, with description HTML from its properties.
         map.on('click', 'lot-fill', (e) => {
-            // Copy coordinates array.
-            // const coordinates = e.features[0].geometry.coordinates.slice();
-
-            //var description = '<table>';
-            //for (const prop in e.features[0].properties) {
-            //  description += '<tr><td><b>' + prop + '</b></td><td>' + e.features[0].properties.prop + '</td></tr>'
-            //}
-            //description += '</table>'
 
             var description = '<h3>' + e.features[0].properties.Наименование_участка_недр + '</h3>'
             description += '<table>'
@@ -515,13 +567,6 @@ body { margin: 0; padding: 0; }
             description += '<tr><td>Статус:</td><td>' + e.features[0].properties.Статус + '</td></tr>'
             description += '<tr><td colspan=2><a href="' + e.features[0].properties.url + '">Карточка лота</a></td></tr>'
             description += '</table>'
-            
-            // description = e.features[0].properties.Название_лота;
-
-
-            const coords = ['''
-            html += f"{str(xcenter)}, {str(ycenter)}"
-            html +='''];
 
             // Ensure that if the map is zoomed out such that multiple
             // copies of the feature are visible, the popup appears
@@ -533,7 +578,32 @@ body { margin: 0; padding: 0; }
             }
 
             new mapboxgl.Popup()
-                .setLngLat(coords)
+                .setLngLat(e.lngLat)
+                .setHTML(description)
+                .addTo(map);
+        });
+
+        // example: https://docs.mapbox.com/mapbox-gl-js/example/polygon-popup-on-click/
+        map.on('click', 'lic-fill', (e) => {
+            var description = '<h3>' + e.features[0].properties.license_block_name + '</h3>'
+            description += '<table>'
+            description += '<tr><td colspan=2>' + e.features[0].properties.gos_reg_num + ' от ' + e.features[0].properties.date_register + '</td></tr>'            
+            description += '<tr><td colspan=2>' + e.features[0].properties.user_info + '</td></tr>'
+            description += '<tr><td>Срок действия: </td><td>' + e.features[0].properties.date_license_stop + '</td></tr>'
+            description += '<tr><td colspan=2><a href="' + e.features[0].properties.rfgf_link + '">Карточка лицензии</a></td></tr>'
+            description += '</table>'
+
+            // Ensure that if the map is zoomed out such that multiple
+            // copies of the feature are visible, the popup appears
+            // over the copy being pointed to.
+            if (['mercator', 'equirectangular'].includes(map.getProjection().name)) {
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+            }
+
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
                 .setHTML(description)
                 .addTo(map);
         });
@@ -672,7 +742,7 @@ if __name__ == '__main__':
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
     
-    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token)
+    # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token)
     # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
 
     # with open('tmp.txt', 'w') as logf, requests.Session() as s:
@@ -728,11 +798,12 @@ if __name__ == '__main__':
 
         with open('tmp.txt', 'w') as logf:
             pass
-            # for lot in lots:
+            pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+            for lot in lots:
             #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
             #         pass
-            #     if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token):
-            #         message = f'{lot}'
+                if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token, pgconn=pgconn):
+                    message = f'{lot}'
                     
                     
                     
@@ -759,12 +830,12 @@ if __name__ == '__main__':
                     # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML', photo=f'torgi_gov_ru/{lot}.png'):
                     #     pass
 
-                    # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML'):
-                    #     pass
+                    if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>'):
+                        pass
 
                     # if send_to_teams(vgdb_bot_tests_webhook, message, logf, sections=['SECTION 1']):
                     #     pass
-        
+            pgconn.close()
     # # This is telegram credentials to send message to the 'VG Database Techinfo' group
     # with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
     #     jdata = json.load(f)
