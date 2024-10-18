@@ -547,6 +547,22 @@ body { margin: 0; padding: 0; }
             }
         });
 
+        map.addLayer({
+            'id': 'licLabel',
+            'type': 'symbol',
+            'source': 'license', 
+            'layout': {
+                'text-field': ['get', 'gos_reg_num'],
+                'text-font': ['Open Sans Semibold'],
+                'text-size': 8,
+                'text-offset': [0, 0.5],
+                'text-anchor': 'top'
+            },
+            'paint': {
+                'text-color': '#803300'
+            }
+        });
+
         // add symbol layer with labels example https://docs.mapbox.com/mapbox-gl-js/example/geojson-markers/
 
         // When a click event occurs on a feature in the places layer, open a popup at the
@@ -615,6 +631,16 @@ body { margin: 0; padding: 0; }
 
         // Change it back to a pointer when it leaves.
         map.on('mouseleave', 'lot-fill', () => {
+            map.getCanvas().style.cursor = '';
+        });
+
+        // Change the cursor to a pointer when the mouse is over the places layer.
+        map.on('mouseenter', 'lic-fill', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a pointer when it leaves.
+        map.on('mouseleave', 'lic-fill', () => {
             map.getCanvas().style.cursor = '';
         });
     });
