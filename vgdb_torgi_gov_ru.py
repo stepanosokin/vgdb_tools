@@ -415,7 +415,7 @@ def generate_lot_mapbox_html(lot, ofile, token, pgconn=None):
                 with pgconn as pg:
                     sql = f"select lb.gos_reg_num from rfgf.license_blocks_rfgf_hc_active lb " \
                         f"where st_intersects(st_makevalid(lb.geom), " \
-                        f"(select st_buffer(st_makevalid(geom), 2) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
+                        f"(select st_buffer(st_makevalid(geom), 1) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
                         f"where \"Номер уведомления\" = '{lot}' limit 1));"
                     with pg.cursor() as cur:
                         cur.execute(sql)
@@ -785,7 +785,7 @@ if __name__ == '__main__':
         #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
         #         '22000059140000000015','22000039810000000058']
         # lots = ['22000039810000000090']
-        lots = ['22000033960000000028']
+        lots = ['22000039810000000094']
 
         # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
         # jd = response.json()
