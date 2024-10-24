@@ -193,7 +193,7 @@ def parse_lotcard(lotcard):
 
 def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=('token', 'chatid'),
                   report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt',
-                  webhook='', mapbox_token=''):
+                  webhook='', mapbox_token='', webhostssh='.vdsinassh'):
     status_dict = {
         "PUBLISHED": 'Опубликован',
         "APPLICATIONS_SUBMISSION": 'Прием заявок',
@@ -201,6 +201,12 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
         "FAILED": 'Не состоялся',
         "SUCCEED": 'Состоялся'
     }
+    webhostssh_dict = {}
+    try:
+        with open(webhostssh, 'r', encoding='utf-8') as wbehostf:
+            webhostssh_dict = json.load(wbehostf)
+    except:
+        pass
     updates = (0, 0)
     lotcard_dict = parse_lotcard(lotcard)
     if lotcard_dict:
@@ -287,9 +293,9 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             message += f"; \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">Карточка лота</a>"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:                                
                                 is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
-                                is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, pgconn=pgconn)
+                                is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, webhostssh=webhostssh, pgconn=pgconn)
                                 if is_html:
-                                    message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                                    message += f"; \n<a href=\"{webhostssh_dict.get('url')}{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                                     os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                                 log_message(s, logf, report_bot_info, message, to_telegram=False)
                                     # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
@@ -342,9 +348,10 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
-                        is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, pgconn=pgconn)
+                        is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, webhostssh=webhostssh, pgconn=pgconn)
                         if is_html:
-                            message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                            # message += f"; \n<a href=\"http://195.2.79.9:8080/{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                            message += f"; \n<a href=\"{webhostssh_dict.get('url')}{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
                             os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
                         log_message(s, logf, report_bot_info, message, to_telegram=False)
                             # message += f'\n[Landing (VG VPN)](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lotcard_dict['id']})'
@@ -367,7 +374,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
 
 
 def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), 
-                     logfile='torgi_gov_ru/logfile.txt', webhook='', mapbox_token=''):
+                     logfile='torgi_gov_ru/logfile.txt', webhook='', mapbox_token='', webhostssh='.vdsinassh'):
     lotcards = download_lotcards(log_bot_info=log_bot_info, logfile=logfile)
     if lotcards and dsn:
         new, updated = 0, 0
@@ -375,7 +382,7 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
         for lotcard in lotcards:
             updates = check_lotcard(pgconn, lotcard,
                                     log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile,
-                                    webhook=webhook, mapbox_token=mapbox_token)
+                                    webhook=webhook, mapbox_token=mapbox_token, webhostssh=webhostssh)
             new, updated = [x + y for x, y in zip((new, updated), updates)]
         pgconn.commit()
         pgconn.close()
@@ -384,7 +391,7 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
             log_message(s, logf, log_bot_info, message)
 
 
-def generate_lot_mapbox_html(lot, ofile, token, pgconn=None):
+def generate_lot_mapbox_html(lot, ofile, token, webhostssh='.vdsinassh', pgconn=None):
     with requests.Session() as s:
         i = 1
         status = 0
@@ -415,7 +422,7 @@ def generate_lot_mapbox_html(lot, ofile, token, pgconn=None):
                 with pgconn as pg:
                     sql = f"select lb.gos_reg_num from rfgf.license_blocks_rfgf_hc_active lb " \
                         f"where st_intersects(st_makevalid(lb.geom), " \
-                        f"(select st_buffer(st_makevalid(geom), 1) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
+                        f"(select st_buffer(st_makevalid(geom), 0.5) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
                         f"where \"Номер уведомления\" = '{lot}' limit 1));"
                     with pg.cursor() as cur:
                         cur.execute(sql)
@@ -652,16 +659,24 @@ body { margin: 0; padding: 0; }
             with open(ofile, 'w', encoding='utf-8') as output:
                 _ = output.write(html)
 
-            def createSSHClient(server, port, user):
+            def createSSHClient(server, port, user, password=None):
                 client = paramiko.SSHClient()
                 client.load_system_host_keys()
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(server, port, user)
+                if password:
+                    client.connect(server, port, user, password)
+                else:
+                    client.connect(server, port, user)
                 return client
             try:
-                ssh = createSSHClient('195.2.79.9', '22', 'stepan')
+                with open(webhostssh, 'r', encoding='utf-8') as sshf:
+                    webhostssh = json.load(sshf)
+                    pass
+                # ssh = createSSHClient('195.2.79.9', '22', 'stepan')
+                ssh = createSSHClient(webhostssh['host'], webhostssh['port'], webhostssh['user'], webhostssh.get('password'))
                 scp = SCPClient(ssh.get_transport())
-                scp.put(ofile, recursive=True, remote_path='/home/stepan/apache/htdocs')
+                # scp.put(ofile, recursive=True, remote_path='/home/stepan/apache/htdocs')
+                scp.put(ofile, recursive=True, remote_path=webhostssh.get('remote_path'))
                 scp.close()
                 return True
             except:
@@ -828,7 +843,8 @@ if __name__ == '__main__':
             for lot in lots:
             #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
             #         pass
-                if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token, pgconn=pgconn):
+                # if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token, webhostssh='.vdsinassh', pgconn=pgconn):
+                if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
                     message = f'{lot}'
                     
                     
@@ -856,7 +872,10 @@ if __name__ == '__main__':
                     # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML', photo=f'torgi_gov_ru/{lot}.png'):
                     #     pass
 
-                    if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>'):
+                    # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.htm">Отобразить на карте</a>'):
+                    #     pass
+
+                    if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>'):
                         pass
 
                     # if send_to_teams(vgdb_bot_tests_webhook, message, logf, sections=['SECTION 1']):

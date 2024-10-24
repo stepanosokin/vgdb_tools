@@ -30,7 +30,8 @@ with open('.mapbox_token', encoding='utf-8') as mbtkf:
 refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
                  report_bot_info=report_bot_info, 
                  webhook=nr_ne_webhook_2023, 
-                 mapbox_token=mb_token)
+                 mapbox_token=mb_token, 
+                 webhostssh='.regrussh')
 
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
 #                  report_bot_info=report_bot_info, 
