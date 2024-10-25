@@ -9,6 +9,7 @@ from requests.utils import quote
 import paramiko
 from scp import SCPClient
 import locale
+import dateutil.parser
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -90,8 +91,8 @@ def parse_lotcard(lotcard):
         if lotcard.get('priceFin'):
             lotcard_dict['priceFin'] = lotcard['priceFin']
         if lotcard.get('biddEndTime'):
-            lotcard_dict[
-                'biddEndTime'] = f"'{datetime.fromisoformat(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
+            lotcard_dict['biddEndTime'] = f"'{dateutil.parser.isoparse(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
+            # lotcard_dict['biddEndTime'] = f"'{datetime.fromisoformat(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
         if lotcard.get('characteristics'):
             for charstic in lotcard['characteristics']:
                 if charstic.get('code') == 'mineralResource':
@@ -111,10 +112,11 @@ def parse_lotcard(lotcard):
                         lotcard_dict['resourcePotential'] = f"'{resourcePotential}'"
                 if charstic.get('code') == 'resourceAreaId':
                     if charstic.get('characteristicValue'):
-                        if isinstance(charstic['characteristicValue'], str):
+                        if isinstance(charstic['characteristicValue'], dict):
+                            if charstic['characteristicValue'].get('value'):
+                                lotcard_dict['resourceAreaId'] = charstic['characteristicValue']['value']
+                        else:
                             lotcard_dict['resourceAreaId'] = charstic['characteristicValue']
-                        elif charstic['characteristicValue'].get('value'):
-                            lotcard_dict['resourceAreaId'] = charstic['characteristicValue']['value']
         if lotcard.get('currencyCode'):
             currencyCode = lotcard['currencyCode'].replace("'", "''")
             lotcard_dict['currencyCode'] = f"'{currencyCode}'"
@@ -237,9 +239,13 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 dbval = float(dbval)
                                 val = float(val)
                             pass
-                        if val != dbval:
-                            # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
-                            changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                        if field != 'lot_data':
+                            if val != dbval:
+                                # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+                                changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                        else:
+                            if sorted([(k, v) for k, v in val.items()]) != sorted([(k, v) for k, v in dbval.items()]):
+                                changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
                             
                             # message = f"lotcard {result[0]['id']} change detected: {field} -> {val}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
@@ -247,7 +253,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     
                     if changes:
                         # print(changes)
-                        updates = (0, 1)
+                        if any([x['field'] != 'lot_data' for x in changes]):
+                            updates = (0, 1)
                         fields_to_update = []
                         values_to_insert = []
                         for change in list(changes):
@@ -389,6 +396,69 @@ def refresh_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=(
         message = f"Новых лотов: {str(new)}\nИзменено лотов: {str(updated)}"
         with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
             log_message(s, logf, log_bot_info, message)
+    
+
+def refresh_old_lotcards(dsn='', log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), 
+                     logfile='torgi_gov_ru/logfile.txt', webhook='', mapbox_token='', webhostssh='.vdsinassh'):
+    pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+    sql = 'select id from torgi_gov_ru.lotcards;'
+    with pgconn.cursor() as cur:
+        cur.execute(sql)
+        lotcards_in_base = cur.fetchall()
+    pgconn.close()
+    if lotcards_in_base:
+        new, updated = 0, 0
+        with requests.Session() as s:
+            pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+            for lotcard_in_base in lotcards_in_base:
+                lotcard_id = lotcard_in_base['id']
+                url = f"https://torgi.gov.ru/new/public/lots/lot/{lotcard_id}"
+                headers = {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
+                    "Cache-Control": "max-age=0",
+                    "Connection": "keep-alive",
+                    "DNT": "1",
+                    "Sec-Fetch-Dest": "document",
+                    "Sec-Fetch-Mode": "navigate",
+                    "Sec-Fetch-Site": "same-origin",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+                    "sec-ch-ua": '"Chromium";v="130", "Microsoft Edge";v="130", "Not?A_Brand";v="99"'
+                }
+                status, result = smart_http_request(s, url=url, headers=headers)
+                if status == 200:
+                    url = f"https://torgi.gov.ru/new/api/public/lotcards/{lotcard_id}"
+                    headers = {
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Encoding": "gzip, deflate, br, zstd",
+                        "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
+                        "Connection": "keep-alive",
+                        "DNT": "1",
+                        "Referer": f"https://torgi.gov.ru/new/public/lots/lot/{lotcard_id}",
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Site": "same-origin",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+                        "branchId": "null",
+                        "organizationId": "null",
+                        "sec-ch-ua": '"Chromium";v="130", "Microsoft Edge";v="130", "Not?A_Brand";v="99"'
+                    }
+                    status, result = smart_http_request(s, url=url, headers=headers)
+                    if status == 200:
+                        cur_lotcard_json = result.json()
+                        # cur_lotcard_dict = parse_lotcard(cur_lotcard_json)
+                        updates = check_lotcard(pgconn, cur_lotcard_json,
+                                log_bot_info=log_bot_info, report_bot_info=report_bot_info, logfile=logfile,
+                                webhook=webhook, mapbox_token=mapbox_token, webhostssh=webhostssh)
+                        new, updated = [x + y for x, y in zip((new, updated), updates)]
+                        pass
+            pgconn.commit()
+            pgconn.close()
+        message = f"Новых лотов: {str(new)}\nИзменено лотов: {str(updated)}"
+        with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+            log_message(s, logf, log_bot_info, message)
+
 
 
 def generate_lot_mapbox_html(lot, ofile, token, webhostssh='.vdsinassh', pgconn=None):
@@ -419,14 +489,14 @@ def generate_lot_mapbox_html(lot, ofile, token, webhostssh='.vdsinassh', pgconn=
             if pgconn:
                 lic_rows = None
                 lic_j_list = []
-                with pgconn as pg:
-                    sql = f"select lb.gos_reg_num from rfgf.license_blocks_rfgf_hc_active lb " \
-                        f"where st_intersects(st_makevalid(lb.geom), " \
-                        f"(select st_buffer(st_makevalid(geom), 0.5) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
-                        f"where \"Номер уведомления\" = '{lot}' limit 1));"
-                    with pg.cursor() as cur:
-                        cur.execute(sql)
-                        lic_rows = cur.fetchall()
+                # with pgconn as pg:
+                sql = f"select lb.gos_reg_num from rfgf.license_blocks_rfgf_hc_active lb " \
+                    f"where st_intersects(st_makevalid(lb.geom), " \
+                    f"(select st_buffer(st_makevalid(geom), 0.5) as geom from torgi_gov_ru.lotcards_spatial_all lc " \
+                    f"where \"Номер уведомления\" = '{lot}' limit 1));"
+                with pgconn.cursor() as cur:
+                    cur.execute(sql)
+                    lic_rows = cur.fetchall()
                 if lic_rows:
                     for lic_row in lic_rows:
                         url = f"http://192.168.117.3:5000/collections/license_blocks_rfgf_hcs_active/items/{lic_row['gos_reg_num']}?f=json"
@@ -791,100 +861,25 @@ if __name__ == '__main__':
     #     send_to_telegram(s, logf, bot_info=log_bot_info, message=message)
 
     
-    with requests.Session() as s:
-        # lot = '22000039810000000086'
-        # lot = '22000039810000000046'
-        # lot = '22000033960000000024'
-        # lot = '22000039810000000086'
-        # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
-        #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
-        #         '22000059140000000015','22000039810000000058']
-        # lots = ['22000039810000000090']
-        lots = ['22000039810000000094']
+    refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+                         webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
 
-        # response = s.get(f'http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot}?f=json')
-        # jd = response.json()
-        # # jd = {"type": jd["type"], "properties": {k: v for k, v in jd['properties'].items() if k == 'Название лота'}, "geometry": jd["geometry"]}
-        # # xmin = min([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
-        # # xmax = max([point[0] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
-        # # ymin = min([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) - 0.01
-        # # ymax = max([point[1] for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]) + 0.01
-        # points = [point for pol in jd['geometry']['coordinates'] for ring in pol for point in ring]
-        # # points_string = ', '.join(['[' + str(point[1]) +', ' + str(point[0]) + ']' for point in points])
-        # points_tuples = [(point[1], point[0]) for point in points]
-        # encoded_polyline = polyline.encode(points_tuples, 5)
-        # # https://docs.mapbox.com/api/maps/styles/
-        # styles = {'streets': 'streets-v12', 'dark': 'dark-v11', 'light': 'light-v11', 'sat': 'satellite-v9', 
-        #           'sat-str': 'satellite-streets-v12', 'out': 'outdoors-v12'}
-        # # os.environ["MAPBOX_ACCESS_TOKEN"] = mb_token
-        # url = f"https://api.mapbox.com/styles/v1/mapbox/{styles['out']}/static/" \
-        #       f"path-5+c00-0.5({encoded_polyline})/" \
-        #       f"auto/200x200"
-        # params = {"access_token": mb_token,
-        #           "padding": '50,50,50'}
-        # response = s.get(url, params=params)
-        # # add to a file
-        # with open('./output_file.png', 'wb') as output:
-        #     _ = output.write(response.content)
-        
-
-        # with open('tmp.txt', 'w') as logf:
-        #     if get_lot_on_mapbox_png(lot, 'torgi_gov_ru/lot.png', mb_token):
-        #         pass
-        #         message = f'[lotcard GeoJSON](http://192.168.117.3:5000/collections/license_hcs_lotcards/items/{lot})'
-        #         if send_to_telegram(s, logf, bot_info=log_bot_info, message=message, photo='torgi_gov_ru/lot.png'):
-        #             pass
-
-        # generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token)
-
-        with open('tmp.txt', 'w') as logf:
-            pass
-            pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
-            for lot in lots:
-            #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
-            #         pass
-                # if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.html", mb_token, webhostssh='.vdsinassh', pgconn=pgconn):
-                if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
-                    message = f'{lot}'
-                    
-                    
-                    
-                    # success = False
-                    # try:                    
-                    #     def createSSHClient(server, port, user):
-                    #         client = paramiko.SSHClient()
-                    #         client.load_system_host_keys()
-                    #         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    #         client.connect(server, port, user)
-                    #         return client
-
-                    #     ssh = createSSHClient('195.2.79.9', '22', 'stepan')
-                    #     scp = SCPClient(ssh.get_transport())
-                    #     scp.put(f"torgi_gov_ru/{lot}.html", recursive=True, remote_path='/home/stepan/apache/htdocs')
-                    #     scp.close()
-                    #     success = True
-                    # except:
-                    #     pass
-                    # pass
-                    # # if send_to_telegram(s, logf, bot_info=log_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{lot}.html"):
-                    # if success:
-                    
-                    # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.html">Отобразить на карте</a>', parse_mode='HTML', photo=f'torgi_gov_ru/{lot}.png'):
-                    #     pass
-
-                    # if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="http://195.2.79.9:8080/{lot}.htm">Отобразить на карте</a>'):
-                    #     pass
-
-                    if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>'):
-                        pass
-
-                    # if send_to_teams(vgdb_bot_tests_webhook, message, logf, sections=['SECTION 1']):
-                    #     pass
-            pgconn.close()
-    # # This is telegram credentials to send message to the 'VG Database Techinfo' group
-    # with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
-    #     jdata = json.load(f)
-    #     report_bot_info = (jdata['token'], jdata['chatid'])
     
-    # if send_to_telegram(s, logf, bot_info=report_bot_info, message=f'Простите меня, опять у меня отладка, опять спамлю! надеюсь, больше такое не повторится!', parse_mode='HTML'):
-    #     pass
+    # # checking mapbox functions
+    # with requests.Session() as s:
+    #     # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
+    #     #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
+    #     #         '22000059140000000015','22000039810000000058']
+    #     lots = ['22000039810000000094']
+    #     with open('tmp.txt', 'w') as logf:
+    #         pass
+    #         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+    #         for lot in lots:
+    #         #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
+    #         #         pass                
+    #             if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
+    #                 message = f'{lot}'
+    #                 if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>'):
+    #                     pass
+    #         pgconn.close()
+   
