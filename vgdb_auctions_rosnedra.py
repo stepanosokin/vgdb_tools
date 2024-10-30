@@ -305,7 +305,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
                                                 # if we've downloaded at east 1 file, then function is a success
                                                 success = True
                                                 # create a new file using cname and the file extension from the curl
-                                                with open(os.path.join(final_directory, f"{cname}.{curl.split('.')[-1]}"), 'wb') as f:
+                                                with open(os.path.join(final_directory, f"{cname.replace(chr(34), '').rstrip()}.{curl.split('.')[-1]}"), 'wb') as f:
                                                     f.write(dresult.content)
                                                     pass
                                         # find and parse the application deadline from the item webpage
@@ -414,7 +414,7 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
                 if i > 100:
                     break
         except:
-            # if something went wrong, write a line to ligfile
+            # if something went wrong, write a line to logfile
             message = 'AuctionResultsUpdater: Initial request to www.rosnedra.gov.ru failed, please check your params'
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
@@ -661,11 +661,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                        'order_date',
                        'announce_date',
                        'appl_deadline',
-                       'regions']
+                       'regions', 
+                       'rn_guid']
         # create a list of field types for license blocks. The order must match the field_names list.
         field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString,
                        ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate,
-                       ogr.OFTDate, ogr.OFTString]
+                       ogr.OFTDate, ogr.OFTString, ogr.OFTString]
         # add fields to the result layer
         for f_name, f_type in zip(field_names, field_types):
             out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
@@ -677,8 +678,24 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         # create empty list for new blocks for telegram report
         new_blocks_list = []
 
+        nextgid = 0
+        if dsn:            
+            i = 1
+            pgconn = None
+            while not pgconn and i <= 10:
+                i += 1
+                pgconn = psycopg2.connect(dsn)
+            if pgconn:
+                sql = 'select max(gid) as mgid from rosnedra.license_blocks_rosnedra_orders;'
+                with pgconn.cursor() as cur:
+                    cur.execute(sql)
+                    result = cur.fetchall()
+                nextgid = result[0][0] + 1
+                pgconn.close()
+
         # loop through the folders inside the folder with downloaded data
         for path, dirs, files in os.walk(os.path.abspath(directory)):
+
             # loop through all excel files in the current folder. Usually it is 1 excel file.
             for filename in fnmatch.filter(files, '*.xls*'):
                 # load current item metadata from result_metadata.json file in the current folder. The file is created by
@@ -884,6 +901,20 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                             send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                                              logdateformat=logdateformat)
                                     pgconn.close()
+                            
+                            rn_guid = ''
+                            order_date = datetime.strptime(attrs_dict.get('order_date'), "%Y-%m-%d")
+                            if order_date:
+                                rn_guid += order_date.strftime("%Y%m%d")
+                            source_name = attrs_dict.get('source_name')
+                            if source_name:
+                                rn_guid += source_name.split()[5].replace('"', '').zfill(3)
+                            
+                            rn_guid += str(nextgid).zfill(6)
+                            nextgid += 1
+                            attrs_dict['rn_guid'] = rn_guid
+                            feature.SetField('rn_guid', rn_guid)
+                            pass
 
                             #####################################################################
 
@@ -1012,6 +1043,19 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                     send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                                      logdateformat=logdateformat)
                             pgconn.close()
+                    rn_guid = ''
+                    order_date = datetime.strptime(attrs_dict.get('order_date'), "%Y-%m-%d")
+                    if order_date:
+                        rn_guid += order_date.strftime("%Y%m%d")
+                    source_name = attrs_dict.get('source_name')
+                    if source_name:
+                        rn_guid += source_name.split()[5].replace('"', '').zfill(3)
+                    
+                    rn_guid += str(nextgid).zfill(6)
+                    nextgid += 1
+                    attrs_dict['rn_guid'] = rn_guid
+                    feature.SetField('rn_guid', rn_guid)
+                    pass
                     ##############################################################
 
                     # add an item to the list of new blocks for telegram report
@@ -1290,8 +1334,8 @@ if __name__ == '__main__':
     # pgconn = psycopg2.connect(dsn)
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
-        startdt = lastdt_result[1] + timedelta(days=1)
-        # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
+        # startdt = lastdt_result[1] + timedelta(days=1)
+        startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
         # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
         enddt = datetime.now()
         clear_folder('rosnedra_auc')
