@@ -328,6 +328,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 if webhook:
                                     send_to_teams(webhook, message, logf)
                     
+                    lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
                     old_rn_guid = result[0]['rn_guid']
                     new_rn_guid = ''
                     if not old_rn_guid:
@@ -340,9 +341,37 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 sql = f"update torgi_gov_ru.lotcards set rn_guid = '{new_rn_guid}' where \"gid\" = {str(result[0]['gid'])};"
                                 cur.execute(sql)
                                 pgconn.commit()
-                        # new_rn_guid = 
-                    
-                    pass
+                    old_rfgf_gos_reg_num = result[0]['rfgf_gos_reg_num']
+                    rfgfsql = f"select rosnedra.get_rfgf_gos_reg_num('{old_rn_guid or new_rn_guid}');"
+                    cur.execute(rfgfsql)
+                    new_rfgf_gos_reg_num_result = cur.fetchall()
+                    if new_rfgf_gos_reg_num_result[0][0]:
+                        new_rfgf_gos_reg_num = new_rfgf_gos_reg_num_result[0][0]
+                        if new_rfgf_gos_reg_num != old_rfgf_gos_reg_num:
+                            sql = f"update torgi_gov_ru.lotcards set rfgf_gos_reg_num = '{new_rfgf_gos_reg_num}' where \"gid\" = {str(result[0]['gid'])};"
+                            cur.execute(sql)
+                            pgconn.commit()
+                            if cur.statusmessage == 'UPDATE 1':
+                            # update_result = cur.fetchall()
+                                message = f"Выдана лицензия на участок УВС по результатам аукциона: " \
+                                    f"\n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
+                                with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
+                                    is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
+                                    is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, webhostssh=webhostssh, pgconn=pgconn)
+                                    if is_html:
+                                        message += f"; \n<a href=\"{webhostssh_dict.get('url')}{lotcard_dict['noticeNumber']}.htm\">Отобразить на карте</a>"
+                                        os.remove(f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm")
+                                        log_message(s, logf, report_bot_info, message, to_telegram=False)
+                                    if is_png:
+                                        send_to_telegram(s, logf, bot_info=report_bot_info, message=message, photo='torgi_gov_ru/lot.png')
+                                    elif is_html:
+                                        send_to_telegram(s, logf, bot_info=report_bot_info, message=message)
+                                    else:
+                                        log_message(s, logf, report_bot_info, message, to_telegram=True)
+                                    if webhook:
+                                        send_to_teams(webhook, message, logf)
+
+                            pass
                 else:
                     updates = (1, 0)
                     fields_to_update = ['"' + x + '"' for x in lotcard_dict.keys()]
@@ -383,10 +412,20 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     new_rn_guid_result = cur.fetchall()
                     if new_rn_guid_result:
                         if new_rn_guid_result[0][0]:
-                            new_rn_guid = new_rn_guid_result[0][0]
+                            new_rn_guid = new_rn_guid_result[0][0]                            
                             sql = f"update torgi_gov_ru.lotcards set rn_guid = '{new_rn_guid}' where \"noticeNumber\" = '{lotcard_dict['noticeNumber']}';"
                             cur.execute(sql)
                             pgconn.commit()
+                            new_rfgf_gos_reg_num = None
+                            sql = f"select rosnedra.get_rfgf_gos_reg_num('{new_rn_guid}');"
+                            cur.execute(sql)
+                            new_rfgf_gos_reg_num_result = cur.fetchall()
+                            if new_rfgf_gos_reg_num_result[0][0]:
+                                new_rfgf_gos_reg_num = new_rfgf_gos_reg_num_result[0][0]
+                                if new_rfgf_gos_reg_num:
+                                    sql = f"update torgi_gov_ru.lotcards set rfgf_gos_reg_num = '{new_rfgf_gos_reg_num}' where \"noticeNumber\" = '{lotcard_dict['noticeNumber']}';"
+                                    cur.execute(sql)
+                                    pgconn.commit()
 
                     with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                         is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
@@ -896,11 +935,11 @@ if __name__ == '__main__':
     #     send_to_telegram(s, logf, bot_info=log_bot_info, message=message)
 
     
-    # refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
-    #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
-    
-    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+    refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
                          webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
+    
+    # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+    #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
 
     
     # # checking mapbox functions
