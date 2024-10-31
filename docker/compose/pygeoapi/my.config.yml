@@ -437,3 +437,37 @@ resources:
               id_field: 'Номер уведомления'
               table: lotcards_spatial_all
               geom_field: geom
+    
+    license_hcs_lotcards_test:
+        type: collection
+        title:
+            ru: Лоты на участки УВС
+            en: HCS Blocks Lotcards
+        description: 
+            ru: Лоты на участки УВС, выставленные на торги на torgi.gov.ru в текущем и прошлом году
+            en: Lotcards for HCS license blocks published at torgi.gov.ru
+        keywords:
+            - license
+            - hcs
+            - torgi.gov.ru
+            - участки
+            - увс
+            - лот
+            - торги
+        extents:
+            spatial:
+                bbox: [19.0,41.0,180.0,80.0]
+                crs: http://www.opengis.net/def/crs/OGC/1.3/CRS84
+        providers:
+            - type: feature
+              name: PostgreSQL
+              data:
+                  host: ${PG_HOST}
+                  port: ${PG_PORT}
+                  dbname: ${PG_DB}
+                  user: ${PG_USER}
+                  password: ${PG_PASS}
+                  search_path: [torgi_gov_ru]
+              id_field: 'Номер уведомления'
+              table: lotcards_spatial_all
+              geom_field: geom
