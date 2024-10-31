@@ -354,7 +354,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             if cur.statusmessage == 'UPDATE 1':
                             # update_result = cur.fetchall()
                                 message = f"Выдана лицензия на участок УВС по результатам аукциона: " \
-                                    f"\n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
+                                    f"\n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>;"
+                                message += f" \nНомер {new_rfgf_gos_reg_num}"
                                 with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                     is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
                                     is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, webhostssh=webhostssh, pgconn=pgconn)
