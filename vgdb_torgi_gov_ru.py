@@ -353,9 +353,42 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             pgconn.commit()
                             if cur.statusmessage == 'UPDATE 1':
                             # update_result = cur.fetchall()
+                                sql = f"select gos_reg_num, license_block_name, date_register, date_license_stop, user_info, asln_link, rfgf_link " \
+                                      f"from rfgf.license_blocks_rfgf_hc_active where gos_reg_num = '{new_rfgf_gos_reg_num}';"
+                                cur.execute(sql)
+                                blockresult = cur.fetchall()
+                                if blockresult:
+                                    blockdata = blockresult[0]
                                 message = f"Выдана лицензия на участок УВС по результатам аукциона: " \
-                                    f"\n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>;"
-                                message += f" \nНомер {new_rfgf_gos_reg_num}"
+                                    f" \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
+                                message += f"; \nСтатус аукциона: {status_dict.get(lotcard_dict.get('lotStatus'))}"
+                                message += f"; \nЛицензия: <a href=\"{blockdata.get('rfgf_link')}\">{new_rfgf_gos_reg_num}</a>"
+                                message += f"; \nНазвание: {blockdata.get('license_block_name')}"
+                                date_register = None
+                                try:
+                                    date_register = blockdata.get('date_register').strftime('%Y-%m-%d')
+                                except:
+                                    pass
+                                if date_register:
+                                    message += f"; \nДата выдачи: {date_register}"
+                                date_license_stop = None
+                                try:
+                                    date_license_stop = blockdata.get('date_license_stop').strftime('%Y-%m-%d')
+                                except:
+                                    pass
+                                if date_license_stop:
+                                    message += f"; \nСрок действия: {date_license_stop}"                                
+                                form_dict = {
+                                    'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ': 'ООО', 
+                                    'АКЦИОНЕРНОЕ ОБЩЕСТВО': 'АО',
+                                    'ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ПАО',
+                                    'ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ': 'ФГБУ',
+                                    'ЗАКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ЗАО'
+                                }
+                                user_info = str(blockdata.get('user_info')).upper()
+                                for k, v in form_dict.items():
+                                    user_info = user_info.replace(k, v) 
+                                message += f"; \nПользователь: {user_info}"
                                 with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                                     is_png = get_lot_on_mapbox_png(lotcard_dict['noticeNumber'], 'torgi_gov_ru/lot.png', mapbox_token)                                
                                     is_html = generate_lot_mapbox_html(lot=lotcard_dict['noticeNumber'], ofile=f"torgi_gov_ru/{str(lotcard_dict['noticeNumber'])}.htm", token=mapbox_token, webhostssh=webhostssh, pgconn=pgconn)
