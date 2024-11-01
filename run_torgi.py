@@ -1,6 +1,9 @@
 from vgdb_torgi_gov_ru import *
 from datetime import datetime, timedelta
 from synchro_evergis import *
+from time import sleep
+
+sleep(120)
 
 # read the postgres login credentials in dsn format from file
 with open('.pgdsn', encoding='utf-8') as dsnf:
