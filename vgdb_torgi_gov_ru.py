@@ -359,7 +359,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 blockresult = cur.fetchall()
                                 if blockresult:
                                     blockdata = blockresult[0]
-                                message = f"Выдана лицензия на участок УВС по результатам аукциона: " \
+                                message = f"Найдена лицензия на участок УВС, ранее выставлявшийся на аукцион: " \
                                     f" \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
                                 message += f"; \nСтатус аукциона: {status_dict.get(lotcard_dict.get('lotStatus'))}"
                                 message += f"; \nЛицензия: <a href=\"{blockdata.get('rfgf_link')}\">{new_rfgf_gos_reg_num}</a>"
