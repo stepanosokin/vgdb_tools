@@ -228,7 +228,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                 cur.execute(sql)
                 result = cur.fetchall()
                 if result:
-                    fields_to_check = ['lotStatus', 'priceMin', 'biddEndTime']
+                    fields_to_check = ['lotStatus', 'priceMin', 'priceFin', 'biddEndTime']
                     changes = []
                     for field, val in lotcard_dict.items():
                         if type(val) == str and field != 'squareMR':
@@ -278,8 +278,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         pgconn.commit()
                         lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
                         message = ''
-                        chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "biddEndTime": 'Заявки до'}
-                        for i, change in enumerate([x for x in list(changes) if x['field'] in ['lotStatus', 'priceMin', 'biddEndTime']]):
+                        chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "priceFin": 'Фин.цена', "biddEndTime": 'Заявки до'}
+                        for i, change in enumerate([x for x in list(changes) if x['field'] in fields_to_check]):
                             # logmessage = f"logging lotcard change: {change['id']} -> {change['field']} -> {str(change['new'])}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, logmessage)
@@ -300,7 +300,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     val += f' {tz}'
                             elif change['field'] == 'lotStatus':
                                 message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
-                            elif change['field'] == 'priceMin':
+                            elif change['field'] in ['priceMin', 'priceFin']:
                                 locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
                                 message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
                                 locale.setlocale(locale.LC_ALL, (''))
@@ -427,7 +427,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                     if lotcard_dict.get('priceFin'):
                         locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
                         # message += f"; \nИтог.цена: {str(lotcard_dict['priceFin'])}"
-                        message += f"; \nИтог.цена: {locale.currency(float(lotcard_dict['priceFin']), grouping=True)}"
+                        message += f"; \nФин.цена: {locale.currency(float(lotcard_dict['priceFin']), grouping=True)}"
                         locale.setlocale(locale.LC_ALL, '')
                     if lotcard_dict.get('biddEndTime'):
                         endtime = datetime.strptime(lotcard_dict['biddEndTime'], "%Y-%m-%d %H:%M:%S")
