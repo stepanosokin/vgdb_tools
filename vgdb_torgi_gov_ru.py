@@ -765,6 +765,12 @@ body { margin: 0; padding: 0; }
               currencyDisplay : 'symbol', 
               useGrouping: true
             }) + '</td></tr>'
+            description += '<tr><td>Фин.цена:</td><td>' + parseInt(e.features[0].properties.Итоговая_цена).toLocaleString('ru-RU', {
+              style: 'currency', 
+              currency: 'RUB', 
+              currencyDisplay : 'symbol', 
+              useGrouping: true
+            }) + '</td></tr>'
             description += '<tr><td>Статус:</td><td>' + e.features[0].properties.Статус + '</td></tr>'
             description += '<tr><td colspan=2><a href="' + e.features[0].properties.url + '">Карточка лота</a></td></tr>'
             description += '</table>'
