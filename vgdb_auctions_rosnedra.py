@@ -17,6 +17,43 @@ import re
 # from tzdata import *
 
 
+def parse_resources(text):    
+    templ = r''
+    if re.search(r'нефть', text, re.I|re.S):
+        templ += r'(?P<oilname>нефть(\s*\(?извл\.?\)?)?)(?P<oilval>.*)'
+    if re.search(r'газ', text, re.I|re.S):
+        templ += r'(?P<gasname>газ)(?P<gasval>.*)'
+    if re.search(r'конденсат', text, re.I|re.S):
+        templ += r'(?P<condname>конденсат)(?P<condval>.*)'
+    match1 = re.search(templ, text, re.I|re.S)
+    if match1:
+        dict1 = match1.groupdict()
+        pass
+
+        def parse_resvalues(txt):
+            SUB = str.maketrans( "₀₁₂₃₄₅₆₇₈₉", "0123456789")
+            SUP = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
+            txt = txt.translate(SUB)
+            txt = txt.translate(SUP)
+            tmpl = r''
+            for cat in ['A', 'B1', 'B2', 'C1', 'C2', 'D0', 'Dл', 'D1', 'D2']:
+                if re.search(fr'^ ?{cat}', txt, re.M):
+                    tmpl += fr'(?P<{cat}catname>.*^ ?{cat}) *- *(?P<{cat}catvalue>.+$)'
+            mtch1 = re.search(tmpl, txt, re.M|re.S)
+            if mtch1:
+                return mtch1.groupdict()
+            else:
+                return None
+
+        for k, v in dict1.items():
+            if k in ['oilval', 'gasval', 'condval']:
+                parsed_v = parse_resvalues(v)
+                if parsed_v:
+                    dict1[k] = parsed_v
+            
+
+    pass
+
 
 def rus_month_genitive_to_nominative(i_string):
     '''
@@ -1345,23 +1382,38 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     # pgconn = psycopg2.connect(dsn)
-    lastdt_result = get_latest_order_date_from_synology(dsn)
-    if lastdt_result[0]:
-        startdt = lastdt_result[1] + timedelta(days=1)
-        # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
-        # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
-        enddt = datetime.now()
-        clear_folder('rosnedra_auc')
-        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-                           folder='rosnedra_auc', bot_info=bot_info)
-        if download:
-            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
-            if parse:
-                pass
+    # lastdt_result = get_latest_order_date_from_synology(dsn)
+    # if lastdt_result[0]:
+    #     startdt = lastdt_result[1] + timedelta(days=1)
+    #     # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
+    #     # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
+    #     enddt = datetime.now()
+    #     clear_folder('rosnedra_auc')
+    #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+    #                        folder='rosnedra_auc', bot_info=bot_info)
+    #     if download:
+    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
+    #         if parse:
+    #             pass
                 # update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
                 # if update:
                 #     pass
                     # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     # pgconn.close()
 
+#     parse_resources('''Нефть (извл.)
+# D0 - 4,373 млн т
+
+
+# D1 - 2,3 млн т
+# D2 - 1,5 млн т
+# Газ
+#  D1 - 12,6 млрд м3
+# D2 - 5,4 млрд м3
+# Конденсат
+# D1 -1,2 млн т
+# D2 - 0,5 млн т''')
+
+parse_resources('''газ
+C₁ - 3.008 млрд.м3''')
