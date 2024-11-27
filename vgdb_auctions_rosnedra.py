@@ -19,40 +19,77 @@ import re
 
 def parse_resources(text):    
     templ = r''
-    if re.search(r'нефть', text, re.I|re.S):
-        templ += r'(?P<oilname>нефть(\s*\(?извл\.?\)?)?)(?P<oilval>.*)'
-    if re.search(r'газ', text, re.I|re.S):
-        templ += r'(?P<gasname>газ)(?P<gasval>.*)'
-    if re.search(r'конденсат', text, re.I|re.S):
-        templ += r'(?P<condname>конденсат)(?P<condval>.*)'
+    resdict = {
+        r'нефт.?': 'oil', 
+        r'газ.?': 'gas', 
+        r'конденсат.?': 'cond'
+        }
+    catlist = [
+        'A', 'B1', 'B2', 'C1', 'C2', 'D0', 'Dл', 'D1', 'D2'
+    ]
+    for k, v in resdict.items():
+        if re.search(fr'{k}', text, re.I|re.S):
+            templ += fr'(?P<{v}name>{k}(\s*\(?извл\.?\)?)?)(?P<{v}>.*)'
+    
+    # if re.search(r'нефть', text, re.I|re.S):
+    #     templ += r'(?P<oilname>нефть(\s*\(?извл\.?\)?)?)(?P<oilval>.*)'
+    # if re.search(r'газ', text, re.I|re.S):
+    #     templ += r'(?P<gasname>газ)(?P<gasval>.*)'
+    # if re.search(r'конденсат', text, re.I|re.S):
+    #     templ += r'(?P<condname>конденсат)(?P<condval>.*)'
+    
     match1 = re.search(templ, text, re.I|re.S)
     if match1:
         dict1 = match1.groupdict()
-        pass
 
         def parse_resvalues(txt):
             SUB = str.maketrans( "₀₁₂₃₄₅₆₇₈₉", "0123456789")
             SUP = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
             txt = txt.translate(SUB)
             txt = txt.translate(SUP)
+            ruseng = str.maketrans( "АВСД", "ABCD")
+            txt = txt.translate(ruseng)
             tmpl = r''
-            for cat in ['A', 'B1', 'B2', 'C1', 'C2', 'D0', 'Dл', 'D1', 'D2']:
-                if re.search(fr'^ ?{cat}', txt, re.M):
-                    tmpl += fr'(?P<{cat}catname>.*^ ?{cat}) *- *(?P<{cat}catvalue>.+$)'
+            for cat in catlist:
+                # if re.search(fr'^ ?{cat}', txt, re.M):
+                if re.search(fr' ?{cat}', txt, re.M):                    
+                    # tmpl += fr'.*^.*(?P<{cat}catname>{cat}) *[-–] *(?P<{cat}catvalue>.+$)'
+                    tmpl += fr'.*(?P<{cat}catname>{cat}) *[-–] *(?P<{cat}catvalue>.+)'
             mtch1 = re.search(tmpl, txt, re.M|re.S)
             if mtch1:
                 return mtch1.groupdict()
             else:
                 return None
 
+        dict2 = {}
+
         for k, v in dict1.items():
-            if k in ['oilval', 'gasval', 'condval']:
+            # if k in ['oilval', 'gasval', 'condval']:
+            if k in resdict.values():
                 parsed_v = parse_resvalues(v)
                 if parsed_v:
-                    dict1[k] = parsed_v
+                    dict2[k] = parsed_v
+        
+        if dict2:
+            dict2 = {k: {k2: v2.replace('\n', '').strip() for k2, v2 in v.items()} for k, v in dict2.items()}
+            for k, v in dict2.items():
+                for k2, v2 in v.items():
+                    if 'catvalue' in k2:
+                        tup = None
+                        # tmpl = r'(\d+[,\.]\d+) ?(\w+\.? *\w+\.?)'
+                        tmpl = r'(\d+[,\.]?\d*) ?(\w+\.? *\w+\.?)'
+                        match = re.search(tmpl, v2)
+                        if match:
+                            tup = tuple(match.groups())
+                        if tup:
+                            tup = (float(tup[0].replace(',', '.')), tup[1])
+                            dict2[k][k2] = tup
+                        pass
+            dict2 = {k: {k2.replace('catvalue', ''): v2 for k2, v2 in v.items() if 'catvalue' in k2} for k, v in dict2.items()}
             
+            return dict2
 
-    pass
+    return None
 
 
 def rus_month_genitive_to_nominative(i_string):
@@ -1406,7 +1443,7 @@ if __name__ == '__main__':
 # D0 - 4,373 млн т
 
 
-# D1 - 2,3 млн т
+# D1 - 2,3 млн.т.
 # D2 - 1,5 млн т
 # Газ
 #  D1 - 12,6 млрд м3
@@ -1415,5 +1452,48 @@ if __name__ == '__main__':
 # D1 -1,2 млн т
 # D2 - 0,5 млн т''')
 
-parse_resources('''газ
-C₁ - 3.008 млрд.м3''')
+# parse_resources('''газ
+# C₁ - 3.008 млрд.м3''')
+
+# parse_resources('''Нефть (извл.): по категории D0 – 0,507млн т.''')
+
+# parse_resources('''Нефть (извл.): по категории D0 – 0,235 млн т.''')
+
+# parse_resources('''ресурсы нефти кат. D0 – 0,160 млн. т; Dл - 0,3 млн.т.''')
+
+# parse_resources('''Запасы нефти категории С1 - 140 тыс.т, С2 - 71 тыс.т ''')
+
+# parse_resources('''нефть:D0-0,31 млн. т,Dл-0,381 млн. т,D1 - 0,3 млн. т,D2 - 0,2 млн.т; газ D1 – 0,20 млрд. м3''')
+
+# parse_resources('''нефть, газ, конденсат''')
+
+# parse_resources('''нефть(извл)
+# С1 - 0,001 млн.т.
+
+
+# Dл - 0,4 млн.т.
+# газ 
+# С1 - 0,62 млрд.м3
+# С2 - 0,327 млрд.м3
+
+# Dл - 0,5 млрд.м3
+
+# конденсат
+# С1 - 0,006 млн.т.''')
+
+
+# parse_resources('''нефть (извл)
+# C₁ - 0.096 млн. т
+# C₂ - 2.688 млн. т
+# газ
+# C₂ - 0.101 млрд.м3
+# D₀ - 0.65 млрд.м3
+# конденсат
+# C₂ - 0.004 млн. т''')
+
+parse_resources('''нефть
+Dл- 2,112 млн.т, 
+D1- 1,04 млн.т,                     газ
+Dл -8,707 млрд.м3,  
+конденсат
+Dл-0,093 млн.т.''')
