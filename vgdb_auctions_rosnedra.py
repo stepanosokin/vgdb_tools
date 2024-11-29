@@ -83,6 +83,10 @@ def parse_resources(text):
                             tup = tuple(match.groups())
                         if tup:
                             tup = (float(tup[0].replace(',', '.')), tup[1])
+                            if re.search(r'тыс\.? ?т\.?', tup[1], re.I) and k in ['oil', 'cond']:
+                                tup = (tup[0] / 1000, tup[1].replace('тыс', 'млн'))
+                            if re.search(r'млн|миллион', tup[1], re.I) and k == 'gas':
+                                tup = (tup[0] / 1000, tup[1].replace('млн', 'млрд').replace('миллион', 'млрд'))
                             dict2[k][k2] = tup
                         pass
             dict2 = {k: {k2.replace('catvalue', ''): v2 for k2, v2 in v.items() if 'catvalue' in k2} for k, v in dict2.items()}
@@ -739,14 +743,19 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                        'announce_date',
                        'appl_deadline',
                        'regions', 
-                       'rn_guid']
+                       'rn_guid', 
+                       'resources_parsed']
         # create a list of field types for license blocks. The order must match the field_names list.
         field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString,
                        ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate,
-                       ogr.OFTDate, ogr.OFTString, ogr.OFTString]
+                       ogr.OFTDate, ogr.OFTString, ogr.OFTString, ogr.OFTString]
         # add fields to the result layer
         for f_name, f_type in zip(field_names, field_types):
-            out_layer.CreateField(ogr.FieldDefn(f_name, f_type))
+            defn = ogr.FieldDefn(f_name, f_type)
+            if f_name == 'resources_parsed':
+                pass
+                # defn.SetSubType(ogr.OFSTJSON)
+            out_layer.CreateField(defn)
         # get the layer definition from the layer to use it when creating new features
         featureDefn = out_layer.GetLayerDefn()
         # start the parsed blocks counter
@@ -957,14 +966,14 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                         i += 1
                                         message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
                                         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                        logdateformat=logdateformat)
+                                        # send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                        #                 logdateformat=logdateformat)
                                         try:
                                             pgconn = psycopg2.connect(dsn)
                                             message = f"Подключение к БД для парсинга участка установлено"
                                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                            logdateformat=logdateformat)
+                                            # send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                            #                 logdateformat=logdateformat)
                                         except:
                                             message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
                                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
@@ -1002,6 +1011,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                 attrs_dict['rn_guid'] = rn_guid
                                 feature.SetField('rn_guid', rn_guid)
                                 pass
+
+                                if attrs_dict.get('reserves_predicted_resources'):                                    
+                                    parsed_resources = parse_resources(str(attrs_dict['reserves_predicted_resources']))
+                                    if parsed_resources:
+                                        feature.SetField('resources_parsed', json.dumps(parsed_resources, ensure_ascii=False))
+                                    pass
 
                                 #####################################################################
 
@@ -1099,14 +1114,14 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             i += 1
                             message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                             logdateformat=logdateformat)
+                            # send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                            #                  logdateformat=logdateformat)
                             try:
                                 pgconn = psycopg2.connect(dsn)
                                 message = f"Подключение к БД для парсинга участка установлено"
                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                 logdateformat=logdateformat)
+                                # send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                #                  logdateformat=logdateformat)
                             except:
                                 message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
@@ -1143,6 +1158,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     attrs_dict['rn_guid'] = rn_guid
                     feature.SetField('rn_guid', rn_guid)
                     pass
+
+                    if attrs_dict.get('reserves_predicted_resources'):
+                        parsed_resources = parse_resources(str(attrs_dict['reserves_predicted_resources']))
+                        if parsed_resources:
+                            feature.SetField('resources_parsed', json.dumps(parsed_resources, ensure_ascii=False))
+                        pass
                     ##############################################################
 
                     # add an item to the list of new blocks for telegram report
@@ -1418,82 +1439,42 @@ if __name__ == '__main__':
         blocks_nr_ne_webhook = f.read().replace('\n', '')
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
+    
     # pgconn = psycopg2.connect(dsn)
     # lastdt_result = get_latest_order_date_from_synology(dsn)
     # if lastdt_result[0]:
     #     startdt = lastdt_result[1] + timedelta(days=1)
-    #     # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
-    #     # enddt = datetime.strptime('2024-06-30', '%Y-%m-%d')
-    #     enddt = datetime.now()
+    #     startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
+    #     enddt = datetime.strptime('2024-09-05', '%Y-%m-%d')
+    #     # enddt = datetime.now()
     #     clear_folder('rosnedra_auc')
     #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
     #                        folder='rosnedra_auc', bot_info=bot_info)
     #     if download:
     #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
     #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
-    #         if parse:
-    #             pass
-                # update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-                # if update:
-                #     pass
-                    # synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+            
+    #         # if parse:
+    #         #     pass
+    #         #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+    #         #     if update:
+    #         #         pass
+    #         #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     # pgconn.close()
 
-#     parse_resources('''Нефть (извл.)
-# D0 - 4,373 млн т
+
+    # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
+    # pgconn = psycopg2.connect(dsn)
+    # with pgconn.cursor() as cur:
+    #     sql = "select gid, reserves_predicted_resources from rosnedra.license_blocks_rosnedra_orders;"
+    #     cur.execute(sql)
+    #     sdata = [(x[0], x[1]) for x in cur.fetchall()]
+    #     for it in sdata:
+    #         parsed = parse_resources(it[1])
+    #         if parsed:
+    #             sql = f"update rosnedra.license_blocks_rosnedra_orders set resources_parsed = '{json.dumps(parsed, ensure_ascii=False)}' where gid = {it[0]};"
+    #             cur.execute(sql)
+    #     pgconn.commit()
+    # pgconn.close()
 
 
-# D1 - 2,3 млн.т.
-# D2 - 1,5 млн т
-# Газ
-#  D1 - 12,6 млрд м3
-# D2 - 5,4 млрд м3
-# Конденсат
-# D1 -1,2 млн т
-# D2 - 0,5 млн т''')
-
-# parse_resources('''газ
-# C₁ - 3.008 млрд.м3''')
-
-# parse_resources('''Нефть (извл.): по категории D0 – 0,507млн т.''')
-
-# parse_resources('''Нефть (извл.): по категории D0 – 0,235 млн т.''')
-
-# parse_resources('''ресурсы нефти кат. D0 – 0,160 млн. т; Dл - 0,3 млн.т.''')
-
-# parse_resources('''Запасы нефти категории С1 - 140 тыс.т, С2 - 71 тыс.т ''')
-
-# parse_resources('''нефть:D0-0,31 млн. т,Dл-0,381 млн. т,D1 - 0,3 млн. т,D2 - 0,2 млн.т; газ D1 – 0,20 млрд. м3''')
-
-# parse_resources('''нефть, газ, конденсат''')
-
-# parse_resources('''нефть(извл)
-# С1 - 0,001 млн.т.
-
-
-# Dл - 0,4 млн.т.
-# газ 
-# С1 - 0,62 млрд.м3
-# С2 - 0,327 млрд.м3
-
-# Dл - 0,5 млрд.м3
-
-# конденсат
-# С1 - 0,006 млн.т.''')
-
-
-# parse_resources('''нефть (извл)
-# C₁ - 0.096 млн. т
-# C₂ - 2.688 млн. т
-# газ
-# C₂ - 0.101 млрд.м3
-# D₀ - 0.65 млрд.м3
-# конденсат
-# C₂ - 0.004 млн. т''')
-
-parse_resources('''нефть
-Dл- 2,112 млн.т, 
-D1- 1,04 млн.т,                     газ
-Dл -8,707 млрд.м3,  
-конденсат
-Dл-0,093 млн.т.''')
