@@ -7,6 +7,7 @@ import psycopg2
 from psycopg2.extras import *
 from vgdb_general import send_to_telegram, send_to_teams
 from datetime import datetime
+import json
 
 
 def request_reports(**kwargs):
@@ -280,7 +281,7 @@ def request_reports(**kwargs):
         return reports
 
 
-def get_pages_number():
+def get_pages_number(s: requests.Session):
     headers = {'accept': '*/*',
                'accept-encoding': 'gzip, deflate, br',
                'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6',
@@ -307,35 +308,35 @@ def get_pages_number():
         'source': '',
         'pi': ''
     }
-    with requests.Session() as s:
-        i = 1
-        status_code = 0
-        while status_code != 200 and i <= 10:
-            try:
-                response = s.post('https://rfgf.ru/catalog/index.php', headers=headers, data=data)
-                status_code = response.status_code
-            except:
-                pass
-            i += 1
-        if status_code != 200:
-            return (False, 0)
-        # parse the html result of the request with BeautifulSoup parser
-        soup = BeautifulSoup(response.text, 'html.parser')
-        # this is the default number of pages to process
-        pages = 1
-        # now let's find how many pages the result has
-        # check if the result is not empty
-        if 'Поиск не дал результатов' not in soup.text:
-            # find the <ul class="hr2" id="list_pages2"> tag which contains the number of pages, then loop through the <li> tags in it
-            for li in soup.find(id='list_pages2').find_all('li'):
-                # if 'из' is in the tag text, then whe are inside the desired tag
-                if li.text.find('из') > 0:
-                    # take the tag text and remove anything but the numbers from it
-                    pages = int(str(li.text[li.text.find('из') + 3:].replace('>', '').replace(' ', '')))
-                    # print(pages)
-            return (True, pages)
-        else:
-            return (True, 0)
+    # with requests.Session() as s:
+    i = 1
+    status_code = 0
+    while status_code != 200 and i <= 10:
+        try:
+            response = s.post('https://rfgf.ru/catalog/index.php', headers=headers, data=data)
+            status_code = response.status_code
+        except:
+            pass
+        i += 1
+    if status_code != 200:
+        return (False, 0)
+    # parse the html result of the request with BeautifulSoup parser
+    soup = BeautifulSoup(response.text, 'html.parser')
+    # this is the default number of pages to process
+    pages = 1
+    # now let's find how many pages the result has
+    # check if the result is not empty
+    if 'Поиск не дал результатов' not in soup.text:
+        # find the <ul class="hr2" id="list_pages2"> tag which contains the number of pages, then loop through the <li> tags in it
+        for li in soup.find(id='list_pages2').find_all('li'):
+            # if 'из' is in the tag text, then whe are inside the desired tag
+            if li.text.find('из') > 0:
+                # take the tag text and remove anything but the numbers from it
+                pages = int(str(li.text[li.text.find('из') + 3:].replace('>', '').replace(' ', '')))
+                # print(pages)
+        return (True, pages)
+    else:
+        return (True, 0)
 
 
 def check_report(pgconn, table, report):
@@ -450,8 +451,33 @@ def send_reports_csv_to_telegram(s, logf, fname, reports_list=None, list_type='a
             os.remove(os.path.join(os.getcwd(), fname))
 
 
+def login_to_rfgf(rfgfdsn: str, s: requests.Session):
+    url = 'https://rfgf.ru/catalog/login.php'
+    
+    with open(rfgfdsn, 'r', encoding='utf-8') as f:
+        login_data = json.load(f)
+    
+    params = {
+        "returnto": "",
+        "login": login_data['user'],
+        "pwd": login_data['password']
+        }
+    
+    headers = {
+        "Origin": "https://rfgf.ru",
+        "Referer": "https://rfgf.ru/catalog/login.php",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0"
+    }
+    
+    result = s.post(url, headers=headers, params=params)
+    url = 'https://rfgf.ru/catalog/index.php'
+    result = s.get(url)
+    pass
+    return result.status_code
+
 
 def refresh_rfgf_reports(pgdsn,
+                         rfgfdsn,
                          table='rfgf.rfgf_catalog',
                          pages_pack_size=5000,
                          send_updates=True,
@@ -459,71 +485,88 @@ def refresh_rfgf_reports(pgdsn,
                          report_bot_info=('fake_token', 'fake_chatid'),
                          webhook='',
                          max_packs=10000000):
-    pages_result = get_pages_number()
-    if pages_result[0]:
-        with requests.Session() as s:
+    with requests.Session() as s:
+        login_to_rfgf(rfgfdsn, s)
+        pages_result = get_pages_number(s)
+        if pages_result[0]:
+            # with requests.Session() as s:
+            #     with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+            #         message = f"Запущено обновление отчетов Росгеолфонда. Размер пака {str(pages_pack_size)}, максимум паков {str(max_packs)}."
+            #         send_to_telegram(s, f, bot_info=log_bot_info, message=message)             
             with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                 message = f"Запущено обновление отчетов Росгеолфонда. Размер пака {str(pages_pack_size)}, максимум паков {str(max_packs)}."
                 send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-        # updates_report = []
-        pages = pages_result[1]
-        # pages_pack_size = 5000
-        n_packs = pages // pages_pack_size
-        timestamp = datetime.now().strftime('%Y%m%d%H%M')
-        for i in range(min([n_packs + 1, max_packs])):
-            updates_report = []
-            start_page = i * pages_pack_size + 1
-            if i < n_packs:
-                end_page = (i + 1) * pages_pack_size
-            else:
-                end_page = pages
-            with requests.Session() as s:
+            # updates_report = []
+            pages = pages_result[1]
+            # pages_pack_size = 5000
+            n_packs = pages // pages_pack_size
+            timestamp = datetime.now().strftime('%Y%m%d%H%M')
+            for i in range(min([n_packs + 1, max_packs])):
+                updates_report = []
+                start_page = i * pages_pack_size + 1
+                if i < n_packs:
+                    end_page = (i + 1) * pages_pack_size
+                else:
+                    end_page = pages
+                # with requests.Session() as s:
+                #     with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                #         message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по {str(end_page)}."
+                #         send_to_telegram(s, f, bot_info=log_bot_info, message=message)                
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     message = f"Запущена загрузка отчетов Росгеолфонда, страницы с {str(start_page)} по {str(end_page)}."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
 
-            reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
+                reports = request_reports(ftext='', start_page=start_page, end_page=end_page)
 
-            with requests.Session() as s:
+                # with requests.Session() as s:
+                #     with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                #         message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}. " \
+                #                 f"Загружено {len(reports)} документов."
+                #         send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+                
                 with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                     message = f"Загрузка отчетов Росгеолфонда выполнена. Страницы с {str(start_page)} по {str(end_page)}. " \
-                              f"Загружено {len(reports)} документов."
+                            f"Загружено {len(reports)} документов."
                     send_to_telegram(s, f, bot_info=log_bot_info, message=message)
 
-            pgconnection = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
-            # with pgconnection:
-            for j, report in enumerate(reports):
+                pgconnection = psycopg2.connect(pgdsn, cursor_factory=DictCursor)
+                # with pgconnection:
+                for j, report in enumerate(reports):
 
-                update = check_report(pgconnection, table=table, report=report)
+                    update = check_report(pgconnection, table=table, report=report)
 
-                if (j + 1) % 1000 == 0:
-                    pgconnection.commit()
+                    if (j + 1) % 1000 == 0:
+                        pgconnection.commit()
 
-                if (j + 1) % 10000 == 0:
-                    with requests.Session() as s:
+                    if (j + 1) % 10000 == 0:
+                        # with requests.Session() as s:
+                        #     with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                        #         message = f"Проверено {str(j + 1)} отчетов."
+                        #         send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+                        
                         with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
                             message = f"Проверено {str(j + 1)} отчетов."
                             send_to_telegram(s, f, bot_info=log_bot_info, message=message)
-                if update:
-                    updates_report.append(update)
-                # if updates_report and len(updates_report) % 100 == 0:
-                #     pgconnection.commit()
-            pgconnection.commit()
-            pgconnection.close()
-            if send_updates and updates_report:
-                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                    with requests.Session() as s:
+                    if update:
+                        updates_report.append(update)
+                    # if updates_report and len(updates_report) % 100 == 0:
+                    #     pgconnection.commit()
+                pgconnection.commit()
+                pgconnection.close()
+                if send_updates and updates_report:
+                    with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                        # with requests.Session() as s:
                         new_reports = [x['update_info'] for x in updates_report if x['update_type'] == 'new_report']
                         if new_reports:
                             fname = f"Новые_документы_УВС_РФГФ_{timestamp}_{str(i + 1)}.csv"
                             send_reports_csv_to_telegram(s, f, fname, new_reports, list_type='all_new',
-                                                         bot_info=report_bot_info)
+                                                        bot_info=report_bot_info)
 
                         changed_reports = [x for x in updates_report if x['update_type'] == 'report_changed']
                         if changed_reports:
                             fname = f"Изменения_документов_УВС_РФГФ_{timestamp}_{str(i + 1)}.csv"
                             send_reports_csv_to_telegram(s, f, fname, changed_reports, list_type='all_changed',
-                                                         bot_info=report_bot_info)
+                                                        bot_info=report_bot_info)
 
                             reports_with_link_added = []
                             reports_with_link_removed = []
@@ -537,11 +580,11 @@ def refresh_rfgf_reports(pgdsn,
                             if reports_with_link_added:
                                 fname = f"Документы_УВС_РФГФ_с_новой_ссылкой_{timestamp}_{str(i + 1)}.csv"
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_added,
-                                                             list_type='link_added',
-                                                             bot_info=report_bot_info)
+                                                            list_type='link_added',
+                                                            bot_info=report_bot_info)
                                 split_size = 10
                                 reports_with_link_added_splitted = [reports_with_link_added[i:i + split_size] for i in
-                                                 range(0, len(reports_with_link_added), split_size)]
+                                                range(0, len(reports_with_link_added), split_size)]
                                 for reports_block in reports_with_link_added_splitted:
                                     message = f"Добавлена ссылка в {len(reports_block)} документах в каталоге РФГФ:\n"
                                     title = 'Новые ссылки в каталоге РФГФ'
@@ -560,8 +603,8 @@ def refresh_rfgf_reports(pgdsn,
                             if reports_with_link_removed:
                                 fname = f"Документы_УВС_РФГФ_с_удаленной_ссылкой_{timestamp}_{str(i + 1)}.csv"
                                 send_reports_csv_to_telegram(s, f, fname, reports_with_link_removed,
-                                                             list_type='link_removed',
-                                                             bot_info=report_bot_info)
+                                                            list_type='link_removed',
+                                                            bot_info=report_bot_info)
                                 split_size = 10
                                 reports_with_link_removed_splitted = [reports_with_link_removed[i:i + split_size] for i in
                                                                     range(0, len(reports_with_link_removed), split_size)]
@@ -581,10 +624,10 @@ def refresh_rfgf_reports(pgdsn,
                                         # send_to_teams(webhook, message, f, button_text='Открыть', button_link=docurl)
                                     send_to_teams(webhook, message, f, title=title, sections=sections)
 
-        with requests.Session() as s:
-            with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
-                message = f"Обновление отчетов Росгеолфонда завершено."
-                send_to_telegram(s, f, bot_info=log_bot_info, message=message)
+            with requests.Session() as s:
+                with open('rfgf_reports/rfgf_reports_log.txt', 'w', encoding='utf-8') as f:
+                    message = f"Обновление отчетов Росгеолфонда завершено."
+                    send_to_telegram(s, f, bot_info=log_bot_info, message=message)
 # This is an example of using the class.
 # first you create an instance of RfgfCatalogInvestigator.
 # second, you call it's request_reports function to download the data from rfgf.ru/catalog/index.php
@@ -614,7 +657,24 @@ def refresh_rfgf_reports(pgdsn,
 #     jdata = json.load(f)
 #     bot_info = (jdata['token'], jdata['chatid'])
 # #
-# # refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=1)
+# refresh_rfgf_reports(dsn, pages_pack_size=1, report_bot_info=bot_info, send_updates=True, max_packs=1)
 # refresh_rfgf_reports(dsn, pages_pack_size=10, report_bot_info=bot_info, log_bot_info=bot_info, send_updates=True, max_packs=1)
 # pass
 
+if __name__ == '__main__':
+    # # # read the telegram bot credentials
+    # with open('bot_info_vgdb_bot_toReportsGroup.json', 'r', encoding='utf-8') as f:
+    #     jdata = json.load(f)
+    #     report_bot_info = (jdata['token'], jdata['chatid'])
+    
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        log_bot_info = (jdata['token'], jdata['chatid'])
+        report_bot_info = (jdata['token'], jdata['chatid'])
+    
+    # read the postgres login credentials for gdal from file
+    with open('.pgdsn', encoding='utf-8') as gdalf:
+        dsn = gdalf.read().replace('\n', '')
+
+    refresh_rfgf_reports(dsn, '.rfgfdsn', pages_pack_size=5000, report_bot_info=log_bot_info,
+                     log_bot_info=log_bot_info, send_updates=True)
