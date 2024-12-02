@@ -744,11 +744,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                        'appl_deadline',
                        'regions', 
                        'rn_guid', 
-                       'resources_parsed']
+                       'resources_parsed', 
+                       'rfgf_gos_reg_num']
         # create a list of field types for license blocks. The order must match the field_names list.
         field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString,
                        ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate,
-                       ogr.OFTDate, ogr.OFTString, ogr.OFTString, ogr.OFTString]
+                       ogr.OFTDate, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString]
         # add fields to the result layer
         for f_name, f_type in zip(field_names, field_types):
             defn = ogr.FieldDefn(f_name, f_type)
@@ -1164,6 +1165,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                         if parsed_resources:
                             feature.SetField('resources_parsed', json.dumps(parsed_resources, ensure_ascii=False))
                         pass
+                    
+                    
+
                     ##############################################################
 
                     # add an item to the list of new blocks for telegram report
@@ -1364,6 +1368,27 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
             message = "Synology table rosnedra.license_blocks_rosnedra_orders update FAILED."
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        
+        i = 1
+        pgconn = None
+        while not pgconn and i <= 10:
+            i += 1
+            try:
+                pgconn = psycopg2.connect(gdalpgcs[3:])
+            except:
+                pass
+        if not pgconn or i > 10:
+            message = "Ошибка подключения к БД для получения рег.номера РФГФ"
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        else:
+            sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+                f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+                f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+            with pgconn.cursor() as cur:
+                cur.execute(sql)
+            pgconn.commit()
+            pgconn.close()
     return success
 
 
@@ -1476,5 +1501,25 @@ if __name__ == '__main__':
     #             cur.execute(sql)
     #     pgconn.commit()
     # pgconn.close()
+
+    i = 1
+    pgconn = None
+    while not pgconn and i <= 10:
+        i += 1
+        try:
+            pgconn = psycopg2.connect(dsn)
+        except:
+            pass
+    if not pgconn or i > 10:
+        print("Ошибка подключения к БД для получения рег.номера РФГФ")
+    else:
+        sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+            f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+            f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+        with pgconn.cursor() as cur:
+            cur.execute(sql)
+        pgconn.commit()
+        pgconn.close()
+        pass
 
 
