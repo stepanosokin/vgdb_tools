@@ -90,6 +90,8 @@ def parse_lotcard(lotcard):
             lotcard_dict['priceMin'] = lotcard['priceMin']
         if lotcard.get('priceFin'):
             lotcard_dict['priceFin'] = lotcard['priceFin']
+        if lotcard.get('auctionStartDate'):
+            lotcard_dict['auctionStartDate'] = f"'{dateutil.parser.isoparse(lotcard['auctionStartDate']).strftime('%Y-%m-%d %H:%M:%S')}'"
         if lotcard.get('biddEndTime'):
             lotcard_dict['biddEndTime'] = f"'{dateutil.parser.isoparse(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
             # lotcard_dict['biddEndTime'] = f"'{datetime.fromisoformat(lotcard['biddEndTime']).strftime('%Y-%m-%d %H:%M:%S')}'"
@@ -975,28 +977,28 @@ if __name__ == '__main__':
     #     send_to_telegram(s, logf, bot_info=log_bot_info, message=message)
 
     
-    refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
-                         webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
+    # refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+    #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
     
     # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
     #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
 
     
-    # # checking mapbox functions
-    # with requests.Session() as s:
-    #     # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
-    #     #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
-    #     #         '22000059140000000015','22000039810000000058']
-    #     lots = ['22000039810000000094']
-    #     with open('tmp.txt', 'w') as logf:
-    #         pass
-    #         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
-    #         for lot in lots:
-    #         #     if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
-    #         #         pass                
-    #             if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
-    #                 message = f'{lot}'
-    #                 if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>'):
-    #                     pass
-    #         pgconn.close()
+    # checking mapbox functions
+    with requests.Session() as s:
+        # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
+        #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
+        #         '22000059140000000015','22000039810000000058']
+        lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
+        with open('tmp.txt', 'w') as logf:
+            pass
+            pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+            for lot in lots:
+                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
+                    pass                
+                    if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
+                        message = f'Отобразить на карте {lot}'
+                        if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>', photo=f'torgi_gov_ru/{lot}.png'):
+                            pass
+            pgconn.close()
    
