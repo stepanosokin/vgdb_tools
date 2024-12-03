@@ -1382,9 +1382,11 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         else:
+            # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+            #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+            #     f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
             sql = f"update rosnedra.license_blocks_rosnedra_orders " \
-                f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
-                f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+                f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid);"
             with pgconn.cursor() as cur:
                 cur.execute(sql)
             pgconn.commit()
