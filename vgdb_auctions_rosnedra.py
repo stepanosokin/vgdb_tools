@@ -77,12 +77,14 @@ def parse_resources(text):
                     if 'catvalue' in k2:
                         tup = None
                         # tmpl = r'(\d+[,\.]\d+) ?(\w+\.? *\w+\.?)'
-                        tmpl = r'(\d+[,\.]?\d*) ?(\w+\.? *\w+\.?)'
+                        # tmpl = r'(\d+[,\.]?\d*) ?(\w+\.? *\w+\.?)'
+                        # tmpl = r'(\d+[,\.]?\d*) *(\w+\.? *\w+\.?)'
+                        tmpl = r'(\d+[,\.]? ?\d*) *(\w+\.? *\w+\.?)'
                         match = re.search(tmpl, v2)
                         if match:
                             tup = tuple(match.groups())
                         if tup:
-                            tup = (float(tup[0].replace(',', '.')), tup[1])
+                            tup = (float(tup[0].replace(',', '.').replace(' ', '')), tup[1])
                             if re.search(r'тыс\.? ?т\.?', tup[1], re.I) and k in ['oil', 'cond']:
                                 tup = (tup[0] / 1000, tup[1].replace('тыс', 'млн'))
                             if re.search(r'млн|миллион', tup[1], re.I) and k == 'gas':
@@ -1471,9 +1473,9 @@ if __name__ == '__main__':
     # lastdt_result = get_latest_order_date_from_synology(dsn)
     # if lastdt_result[0]:
     #     startdt = lastdt_result[1] + timedelta(days=1)
-    #     startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
-    #     enddt = datetime.strptime('2024-09-05', '%Y-%m-%d')
-    #     # enddt = datetime.now()
+    #     # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
+    #     # enddt = datetime.strptime('2024-09-05', '%Y-%m-%d')
+    #     enddt = datetime.now()
     #     clear_folder('rosnedra_auc')
     #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
     #                        folder='rosnedra_auc', bot_info=bot_info)
@@ -1490,38 +1492,47 @@ if __name__ == '__main__':
     # pgconn.close()
 
 
-    # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
-    # pgconn = psycopg2.connect(dsn)
-    # with pgconn.cursor() as cur:
-    #     sql = "select gid, reserves_predicted_resources from rosnedra.license_blocks_rosnedra_orders;"
-    #     cur.execute(sql)
-    #     sdata = [(x[0], x[1]) for x in cur.fetchall()]
-    #     for it in sdata:
-    #         parsed = parse_resources(it[1])
-    #         if parsed:
-    #             sql = f"update rosnedra.license_blocks_rosnedra_orders set resources_parsed = '{json.dumps(parsed, ensure_ascii=False)}' where gid = {it[0]};"
-    #             cur.execute(sql)
-    #     pgconn.commit()
-    # pgconn.close()
-
-    i = 1
-    pgconn = None
-    while not pgconn and i <= 10:
-        i += 1
-        try:
-            pgconn = psycopg2.connect(dsn)
-        except:
-            pass
-    if not pgconn or i > 10:
-        print("Ошибка подключения к БД для получения рег.номера РФГФ")
-    else:
-        sql = f"update rosnedra.license_blocks_rosnedra_orders " \
-            f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
-            f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
-        with pgconn.cursor() as cur:
-            cur.execute(sql)
+    # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
+    pgconn = psycopg2.connect(dsn)
+    with pgconn.cursor() as cur:
+        sql = "select gid, reserves_predicted_resources from rosnedra.license_blocks_rosnedra_orders;"
+        cur.execute(sql)
+        sdata = [(x[0], x[1]) for x in cur.fetchall()]
+        for it in sdata:
+            parsed = parse_resources(it[1])
+            if parsed:
+                sql = f"update rosnedra.license_blocks_rosnedra_orders set resources_parsed = '{json.dumps(parsed, ensure_ascii=False)}' where gid = {it[0]};"
+                cur.execute(sql)
         pgconn.commit()
-        pgconn.close()
-        pass
+    pgconn.close()
+
+    # # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.rfgf_gos_reg_num
+    # i = 1
+    # pgconn = None
+    # while not pgconn and i <= 10:
+    #     i += 1
+    #     try:
+    #         pgconn = psycopg2.connect(dsn)
+    #     except:
+    #         pass
+    # if not pgconn or i > 10:
+    #     print("Ошибка подключения к БД для получения рег.номера РФГФ")
+    # else:
+    #     sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+    #         f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+    #         f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+    #     with pgconn.cursor() as cur:
+    #         cur.execute(sql)
+    #     pgconn.commit()
+    #     pgconn.close()
+    #     pass
 
 
+#     # тестирование функции parse_resources
+#     result = parse_resources('''нефть (извл.)
+# D0 - 1, 09 млн. т
+# Dл - 2,0 млн. т
+# D1 -  1,0 млн. т
+# газ 
+# D1  - 0,8 млрд м3''')
+#     pass
