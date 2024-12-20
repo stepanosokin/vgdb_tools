@@ -290,6 +290,10 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 if lotcard_dict.get('resourceLocation_EA(N)'):
                                     resourceLocation = str(lotcard_dict['resourceLocation_EA(N)'])
                                     message += f" ({resourceLocation})"
+                                if lotcard_dict.get('priceMin'):
+                                    locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                                    message += f"\nНач.Цена: {locale.currency(float(lotcard_dict['priceMin']), grouping=True)}"
+                                    locale.setlocale(locale.LC_ALL, (''))
                                 message += ':'
                             val = change['new']
                             if change['field'] == 'biddEndTime':
@@ -302,7 +306,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     val += f' {tz}'
                             elif change['field'] == 'lotStatus':
                                 message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
-                            elif change['field'] in ['priceMin', 'priceFin']:
+                            elif change['field'] in ['priceMin']:
                                 locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
                                 message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
                                 locale.setlocale(locale.LC_ALL, (''))
@@ -985,20 +989,22 @@ if __name__ == '__main__':
 
     
     # checking mapbox functions
-    with requests.Session() as s:
-        # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
-        #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
-        #         '22000059140000000015','22000039810000000058']
-        lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
-        with open('tmp.txt', 'w') as logf:
-            pass
-            pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
-            for lot in lots:
-                if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
-                    pass                
-                    if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
-                        message = f'Отобразить на карте {lot}'
-                        if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>', photo=f'torgi_gov_ru/{lot}.png'):
-                            pass
-            pgconn.close()
+    # with requests.Session() as s:
+    #     # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
+    #     #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
+    #     #         '22000059140000000015','22000039810000000058']
+    #     lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
+    #     with open('tmp.txt', 'w') as logf:
+    #         pass
+    #         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
+    #         for lot in lots:
+    #             if get_lot_on_mapbox_png(lot, f'torgi_gov_ru/{lot}.png', mb_token, size=400, padding=100):
+    #                 pass                
+    #                 if generate_lot_mapbox_html(lot, f"torgi_gov_ru/{lot}.htm", mb_token, webhostssh='.regrussh', pgconn=pgconn):
+    #                     message = f'Отобразить на карте {lot}'
+    #                     if send_to_telegram(s, logf, bot_info=log_bot_info, message=f'<a href="https://verdeg.com/pages/{lot}.htm">Отобразить на карте</a>', photo=f'torgi_gov_ru/{lot}.png'):
+    #                         pass
+    #         pgconn.close()
+
+    
    
