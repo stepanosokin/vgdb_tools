@@ -3,6 +3,8 @@ import json
 from selenium import webdriver
 from selenium.webdriver.edge.options import Options
 from bs4 import BeautifulSoup
+from vgdb_general import smart_http_request
+import re
 
 
 def show_cadnum_old(x, y):
@@ -162,9 +164,15 @@ def show_cadnum_sel(x, y):
     options.add_argument("--start-maximized")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-    driver = webdriver.Edge(options=options)
+    # driver = webdriver.Edge(options=options)
+    driver = webdriver.Chrome(options=options)
     # driver.get('https://egrp365.ru')
-    driver.get(f'https://pkk.rosreestr.ru/api/features/1/?sq=%7B%22type%22%3A%22Point%22%2C%22coordinates%22%3A%5B{x}%2C{y}%5D%7D&tolerance=1&limit=11')
+    url = 'https://pkkn.egrp365.org/api/features/1?'
+    url += 'sq=%7B%22type%22%3A%22Point%22%2C%22'
+    url += f'coordinates%22%3A%5B{x}%2C{y}'
+    url += '%5D%7D&tolerance=1&limit=11'
+    # driver.get(f'https://pkk.rosreestr.ru/api/features/1/?sq=%7B%22type%22%3A%22Point%22%2C%22coordinates%22%3A%5B{x}%2C{y}%5D%7D&tolerance=1&limit=11')
+    driver.get(url)
     page_source = driver.page_source
     soup = BeautifulSoup(page_source, 'html.parser')
     data = soup.find('div', attrs={'hidden': 'true'})
@@ -175,9 +183,84 @@ def show_cadnum_sel(x, y):
     if not message:
         message = 'Ошибка запроса кадастрового номера'
     print(message)
-    
+
+
+def show_cadnum_nspd(x, y):
+    with requests.Session() as s:
+        url = 'https://nspd.gov.ru/api/aeggis/v3/36048/wms'
+        headers = {
+            "Accept": '*/*',
+            "Accept-Encoding": 'gzip, deflate, br, zstd; charset=utf-8',
+            "Content-Type": 'text/html; charset=utf-8',
+            "Accept-Language": 'en,ru;q=0.9,en-GB;q=0.8,en-US;q=0.7',
+            "Connection": 'keep-alive',
+            "Origin": "https://nspd.gov.ru/",
+            "DNT": '1',
+            "cache-control": 'no-cache',
+            "Pragma": 'no-cache',
+            "Priority": 'u=1, i',
+            "Referer": f'https://nspd.gov.ru/map?' \
+                        f'thematic=PKK' \
+                        f'&zoom=13.866602508125357' \
+                        f'&coordinate_x={str(x)}' \
+                        f'&coordinate_y={str(y)}' \
+                        f'&theme_id=1' \
+                        f'&is_copy_url=true' \
+                        f'&active_layers=%E8%B3%90',
+            "sec-ch-ua": '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            "sec-ch-ua-mobile": '?0',
+            "Sec-ch-ua-platform": '"Windows"',
+            "Sec-fetch-dest": 'empty',
+            "Sec-fetch-mode": 'cors',
+            "Sec-Fetch-Site": 'same-origin',
+            "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0'
+        }
+        # headers = {
+        #     "Referer": f'https://nspd.gov.ru/map?' \
+        #                 f'thematic=PKK' \
+        #                 f'&zoom=13.866602508125357' \
+        #                 f'&coordinate_x={str(x)}' \
+        #                 f'&coordinate_y={str(y)}' \
+        #                 f'&theme_id=1' \
+        #                 f'&is_copy_url=true' \
+        #                 f'&active_layers=%E8%B3%90',
+        # }
+
+        params = {
+            "REQUEST": 'GetFeatureInfo',
+            "QUERY_LAYERS": '36048',
+            "SERVICE": 'WMS',
+            "VERSION": '1.3.0',
+            "FORMAT": 'image/png',
+            "STYLES": '',
+            "TRANSPARENT": 'true',
+            "LAYERS": '36048',
+            "RANDOM": '0.10847854968801807',
+            "INFO_FORMAT": 'application/json',
+            "FEATURE_COUNT": '10',
+            "I": '228',
+            "J": '150',
+            "WIDTH": '512',
+            "HEIGHT": '512',
+            "CRS": 'EPSG:3857',
+            "BBOX": f'{str(float(x) - 4267.64188619)},{str(float(y) - 1481.34839063)},{str(float(x) + 624.327924059)},{str(float(y) + 3410.57141961)}'
+        }
+
+        status, result = smart_http_request(s=s, url=url, params=params, headers=headers, verify=False)
+        if status == 200:
+            jresult = result.json()
+            if jresult.get('features'):
+                return jresult['features'][0]['properties']['descr']
+            # return jresult
+        return None
+
 
 if __name__ == '__main__':
     # show_cadnum('57.02722347329609', '47.219388818706435')
     # show_cadnum_old('57.02722347329609', '47.219388818706435')
-    show_cadnum_sel('46.286645', '52.7779')
+    
+    # show_cadnum_sel('46.286645', '52.7779')
+
+    # show_cadnum_nspd(6672022.493258687, 9876046.983278478)
+    num = show_cadnum_nspd(6667330.92232106, 9876142.067073278)
+    pass
