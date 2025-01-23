@@ -40,6 +40,7 @@ from vgdb_general import smart_http_request
 # https://github.com/wialon/python-wialon
 # https://forum.wialon.com/viewtopic.php?id=4661
 # https://help.wialon.com/help/api/ru/user-guide/api-reference
+# https://forum.wialon.com/viewtopic.php?id=4661
 from wialon import Wialon, WialonError, flags      
 
 from time import sleep
