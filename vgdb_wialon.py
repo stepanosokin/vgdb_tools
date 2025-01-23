@@ -36,7 +36,12 @@
 
 import requests
 from vgdb_general import smart_http_request
-from wialon import Wialon, WialonError, flags      # https://github.com/wialon/python-wialon https://forum.wialon.com/viewtopic.php?id=4661 
+
+# https://github.com/wialon/python-wialon
+# https://forum.wialon.com/viewtopic.php?id=4661
+# https://help.wialon.com/help/api/ru/user-guide/api-reference
+from wialon import Wialon, WialonError, flags      
+
 from time import sleep
 
 def login(s: requests.Session, tokenfile='.wialon_token'):
@@ -74,6 +79,7 @@ if __name__ == '__main__':
         
         # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/core/search_items
         # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/codesamples/search#search_items_by_property
+        # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/search_items?q=null&start=0&scroll-translations:language-key=ru
         spec = {
             'itemsType': 'avl_unit',
             'propName': 'sys_name',
@@ -84,6 +90,7 @@ if __name__ == '__main__':
         units = wialon_api.core_search_items(spec=spec, force=1, flags=flags.ITEM_DATAFLAG_BASE, **interval)    # список доступных юнитов
         
         # https://sdk.wialon.host/wiki/en/kit/remoteapi/apiref/core/update_data_flags
+        # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/update_data_flags
         spec = [{
             "type": "col",
             "data": [x['id'] for x in units['items']],
@@ -94,6 +101,7 @@ if __name__ == '__main__':
         result = wialon_api.core_update_data_flags(spec=spec, flags=flags.ITEM_DATAFLAG_BASE)   # добавление всех доступных юнитов в сессию
         
         # https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/requests/avl_evts
+        # https://help.wialon.com/help/api/ru/user-guide/api-reference/requests/avl_evts
         data = wialon_api.avl_evts()        # получить новое событие
         sleep(pause)
         
