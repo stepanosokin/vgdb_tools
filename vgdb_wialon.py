@@ -37,6 +37,7 @@
 import requests
 from vgdb_general import smart_http_request
 import psycopg2
+import json
 
 # https://github.com/wialon/python-wialon
 # https://forum.wialon.com/viewtopic.php?id=4661
@@ -133,142 +134,221 @@ def update_units_pg(dsn: str, units: dict):
         pgconn.close()
 
 
+def add_units_to_session(w: Wialon, units: dict):    
+    try:
+        spec = [{
+                    "type": "col",
+                    "data": [x.get('id') for x in units.get('items')],
+                    "flags": 4294967295, 
+                    "mode": 1,
+                    "max_items": 0
+                }]
+        result = w.core_update_data_flags(spec=spec, flags=flags.ITEM_DATAFLAG_BASE)
+        return True
+    except:
+        return False
+
+
+def update_events_pg(dsn, tm: int, events: list):
+    with open(dsn, encoding='utf-8') as f:
+        pgdsn = f.read()
+    pgconn = None    
+    i = 1
+    while not pgconn and i < 10:
+        i += 1
+        try:
+            pgconn = psycopg2.connect(pgdsn)
+        except:
+            pass
+    if pgconn:
+        with pgconn:
+            with pgconn.cursor() as cur:
+                for evt in events:
+                    tm = tm
+                    id = evt['i']
+                    t = evt['d']['t']
+                    tp = evt['d'].get('tp')
+                    if tp == 'ud':
+                        x = evt['d']['pos']['x']
+                        y = evt['d']['pos']['y']
+                        z = evt['d']['pos']['z']
+                        s = evt['d']['pos']['s']
+                    elif tp == 'evt':
+                        x = evt['d']['x']
+                        y = evt['d']['y']
+                        z = None
+                        s = None
+                    data = f"'{json.dumps(evt)}'"
+                    if tp in ['ud', 'evt']:
+                        sql = f"insert into wialon.wialon_evts(tm, id, t, x, y, z, s, tp, data) " \
+                              f"values({str(tm)}, {str(id)}, {str(t)}, {str(x)}, {str(y)}, {str(z)}, {str(s)}, '{tp}', {data});"
+                        cur.execute(sql)
+                        pgconn.commit()
+                        pass
+                    
+
+def shrink_events_pg(dsn):
+    with open(dsn, encoding='utf-8') as f:
+        pgdsn = f.read()
+    pgconn = None    
+    i = 1
+    while not pgconn and i < 10:
+        i += 1
+        try:
+            pgconn = psycopg2.connect(pgdsn)
+        except:
+            pass
+    if pgconn:
+        with pgconn:
+            with pgconn.cursor() as cur:
+                sql = 'select count(*) from wialon.wialon_evts;' 
+                cur.execute(sql)
+                count = cur.fetchall()[0][0]
+                extra = count - 100000
+                if extra > 0:
+                    sql = f"delete from wialon.wialon_evts where gid in (select gid from wialon.wialon_evts order by t ASC limit {str(extra)});"
+                    cur.execute(sql)
+                    pgconn.commit()
+        pgconn.close()
+
+
+
 if __name__ == '__main__':
     
     w = wialon_session()
+
     if w:
         units = get_units(w)
         if units:
             update_units_pg('.pgdsn', units)
+            if add_units_to_session(w=w, units=units):
+                pass
+                # for _ in range(500):
+                shrink_events_pg('.pgdsn')
+                while True:
+                    data = w.avl_evts()
+                    if data.get('events'):
+                        events=[x for x in data['events'] if x['t'] == 'm']
+                        update_events_pg('.pgdsn', tm=data['tm'], events=events)
+                    sleep(1)
+
     w.core_logout()
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    # # https://sdk.wialon.host/wiki/en/local/remoteapi1904/codesamples/update_datafalags?s[]=avl&s[]=evts
-    
-    # pause = 1
-    # try:
-    #     wialon_api = Wialon(host='hst-api.wialon.host')
-    #     with open('.wialon_token', encoding='utf-8') as f:
-    #         token = f.read()
-    #     result = wialon_api.token_login(token=token, appName='python-wialon')    
-    #     wialon_api.sid = result['eid']       
-        
-    #     # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/core/search_items
-    #     # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/codesamples/search#search_items_by_property
-    #     # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/search_items?q=null&start=0&scroll-translations:language-key=ru
-    #     spec = {
-    #         'itemsType': 'avl_unit',
-    #         'propName': 'sys_name',
-    #         'propValueMask': '*',
-    #         'sortType': 'sys_name'
-    #         }
-    #     interval = {"from": 0, "to": 0}
-    #     units = wialon_api.core_search_items(spec=spec, force=1, flags=flags.ITEM_DATAFLAG_BASE, **interval)    # список доступных юнитов
-    #     print(units)
-        
-    #     # https://sdk.wialon.host/wiki/en/kit/remoteapi/apiref/core/update_data_flags
-    #     # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/update_data_flags
-    #     spec = [{
-    #         "type": "col",
-    #         "data": [x['id'] for x in units['items']],
-    #         "flags": 4294967295, 
-    #         "mode": 1,
-    #         "max_items": 0
-    #     }]
-    #     result = wialon_api.core_update_data_flags(spec=spec, flags=flags.ITEM_DATAFLAG_BASE)   # добавление всех доступных юнитов в сессию
-        
-    #     # https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/requests/avl_evts
-    #     # https://help.wialon.com/help/api/ru/user-guide/api-reference/requests/avl_evts
-    #     data = wialon_api.avl_evts()        # получить новое событие
-    #     sleep(pause)
-        
-    #     for _ in range(30):
-    #         print(data)
-    #         data = wialon_api.avl_evts()
-    #         sleep(pause)
-        
-    #     wialon_api.core_logout()
-    #     pass
-    # except WialonError as e:
-    #     print(e)
-    #     pass
 
-    # # Description of 'pos' element
-    # # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/format/unit#position
 
-    # # В ответ на avl_evts приходит json с событиями. 
-    # # {
-    # #     "tm": <uint>, /* message time (UTC) */
-    # #     "events": [....]    /* список СОБЫТИЙ */
-    # # }
-    # # 
-    # # Каждое СОБЫТИЕ имеет структуру:
-    # # {
-    # #     "i": <uint>,        /* идентификатор объекта */
-    # #     "t": 'm',           /* здесь не уверен, скорее всего тип события - СООБЩЕНИЕ */
-    # #     "d": {MESSAGE}      /* Это само сообщение - MESSAGE */
-    # # }
-    # # 
-    # # данные, вложенные в событие - это MESSAGE.
-    # # Типы разных MESSAGE описаны тут: https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages
-    # # Нас интересуют два типа MESSAGE: 'Message with data' и 'Event'.
-    # # 
-    # # Формат Message with data - https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages#message_with_data
-    # # {
-    # #     "t":<uint>,		/* message time (UTC) */
-    # #     "f":<uint>,		/* flags (see below)*/
-    # #     "tp":"ud",		/* message type (ud - message with data) */
-    # #     "pos":{			/* position */
-    # #         "y":<double>,		/* latitude */
-    # #         "x":<double>,		/* longitude */
-    # #         "z":<int>,		/* altitude */
-    # #         "s":<uint>		/* speed */
-    # #         "c":<uint>,		/* course */
-    # #         "sc":<ubyte>		/* satellites count */
-    # #     },
-    # #     "i":<uint>,		/* input data */
-    # #     "o":<uint>,		/* output data */
-    # #     "p":{			/* parameters */
-    # #         <text>:<double>,
-    # #         ...	
-    # #     }
-    # # }
-    # # 
-    # # формат Event - https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages#event
-    # # {
-    # #     "t":<uint>,	/* message time (UTC) */
-    # #     "f":<uint>,	/* flags (see below) */
-    # #     "tp":"evt",	/* message type (evt - event) */
-    # #     "et":<text>,	/* text of event */
-    # #     "x":<double>,	/* longitude */
-    # #     "y":<double>,	/* latitude */
-    # #     "p":{}		/* parameters */
-    # # }
-    # #
-    # # Содержание объекта pos /* position */:
-    # # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/format/unit#position
-    # # {
-    # #     "pos":{			/* last known position */
-    # #         "t":<uint>,		/* time (UTC) */
-    # #         "y":<double>,		/* latitude */
-    # #         "x":<double>,		/* longitude */
-    # #         "z":<double>,		/* altitude */
-    # #         "s":<int>,		/* speed */
-    # #         "c":<int>,		/* course */
-    # #         "sc":<int>		/* satellites count */
-    # #     }
-    # # }
+    
+    if False:
+        # https://sdk.wialon.host/wiki/en/local/remoteapi1904/codesamples/update_datafalags?s[]=avl&s[]=evts
+        
+        pause = 1
+        try:
+            wialon_api = Wialon(host='hst-api.wialon.host')
+            with open('.wialon_token', encoding='utf-8') as f:
+                token = f.read()
+            result = wialon_api.token_login(token=token, appName='python-wialon')    
+            wialon_api.sid = result['eid']       
+            
+            # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/core/search_items
+            # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/codesamples/search#search_items_by_property
+            # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/search_items?q=null&start=0&scroll-translations:language-key=ru
+            spec = {
+                'itemsType': 'avl_unit',
+                'propName': 'sys_name',
+                'propValueMask': '*',
+                'sortType': 'sys_name'
+                }
+            interval = {"from": 0, "to": 0}
+            units = wialon_api.core_search_items(spec=spec, force=1, flags=flags.ITEM_DATAFLAG_BASE, **interval)    # список доступных юнитов
+            print(units)
+            
+            # https://sdk.wialon.host/wiki/en/kit/remoteapi/apiref/core/update_data_flags
+            # https://help.wialon.com/help/api/ru/user-guide/api-reference/core/update_data_flags
+            spec = [{
+                "type": "col",
+                "data": [x['id'] for x in units['items']],
+                "flags": 4294967295, 
+                "mode": 1,
+                "max_items": 0
+            }]
+            result = wialon_api.core_update_data_flags(spec=spec, flags=flags.ITEM_DATAFLAG_BASE)   # добавление всех доступных юнитов в сессию
+            
+            # https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/requests/avl_evts
+            # https://help.wialon.com/help/api/ru/user-guide/api-reference/requests/avl_evts
+            data = wialon_api.avl_evts()        # получить новое событие
+            sleep(pause)
+            
+            for _ in range(30):
+                print(data)
+                data = wialon_api.avl_evts()
+                sleep(pause)
+            
+            wialon_api.core_logout()
+            pass
+        except WialonError as e:
+            print(e)
+            pass
+
+        # Description of 'pos' element
+        # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/format/unit#position
+
+        # В ответ на avl_evts приходит json с событиями. 
+        # {
+        #     "tm": <uint>, /* message time (UTC) */
+        #     "events": [....]    /* список СОБЫТИЙ */
+        # }
+        # 
+        # Каждое СОБЫТИЕ имеет структуру:
+        # {
+        #     "i": <uint>,        /* идентификатор объекта */
+        #     "t": 'm',           /* здесь не уверен, скорее всего тип события - СООБЩЕНИЕ */
+        #     "d": {MESSAGE}      /* Это само сообщение - MESSAGE */
+        # }
+        # 
+        # данные, вложенные в событие - это MESSAGE.
+        # Типы разных MESSAGE описаны тут: https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages
+        # Нас интересуют два типа MESSAGE: 'Message with data' и 'Event'.
+        # 
+        # Формат Message with data - https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages#message_with_data
+        # {
+        #     "t":<uint>,		/* message time (UTC) */
+        #     "f":<uint>,		/* flags (see below)*/
+        #     "tp":"ud",		/* message type (ud - message with data) */
+        #     "pos":{			/* position */
+        #         "y":<double>,		/* latitude */
+        #         "x":<double>,		/* longitude */
+        #         "z":<int>,		/* altitude */
+        #         "s":<uint>		/* speed */
+        #         "c":<uint>,		/* course */
+        #         "sc":<ubyte>		/* satellites count */
+        #     },
+        #     "i":<uint>,		/* input data */
+        #     "o":<uint>,		/* output data */
+        #     "p":{			/* parameters */
+        #         <text>:<double>,
+        #         ...	
+        #     }
+        # }
+        # 
+        # формат Event - https://sdk.wialon.host/wiki/en/local/remoteapi1904/apiref/format/messages#event
+        # {
+        #     "t":<uint>,	/* message time (UTC) */
+        #     "f":<uint>,	/* flags (see below) */
+        #     "tp":"evt",	/* message type (evt - event) */
+        #     "et":<text>,	/* text of event */
+        #     "x":<double>,	/* longitude */
+        #     "y":<double>,	/* latitude */
+        #     "p":{}		/* parameters */
+        # }
+        #
+        # Содержание объекта pos /* position */:
+        # https://sdk.wialon.host/wiki/en/sidebar/remoteapi/apiref/format/unit#position
+        # {
+        #     "pos":{			/* last known position */
+        #         "t":<uint>,		/* time (UTC) */
+        #         "y":<double>,		/* latitude */
+        #         "x":<double>,		/* longitude */
+        #         "z":<double>,		/* altitude */
+        #         "s":<int>,		/* speed */
+        #         "c":<int>,		/* course */
+        #         "sc":<int>		/* satellites count */
+        #     }
+        # }
