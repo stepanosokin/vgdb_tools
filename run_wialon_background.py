@@ -15,10 +15,17 @@ if w:
             # for _ in range(500):
             shrink_events_pg('.pgdsn')
             while True:
-                data = w.avl_evts()
-                if data.get('events'):
-                    events=[x for x in data['events'] if x['t'] == 'm']
-                    update_events_pg('.pgdsn', tm=data['tm'], events=events)
-                sleep(1)
-
+                try:
+                    data = w.avl_evts()
+                    if data.get('events'):
+                        events=[x for x in data['events'] if x['t'] == 'm']
+                        update_events_pg('.pgdsn', tm=data['tm'], events=events)
+                    sleep(1)
+                except:
+                    try:
+                        w.core_logout()
+                    except:
+                        pass
+                    w = wialon_session()
+                    add_units_to_session(w=w, units=units)
     w.core_logout()
