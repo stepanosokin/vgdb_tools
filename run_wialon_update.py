@@ -24,5 +24,5 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
 with open('.egssh', 'r', encoding='utf-8') as f:
     egssh = json.load(f)
 
-synchro_table([('wialon', ['wialon_units', 'wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
+synchro_table([('wialon', ['wialon_units', 'wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info, log=False)
 
