@@ -25,4 +25,6 @@ with open('.egssh', 'r', encoding='utf-8') as f:
     egssh = json.load(f)
 
 synchro_table([('wialon', ['wialon_units', 'wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info, log=False)
+# test
+
 
