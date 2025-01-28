@@ -85,7 +85,7 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                                                       f"port={str(local_port_for_ext_pg)}")
                     ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg,
                                                                    remote_port=int(ext_pgdsn_dict['port']))
-            except:
+            except Exception as err:
                 log_message(s, logf, bot_info, f'Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
         if not ssh_conn:
             log_message(s, logf, bot_info, 'Ошибка подключения к удаленному серверу по SSH')
@@ -326,8 +326,9 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                 with pgconn:
                                     with pgconn.cursor() as cur:
                                         sql = f'DELETE FROM {schema}.{table};'
-                                        log_message(s, logf, bot_info,
-                                                    f'Удаляю данные из таблицы {schema}.{table} на удаленном сервере...')
+                                        if log:
+                                            log_message(s, logf, bot_info,
+                                                        f'Удаляю данные из таблицы {schema}.{table} на удаленном сервере...')
                                         cur.execute(sql)
                                         status = cur.statusmessage
                                 pgconn.close()
@@ -571,34 +572,62 @@ if __name__ == '__main__':
         egssh = json.load(f)
 
 
-    # synchro_schema(['osm'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('culture', ['roads'])],
+    # synchro_schema(['wialon'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['gps_tracks', 'waypoints'])],
     #               local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('culture', ['license_blocks_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('geology', ['field_points'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_table([('dm', ['well_attributes'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_table([('wialon', ['wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
-    # synchro_table([('dm', ['datasets_to_geometries'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+
+    # # new seismic 2d
+    # synchro_table([('dm', ['datasets_to_geometries', 'companies', 'links', 'processings', 'surveys', 'reports', 'links_to_datasets', 
+    #                        'reports_to_surveys', 'seismic_datasets', 'contracts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('dm', ['seismic_lines_processed_2d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
     #               ssh_user=egssh["user"], bot_info=bot_info)
+    
+    # # # new seismic 3d
+    # synchro_table([('dm', ['datasets_to_geometries', 'companies', 'links', 'processings', 'surveys', 'reports', 'links_to_datasets', 
+    #                        'reports_to_surveys', 'seismic_datasets'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('dm', ['seismic_pols_processed_3d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
+    #               ssh_user=egssh["user"], bot_info=bot_info)
 
+    
+    # map_table_view(egdata["user"], egdata["password"], ['aerograv_planning_gin_view'], schema='culture')
+    
+    # unmap_table(egdata["user"], egdata["password"], ['lotcards_spatial_licensed'])
     #
-    # map_table_view(egdata["user"], egdata["password"], ['osm_gas_pipes_v',
-    #                                                     'osm_oil_pipes_v',
-    #                                                     'osm_fuel_pipes_v'], schema='osm')
-    #
-    # unmap_table(egdata["user"], egdata["password"], ['struct01_24'])
-    #
-    # map_table(egdata["user"], egdata["password"], ['struct01_24_merc'], 'vnigni')
+    # map_table(egdata["user"], egdata["password"], ['wells_planning'], 'culture')
     # map_table(egdata["user"], egdata["password"], ['field_points'], 'geology')
 
     # print(get_free_port((5432, 5434)))
-
-    # hello from vscode
+    
+    
 
     # vnigni.struct01_24_new_props_and_geom;
     # vnigni.struct01_24_old_geom_new_props;
     # vnigni.struct01_24_old_props_and_geom;
     # vnigni.struct01_24_old_props_new_geom;
     # vnigni.struct01_24_removed_geom_mv;
+
+
+#     with requests.Session() as s:
+#         url = 'https://geomercury.ru/ds'
+#         result = s.get(url)
+#         pass
+
+#         data = {
+#             "name": "testDs",
+#             "alias": null,
+#             "description": null,
+#             "type": "Postgres",
+#             "connectionString": "Server=172.25.64.1;Port=5432;User Id=postgres;Password=postgres;Database=develop;Maximum Pool Size=25;"
+# }
+
+
+    # with login_to_evergis(egdata['user'], egdata['password']) as s:
+    #     url = 'https://geomercury.ru/sp/ds'
+    #     result = s.get(url)
+        
+    #     pass
