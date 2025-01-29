@@ -204,7 +204,7 @@ def shrink_events_pg(dsn):
                 sql = 'select count(*) from wialon.wialon_evts;' 
                 cur.execute(sql)
                 count = cur.fetchall()[0][0]
-                extra = count - 100000
+                extra = count - 10000
                 if extra > 0:
                     sql = f"delete from wialon.wialon_evts where gid in (select gid from wialon.wialon_evts order by t ASC limit {str(extra)});"
                     cur.execute(sql)
@@ -226,11 +226,21 @@ if __name__ == '__main__':
                 # for _ in range(500):
                 shrink_events_pg('.pgdsn')
                 while True:
-                    data = w.avl_evts()
-                    if data.get('events'):
-                        events=[x for x in data['events'] if x['t'] == 'm']
-                        update_events_pg('.pgdsn', tm=data['tm'], events=events)
-                    sleep(1)
+                    try:
+                        data = w.avl_evts()
+                        if data.get('events'):
+                            events=[x for x in data['events'] if x['t'] == 'm']
+                            update_events_pg('.pgdsn', tm=data['tm'], events=events)
+                        sleep(1)
+                    except:
+                        try:
+                            w.core_logout()
+                        except:
+                            pass
+                        w = wialon_session()
+                        add_units_to_session(w=w, units=units)
+
+
 
     w.core_logout()
 
