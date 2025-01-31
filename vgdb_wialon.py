@@ -35,7 +35,7 @@
 
 
 import requests
-from vgdb_general import smart_http_request
+from vgdb_general import smart_http_request, log_message
 import psycopg2
 import json
 from synchro_evergis import get_free_port
@@ -47,6 +47,8 @@ from synchro_evergis import get_free_port
 from wialon import Wialon, WialonError, flags      
 
 from time import sleep
+from fabric import Connection
+import os
 
 def login(s: requests.Session, tokenfile='.wialon_token'):
     with open(tokenfile, encoding='utf-8') as f:
@@ -188,10 +190,9 @@ def update_events_pg(dsn, tm: int, events: list):
                         pass
 
 
-def update_events_ssh_pg(ext_pgdsn_path, local_pgdsn_path, table, data, channels_dict, timestamp, ssh_host='', ssh_user='',
-                         bot_info=('token', 'id'), folder='scada', log=False, shrink=True):
-    
-
+def update_events_ssh_pg(ext_pgdsn_path, local_pgdsn_path, table, ssh_host='', ssh_user='',
+                         bot_info=('token', 'id'), folder='wialon', log=False):
+    result = False
     local_pgconn = None
     k = 1
     while not local_pgconn and k <= 5:
@@ -211,115 +212,91 @@ def update_events_ssh_pg(ext_pgdsn_path, local_pgdsn_path, table, data, channels
         local_pgconn.close()
     if today_events:
         pass
-    
-
-
-
-
-
-
-
-
-
-
-    with open(ext_pgdsn_path, encoding='utf-8') as f:
-        ext_pgdsn = f.read()
-
-    ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
-    # new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}", f"port={str(local_port_for_ext_pg)}")
-
-
-    current_directory = os.getcwd()
-
-    # new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
-    # new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
-    # with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
-    #     f.write(f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
-    # os.chmod(new_ext_pgpass, 0o600)
-    log_file = os.path.join(current_directory, folder, 'ssh_logfile.txt')
-    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
-        if log:
-            log_message(s, logf, bot_info, '<send_to_ssh_postgres> Начинаю синхронизацию таблиц с Evergis...')
-        j = 1
-        ssh_conn = None
-        while not ssh_conn and j <= 2:
+        with open(ext_pgdsn_path, encoding='utf-8') as f:
+            ext_pgdsn = f.read()
+        ext_pgdsn_dict = dict([x.split('=') for x in ext_pgdsn.split(' ')])
+        current_directory = os.getcwd()
+        log_file = os.path.join(current_directory, folder, 'ssh_logfile.txt')
+        with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
             if log:
-                log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
-            try:
-                j += 1
-                local_port_for_ext_pg = get_free_port((5433, 5440))
-
-                if local_port_for_ext_pg:
-                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
-                                                      f"port={str(local_port_for_ext_pg)}")
-                    new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
-                    new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
-                    with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
-                        f.write(
-                            f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
-                    os.chmod(new_ext_pgpass, 0o600)
-                    ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg, remote_port=int(ext_pgdsn_dict['port']))
-            except:
+                log_message(s, logf, bot_info, '<send_to_ssh_postgres> Начинаю синхронизацию таблиц с Evergis...')
+            j = 1
+            ssh_conn = None
+            while not ssh_conn and j <= 2:
                 if log:
-                    log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
-        if not ssh_conn:
-            if log:
-                log_message(s, logf, bot_info, '<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH')
-            result = False
-
-        with ssh_conn:
-            if log:
-                log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Подключение SSH установлено')
-            my_env = os.environ.copy()
-            my_env["PGPASSFILE"] = new_ext_pgpass
-            i = 1
-            pgconn = None
-            while not pgconn and i <= 2:
-                i += 1
+                    log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Установка подключения к удаленному серверу по SSH, попытка {str(j)}...', to_telegram=False)
                 try:
-                    new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
-                                                      f"port={str(local_port_for_ext_pg)}")
-                    pgconn = psycopg2.connect(new_ext_pgdsn)
+                    j += 1
+                    local_port_for_ext_pg = get_free_port((5433, 5440))
+                    if local_port_for_ext_pg:
+                        new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                        f"port={str(local_port_for_ext_pg)}")
+                        new_ext_pgdsn_dict = dict([x.split('=') for x in new_ext_pgdsn.split(' ')])
+                        new_ext_pgpass = os.path.join(current_directory, folder, '.new_ext_pgpass')
+                        with open(new_ext_pgpass, 'w', encoding='utf-8') as f:
+                            f.write(
+                                f"{new_ext_pgdsn_dict['host']}:{new_ext_pgdsn_dict['port']}:{new_ext_pgdsn_dict['dbname']}:{new_ext_pgdsn_dict['user']}:{new_ext_pgdsn_dict['password']}")
+                        os.chmod(new_ext_pgpass, 0o600)
+                        ssh_conn = Connection(ssh_host, user=ssh_user, connect_kwargs={"banner_timeout": 60}).forward_local(local_port_for_ext_pg, remote_port=int(ext_pgdsn_dict['port']))
                 except:
-                    pass
-            if pgconn:
-                with pgconn:
-                    with pgconn.cursor() as cur:
-                        vals = [str(x.obj_id) + ", '" + x.obj_name + "', '" + x.obj_type + "', '{" + ", ".join(
-                            [chr(34) + channels_dict.get(
-                                str(y["cnlNum"]), str(y["cnlNum"])) + chr(34) + ": " + str(y["val"]) for y in
-                             x.data]) + "}', '" + datetime.strftime(
-                            timestamp, "%Y-%m-%d %H:%M:%S") + "+00" + "'" for x in data]
-                        sql = f"insert into {table}(object_id, object_name, object_type, attrs, datetime) values({'), ('.join(vals)});"
-                        message = ''
-                        i = 1
-                        while message != 'INSERT 0 1' and i <= 2:
-                            i += 1
-                            cur.execute(sql)
-                            message = cur.statusmessage
-                        sql = f"delete from {table} where timezone('UTC', timezone('UTC', current_timestamp)) - timezone('UTC', timezone('UTC', datetime)) > make_interval(days => 1);"
-                        if shrink:
-                            message = ''
-                            j = 1
-                            while 'DELETE' not in message and j <= 2:
-                                j += 1
-                                cur.execute(sql)
-                                message = cur.statusmessage
-                pgconn.close()
-                if i > 2 or j > 2:
                     if log:
-                        log_message(s, logf, bot_info, '<send_to_ssh_postgres>: Ошибка отправки данных в Postgres')
-                    result = False
-                else:
-                    if log:
-                        log_message(s, logf, bot_info, '<send_to_ssh_postgres>: Данные успешно загружены в Postgres')
-                    result = True
-            else:
+                        log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH (попытка {str(j)})', to_telegram=False)
+            if not ssh_conn:
                 if log:
-                    log_message(s, logf, bot_info, 'vgdb_scada: Ошибка подключения к Postgres')
+                    log_message(s, logf, bot_info, '<send_to_ssh_postgres> Ошибка подключения к удаленному серверу по SSH')
                 result = False
-        ssh_conn = None
+                return result
+            with ssh_conn:
+                if log:
+                    log_message(s, logf, bot_info, f'<send_to_ssh_postgres> Подключение SSH установлено')
+                my_env = os.environ.copy()
+                my_env["PGPASSFILE"] = new_ext_pgpass
+                i = 1
+                pgconn = None
+                while not pgconn and i <= 2:
+                    i += 1
+                    try:
+                        new_ext_pgdsn = ext_pgdsn.replace(f"port={ext_pgdsn_dict['port']}",
+                                                        f"port={str(local_port_for_ext_pg)}")
+                        pgconn = psycopg2.connect(new_ext_pgdsn)
+                    except:
+                        pass
+                if pgconn:
+                    with pgconn.cursor() as cur:
+                        sql = f'delete from {table} where date(to_timestamp(t)) < date(now());'
+                        cur.execute(sql)
+                        pgconn.commit()
+                        sql = f'select max(t) from {table};'
+                        cur.execute(sql)
+                        latest_t = 0
+                        dataresult = cur.fetchall()
+                        if dataresult:
+                            latest_t = dataresult[0][0]
+                        today_events = [x for x in today_events if x[8] > latest_t]
+                        if today_events:
+                            values_to_insert = "(" + "), (".join([str(x[0]) + ", " + str(x[1]) + ", " + str(x[2]) + ", " + str(x[3]) + ", " + str(x[4]) + ", " + str(x[5]) + ", '" + str(x[6]).replace('\'', '\"') + "', '" + str(x[7]) + "', " + str(x[8]) for x in today_events]) + ")"
+                            sql = f"insert into {table}(tm, id, x, y, z, s, data, tp, t) values{values_to_insert};"
+                            pass
+                            cur.execute(sql)
+                            pgconn.commit()
+                            message = cur.statusmessage
+                            if 'INSERT' in message:
+                                result = True
+                            else:
+                                result = False
+                    pgconn.close()
+            ssh_conn = None
     return result
+        
+
+
+
+
+
+
+
+
+    
 
 
 def shrink_events_pg(dsn):
@@ -379,7 +356,13 @@ if __name__ == '__main__':
 
     # w.core_logout()
 
-    update_events_ssh_pg('.ext_pgdsn','.pgdsn', 'wialon.wialon_evts', None, None, None, )
+
+    with open('.egssh', 'r', encoding='utf-8') as f:
+        egssh = json.load(f)
+    with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
+        jdata = json.load(f)
+        bot_info = (jdata['token'], jdata['chatid'])
+    update_events_ssh_pg('.ext_pgdsn','.pgdsn', 'wialon.wialon_evts', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
 
     
