@@ -19,7 +19,7 @@ from synchro_evergis import *
 
 with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     jdata = json.load(f)
-    log_bot_info = (jdata['token'], jdata['chatid'])
+    bot_info = (jdata['token'], jdata['chatid'])
 
 with open('.egssh', 'r', encoding='utf-8') as f:
     egssh = json.load(f)
