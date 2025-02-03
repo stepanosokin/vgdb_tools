@@ -828,6 +828,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     # this was an attempt to store the local time of the order using correct timezone (failed)
                     # tf = TimezoneFinder()
 
+                    usage_type_value = None
+
                     # loop through the rows in the current excel spreadsheet
                     for nrow in range(nrows):
                         # loop through the columns in the current row
@@ -866,6 +868,10 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                 excel_col_nums['reserves_predicted_resources'] = ncol
                             if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
                                 excel_col_nums['exp_protocol'] = ncol
+                            if 'длягеологическогоизучениянедр,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                                usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                            elif 'длягеологическогоизучениянедр' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                                usage_type_value = 'геологическое изучение недр'
                             if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
                                 excel_col_nums['usage_type'] = ncol
                             if 'формапредоставленияучастканедрвпольз' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
@@ -1046,7 +1052,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                 float(str(df.iloc[nrow, excel_col_nums['area_km']]).replace(',', '.')),
                                 df.iloc[nrow, excel_col_nums['reserves_predicted_resources']],
                                 df.iloc[nrow, excel_col_nums['exp_protocol']],
-                                df.iloc[nrow, excel_col_nums['usage_type']],
+                                usage_type_value or df.iloc[nrow, excel_col_nums['usage_type']],
                                 df.iloc[nrow, excel_col_nums['lend_type']],
                                 df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
                                 meta_dict['name'],
@@ -1469,42 +1475,42 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     
-    # pgconn = psycopg2.connect(dsn)
-    # lastdt_result = get_latest_order_date_from_synology(dsn)
-    # if lastdt_result[0]:
-    #     startdt = lastdt_result[1] + timedelta(days=1)
-    #     # startdt = datetime.strptime('2024-09-01', '%Y-%m-%d')
-    #     # enddt = datetime.strptime('2024-09-05', '%Y-%m-%d')
-    #     enddt = datetime.now()
-    #     clear_folder('rosnedra_auc')
-    #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-    #                        folder='rosnedra_auc', bot_info=bot_info)
-    #     if download:
-    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
-            
-    #         # if parse:
-    #         #     pass
-    #         #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-    #         #     if update:
-    #         #         pass
-    #         #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
-    # pgconn.close()
-
-
-    # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
     pgconn = psycopg2.connect(dsn)
-    with pgconn.cursor() as cur:
-        sql = "select gid, reserves_predicted_resources from rosnedra.license_blocks_rosnedra_orders;"
-        cur.execute(sql)
-        sdata = [(x[0], x[1]) for x in cur.fetchall()]
-        for it in sdata:
-            parsed = parse_resources(it[1])
-            if parsed:
-                sql = f"update rosnedra.license_blocks_rosnedra_orders set resources_parsed = '{json.dumps(parsed, ensure_ascii=False)}' where gid = {it[0]};"
-                cur.execute(sql)
-        pgconn.commit()
+    lastdt_result = get_latest_order_date_from_synology(dsn)
+    if lastdt_result[0]:
+        # startdt = lastdt_result[1] + timedelta(days=1)
+        startdt = datetime.strptime('2024-05-01', '%Y-%m-%d')
+        enddt = datetime.strptime('2025-02-03', '%Y-%m-%d')
+        # enddt = datetime.now()
+        clear_folder('rosnedra_auc')
+        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+                           folder='rosnedra_auc', bot_info=bot_info)
+        if download:
+            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
+            
+            # if parse:
+            #     pass
+            #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+            #     if update:
+            #         pass
+            #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
     pgconn.close()
+
+
+    # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
+    # pgconn = psycopg2.connect(dsn)
+    # with pgconn.cursor() as cur:
+    #     sql = "select gid, reserves_predicted_resources from rosnedra.license_blocks_rosnedra_orders;"
+    #     cur.execute(sql)
+    #     sdata = [(x[0], x[1]) for x in cur.fetchall()]
+    #     for it in sdata:
+    #         parsed = parse_resources(it[1])
+    #         if parsed:
+    #             sql = f"update rosnedra.license_blocks_rosnedra_orders set resources_parsed = '{json.dumps(parsed, ensure_ascii=False)}' where gid = {it[0]};"
+    #             cur.execute(sql)
+    #     pgconn.commit()
+    # pgconn.close()
 
     # # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.rfgf_gos_reg_num
     # i = 1
