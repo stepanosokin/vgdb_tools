@@ -793,6 +793,13 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     meta_dict = json.load(jf)
                 # create a fullpath to the current excel file
                 excel_file = os.path.join(path, filename)
+
+                pdf_file = None
+                for filename in os.listdir(path):
+                    file_path = os.path.join(path, filename)
+                    if os.path.isfile(file_path) and all([x in file_path for x in ['.pdf', 'Приказ']]):
+                        pdf_file = file_path
+
                 # use pandas to read the excel file. Python environment must have both openpyxl and xlrd libraries installed
                 # to support both *.xls and *.xlsx
                 df = None
@@ -1237,17 +1244,22 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
 
         if new_hcs_blocks_list:
             message = f"Загружено {str(len(new_hcs_blocks_list))} новых объявлений о включении участков УВС в перечни Роснедра:\n"
-            for j, hcs_block in enumerate(new_hcs_blocks_list):
+            for j, hcs_block in enumerate(new_hcs_blocks_list): 
+                message += '\n---------------------------\n---------------------------'
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
-                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; " \
-                                  f"Приказ от {hcs_block['order_date']}; " \
-                                  f"{hcs_block_name}; " \
-                                  f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
+                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "
+                message += f"Приказ от {hcs_block['order_date']}; "
+                message += f"{hcs_block_name}; "
+                message += f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
                 if hcs_block.get('regions'):
                     message += f"Регионы: {hcs_block['regions']}; "
-                message += f"{hcs_block['source_url']}" + '\n'
+                # message += f"{hcs_block['source_url']}" + '\n'
             # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
-            send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+            test = send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+            if pdf_file:
+                send_to_telegram(s, logf, bot_info=report_bot_info, message='Приказ:', logdateformat=logdateformat, document=pdf_file)
+            if excel_file:
+                send_to_telegram(s, logf, bot_info=report_bot_info, message='Приложение к приказу:', logdateformat=logdateformat, document=excel_file)
 
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
@@ -1479,8 +1491,8 @@ if __name__ == '__main__':
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
         # startdt = lastdt_result[1] + timedelta(days=1)
-        startdt = datetime.strptime('2024-05-01', '%Y-%m-%d')
-        enddt = datetime.strptime('2025-02-03', '%Y-%m-%d')
+        startdt = datetime.strptime('2025-01-21', '%Y-%m-%d')
+        enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
         # enddt = datetime.now()
         clear_folder('rosnedra_auc')
         download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
