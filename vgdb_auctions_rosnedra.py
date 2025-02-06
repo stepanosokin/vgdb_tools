@@ -782,6 +782,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 nextgid = result[0][0] + 1
                 pgconn.close()
 
+        excel_files_list = []
+        pdf_files_list = []
+        
         # loop through the folders inside the folder with downloaded data
         for path, dirs, files in os.walk(os.path.abspath(directory)):
 
@@ -793,12 +796,14 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     meta_dict = json.load(jf)
                 # create a fullpath to the current excel file
                 excel_file = os.path.join(path, filename)
+                excel_files_list.append(excel_file)
 
                 pdf_file = None
                 for filename in os.listdir(path):
                     file_path = os.path.join(path, filename)
                     if os.path.isfile(file_path) and all([x in file_path for x in ['.pdf', 'Приказ']]):
                         pdf_file = file_path
+                        pdf_files_list.append(pdf_file)
 
                 # use pandas to read the excel file. Python environment must have both openpyxl and xlrd libraries installed
                 # to support both *.xls and *.xlsx
@@ -1256,10 +1261,12 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 # message += f"{hcs_block['source_url']}" + '\n'
             # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
             test = send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
-            if pdf_file:
-                send_to_telegram(s, logf, bot_info=report_bot_info, message='Приказ:', logdateformat=logdateformat, document=pdf_file)
-            if excel_file:
-                send_to_telegram(s, logf, bot_info=report_bot_info, message='Приложение к приказу:', logdateformat=logdateformat, document=excel_file)
+            if pdf_files_list:
+                for pdf_path in pdf_files_list:
+                    send_to_telegram(s, logf, bot_info=report_bot_info, message='Приказ:', logdateformat=logdateformat, document=pdf_path)
+            if excel_files_list:
+                for excel_path in excel_files_list:
+                    send_to_telegram(s, logf, bot_info=report_bot_info, message='Приложение к приказу:', logdateformat=logdateformat, document=excel_path)
 
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
@@ -1491,9 +1498,9 @@ if __name__ == '__main__':
     lastdt_result = get_latest_order_date_from_synology(dsn)
     if lastdt_result[0]:
         # startdt = lastdt_result[1] + timedelta(days=1)
-        startdt = datetime.strptime('2025-01-21', '%Y-%m-%d')
-        enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
-        # enddt = datetime.now()
+        startdt = datetime.strptime('2025-01-01', '%Y-%m-%d')
+        # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
+        enddt = datetime.now()
         clear_folder('rosnedra_auc')
         download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
                            folder='rosnedra_auc', bot_info=bot_info)
