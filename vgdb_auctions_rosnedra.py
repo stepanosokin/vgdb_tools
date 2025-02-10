@@ -1253,7 +1253,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 message += '\n---------------------------\n---------------------------'
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
                 message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "
-                message += f'<a href="{hcs_block['source_url']}">Приказ от {hcs_block['order_date']}</a>; '
+                message += f"<a href={chr(34) + hcs_block['source_url'] + chr(34)}\">Приказ от {hcs_block['order_date']}</a>; "
                 message += f"{hcs_block_name}; "
                 message += f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
                 if hcs_block.get('regions'):
@@ -1319,7 +1319,107 @@ def get_latest_auc_result_date_from_synology(pgconn):
         return (False, None)
 
 
-def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', table='rosnedra.license_blocks_rosnedra_orders', bot_info=('token', 'chatid')):
+def update_rfgf_gos_reg_num(pgcs, folder='rosnedra_auc', bot_info=None, report_bot_info=None):
+    pass
+    result = False
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    current_directory = os.getcwd()
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        i = 1
+        pgconn = None
+        while not pgconn and i <= 10:
+            i += 1
+            try:
+                pgconn = psycopg2.connect(pgcs, cursor_factory=DictCursor)
+            except:
+                pass
+        if not pgconn or i > 10:
+            message = "Ошибка подключения к БД для получения рег.номера РФГФ"
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        else:
+            # ###########################################################################################
+            # ######### Старый вариант с полным обновлением всех номеров выданных лицензий - начало #####
+            # ###########################################################################################
+            # # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+            # #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+            # #     f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+            # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+            #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid);"
+            # with pgconn.cursor() as cur:
+            #     cur.execute(sql)
+            # ###########################################################################################
+            # ######### Старый вариант с полным обновлением всех номеров выданных лицензий - конец ######
+            # ###########################################################################################
+
+            form_dict = {
+                'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ': 'ООО', 
+                'АКЦИОНЕРНОЕ ОБЩЕСТВО': 'АО',
+                'ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ПАО',
+                'ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ': 'ФГБУ',
+                'ЗАКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ЗАО'
+                }
+            
+            sql = f"select gid, name, rn_guid, rfgf_gos_reg_num, " \
+                    f"rosnedra.get_rfgf_gos_reg_num(rn_guid) as rfgf_gos_reg_num_new, " \
+                    f"resource_type, usage_type, source_url, order_date " \
+                    f"from rosnedra.license_blocks_rosnedra_orders " \
+                    f"where rosnedra.get_rfgf_gos_reg_num(rn_guid) != rfgf_gos_reg_num;"
+            with pgconn.cursor() as cur:
+                cur.execute(sql)
+                rn_blocks_rfgf_updated = cur.fetchall()
+                for rn_block_rfgf_updated in rn_blocks_rfgf_updated:
+                    sql = f"select gos_reg_num, license_block_name, date_register, date_license_stop, user_info, asln_link, rfgf_link " \
+                            f"from rfgf.license_blocks_rfgf_hc_active where gos_reg_num = '{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}';"
+                    cur.execute(sql)
+                    rfgf_block = None
+                    rfgf_block_result = cur.fetchall()
+                    if rfgf_block_result:
+                        rfgf_block = rfgf_block_result[0]                
+                    sql = f"update rosnedra.license_blocks_rosnedra_orders set rfgf_gos_reg_num = '{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}' " \
+                            f"where rn_guid = '{rn_block_rfgf_updated['rn_guid']}';"
+                    cur.execute(sql)
+                    pgconn.commit()
+                    result = True
+                    if any([x in rn_block_rfgf_updated['resource_type'].lower() for x in ['1', 'нефт', 'газ', 'конд']]):
+                        message = ''
+                        if rn_block_rfgf_updated['rfgf_gos_reg_num']:
+                            message = f"Обновлена лицензия на участок УВС, включенный в перечень Роснедра для " \
+                                        f"{rn_block_rfgf_updated['usage_type'].replace('геологическое', 'геологического').replace('изучение', 'изучения').replace('разведка', 'разведки').replace('добыча', 'добычи')}:"
+                            message += '\n' + (rn_block_rfgf_updated['name']).split('\n')[0]
+                            message += f" (<a href={chr(34) + rn_block_rfgf_updated['source_url'] + chr(34)}>Приказ от {rn_block_rfgf_updated['order_date'].strftime('%Y-%m-%d')}</a>)"
+                            message += f"\nЛицензия: {rn_block_rfgf_updated['rfgf_gos_reg_num']}->" \
+                                        f"<a href={chr(34) + rfgf_block['rfgf_link'] + chr(34)}>{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}</a> "
+                            if rfgf_block.get('date_register'):
+                                message += f"от {rfgf_block['date_register'].strftime('%Y-%m-%d')}"
+                            if rfgf_block.get('user_info'):
+                                user_info = str(rfgf_block.get('user_info')).upper()
+                                for k, v in form_dict.items():
+                                    user_info = user_info.replace(k, v)
+                                message += f"\n{user_info}"
+                        else:
+                            message = f"Новая лицензия на участок УВС, включенный в перечень Роснедра для " \
+                                        f"{rn_block_rfgf_updated['usage_type'].replace('геологическое', 'геологического').replace('изучение', 'изучения').replace('разведка', 'разведки').replace('добыча', 'добычи')}:"
+                            message += '\n' + (rn_block_rfgf_updated['name']).split('\n')[0]
+                            message += f" (<a href={chr(34) + rn_block_rfgf_updated['source_url'] + chr(34)}>Приказ от {rn_block_rfgf_updated['order_date'].strftime('%Y-%m-%d')}</a>)"
+                            message += f"Лицензия: <a href={chr(34) + rfgf_block['rfgf_link'] + chr(34)}>{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}</a> "
+                            if rfgf_block.get('date_register'):
+                                message += f"от {rfgf_block['date_register'].strftime('%Y-%m-%d')}"
+                            if rfgf_block.get('user_info'):
+                                user_info = str(rfgf_block.get('user_info')).upper()
+                                for k, v in form_dict.items():
+                                    user_info = user_info.replace(k, v)
+                                message += f"\n{user_info}"
+                        if message and report_bot_info:
+                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                            send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+            pgconn.commit()
+            pgconn.close()
+        return result
+
+
+def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result.gpkg', table='rosnedra.license_blocks_rosnedra_orders', bot_info=('token', 'chatid'), report_bot_info=None):
     '''
     This function takes the results of the parse_blocks_from_orders function and dumps them to the \n
     rosnedra.license_blocks_rosnedra_orders table inside the specified database. \n
@@ -1396,28 +1496,96 @@ def update_postgres_table(gdalpgcs, folder='rosnedra_auc', gpkg='rosnedra_result
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         
-        i = 1
-        pgconn = None
-        while not pgconn and i <= 10:
-            i += 1
-            try:
-                pgconn = psycopg2.connect(gdalpgcs[3:])
-            except:
-                pass
-        if not pgconn or i > 10:
-            message = "Ошибка подключения к БД для получения рег.номера РФГФ"
-            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
-        else:
-            # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
-            #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
-            #     f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
-            sql = f"update rosnedra.license_blocks_rosnedra_orders " \
-                f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid);"
-            with pgconn.cursor() as cur:
-                cur.execute(sql)
-            pgconn.commit()
-            pgconn.close()
+        if False:
+            i = 1
+            pgconn = None
+            while not pgconn and i <= 10:
+                i += 1
+                try:
+                    pgconn = psycopg2.connect(gdalpgcs[3:], cursor_factory=DictCursor)
+                except:
+                    pass
+            if not pgconn or i > 10:
+                message = "Ошибка подключения к БД для получения рег.номера РФГФ"
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+            else:
+                # ###########################################################################################
+                # ######### Старый вариант с полным обновлением всех номеров выданных лицензий - начало #####
+                # ###########################################################################################
+                # # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+                # #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) " \
+                # #     f"where date_created = '{datetime.now().strftime('%Y-%m-%d')}';"
+                # sql = f"update rosnedra.license_blocks_rosnedra_orders " \
+                #     f"set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid);"
+                # with pgconn.cursor() as cur:
+                #     cur.execute(sql)
+                # ###########################################################################################
+                # ######### Старый вариант с полным обновлением всех номеров выданных лицензий - конец ######
+                # ###########################################################################################
+
+                form_dict = {
+                    'ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ': 'ООО', 
+                    'АКЦИОНЕРНОЕ ОБЩЕСТВО': 'АО',
+                    'ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ПАО',
+                    'ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ БЮДЖЕТНОЕ УЧРЕЖДЕНИЕ': 'ФГБУ',
+                    'ЗАКРЫТОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО': 'ЗАО'
+                    }
+                
+                sql = f"select gid, name, rn_guid, rfgf_gos_reg_num, " \
+                    f"rosnedra.get_rfgf_gos_reg_num(rn_guid) as rfgf_gos_reg_num_new, " \
+                    f"resource_type, usage_type, source_url, order_date " \
+                    f"from rosnedra.license_blocks_rosnedra_orders " \
+                    f"where rosnedra.get_rfgf_gos_reg_num(rn_guid) != rfgf_gos_reg_num;"
+                with pgconn.cursor() as cur:
+                    cur.execute(sql)
+                    rn_blocks_rfgf_updated = cur.fetchall()
+                for rn_block_rfgf_updated in rn_blocks_rfgf_updated:
+                    sql = f"select gos_reg_num, license_block_name, date_register, date_license_stop, user_info, asln_link, rfgf_link " \
+                        f"from rfgf.license_blocks_rfgf_hc_active where gos_reg_num = '{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}';"
+                    cur.execute(sql)
+                    rfgf_block = None
+                    rfgf_block_result = cur.fetchall()
+                    if rfgf_block_result:
+                        rfgf_block = rfgf_block_result[0]                
+                    sql = f"update rosnedra.license_blocks_rosnedra_orders set rfgf_gos_reg_num = '{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}' " \
+                        f"where rn_guid = '{rn_block_rfgf_updated['rn_guid']}';"
+                    cur.execute(sql)
+                    pgconn.commit()
+                    if any([x in rn_block_rfgf_updated['resource_type'].lower() for x in ['нефт', 'газ', 'конд']]):
+                        message = ''
+                        if rn_block_rfgf_updated['rfgf_gos_reg_num']:
+                            message = f"Обновлена лицензия на участок УВС, включенный в перечень Роснедра для " \
+                                        f"{rn_block_rfgf_updated['usage_type'].replace('гелогическое', 'геологического').replace('изучение', 'изучения').replace('разведка', 'разведки').replace('добыча', 'добычи')}:"
+                            message += '\n' + '\n'.split(rn_block_rfgf_updated['name'])[0]
+                            message += f" (<a href={chr(34) + rn_block_rfgf_updated['source_url'] + chr(34)}>Приказ от {rn_block_rfgf_updated['order_date'].strftime('%Y-%m-%d')}</a>)"
+                            message += f"\n{rn_block_rfgf_updated['rfgf_gos_reg_num']}-> " \
+                                        f"<a href={chr(34) + rfgf_block['rfgf_link'] + chr(34)}>{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}</a> "
+                            if rfgf_block.get('date_register'):
+                                message += f"от {rfgf_block['date_register'].strftime('%Y-%m-%d')}"
+                            if rfgf_block.get('user_info'):
+                                user_info = str(rfgf_block.get('user_info')).upper()
+                                for k, v in form_dict.items():
+                                    user_info = user_info.replace(k, v)
+                                message += f"\n{user_info}"
+                        else:
+                            message = f"Новая лицензия на участок УВС, включенный в перечень Роснедра для " \
+                                        f"{rn_block_rfgf_updated['usage_type'].replace('гелогическое', 'геологического').replace('изучение', 'изучения').replace('разведка', 'разведки').replace('добыча', 'добычи')}:"
+                            message += '\n' + '\n'.split(rn_block_rfgf_updated['name'])[0]
+                            message += f" (<a href={chr(34) + rn_block_rfgf_updated['source_url'] + chr(34)}>Приказ от {rn_block_rfgf_updated['order_date'].strftime('%Y-%m-%d')}</a>)"
+                            message += f"<a href={chr(34) + rfgf_block['rfgf_link'] + chr(34)}>{rn_block_rfgf_updated['rfgf_gos_reg_num_new']}</a> "
+                            if rfgf_block.get('date_register'):
+                                message += f"от {rfgf_block['date_register'].strftime('%Y-%m-%d')}"
+                            if rfgf_block.get('user_info'):
+                                user_info = str(rfgf_block.get('user_info')).upper()
+                                for k, v in form_dict.items():
+                                    user_info = user_info.replace(k, v)
+                                message += f"\n{user_info}"
+                            if message and report_bot_info:
+                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+                pgconn.commit()
+                pgconn.close()
     return success
 
 
@@ -1494,27 +1662,30 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     
-    pgconn = psycopg2.connect(dsn)
-    lastdt_result = get_latest_order_date_from_synology(dsn)
-    if lastdt_result[0]:
-        # startdt = lastdt_result[1] + timedelta(days=1)
-        startdt = datetime.strptime('2025-01-01', '%Y-%m-%d')
-        # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
-        enddt = datetime.now()
-        clear_folder('rosnedra_auc')
-        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-                           folder='rosnedra_auc', bot_info=bot_info)
-        if download:
-            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
+    # pgconn = psycopg2.connect(dsn)
+    # lastdt_result = get_latest_order_date_from_synology(dsn)
+    # if lastdt_result[0]:
+    #     # startdt = lastdt_result[1] + timedelta(days=1)
+    #     startdt = datetime.strptime('2025-01-01', '%Y-%m-%d')
+    #     # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
+    #     enddt = datetime.now()
+    #     clear_folder('rosnedra_auc')
+    #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+    #                        folder='rosnedra_auc', bot_info=bot_info)
+    #     if download:
+    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
             
-            # if parse:
-            #     pass
-            #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-            #     if update:
-            #         pass
-            #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
-    pgconn.close()
+    #         # if parse:
+    #         #     pass
+    #         #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+    #         #     if update:
+    #         #         pass
+    #         #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+    # pgconn.close()
+
+    update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
+    pass
 
 
     # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
