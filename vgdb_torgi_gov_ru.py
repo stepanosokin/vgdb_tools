@@ -368,6 +368,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 message = f"Найдена лицензия на участок УВС, ранее выставлявшийся на аукцион: " \
                                     f" \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
                                 message += f"; \nСтатус аукциона: {status_dict.get(lotcard_dict.get('lotStatus'))}"
+                                message += f"; \nДата аукциона: {lotcard_dict.get('auctionStartDate').strftime('%Y-%m-%d')}"
                                 message += f"; \nЛицензия: <a href=\"{blockdata.get('rfgf_link')}\">{new_rfgf_gos_reg_num}</a>"
                                 message += f"; \nНазвание: {blockdata.get('license_block_name')}"
                                 date_register = None
@@ -988,12 +989,13 @@ if __name__ == '__main__':
     #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
 
     
-    # checking mapbox functions
+    # # checking mapbox functions
     # with requests.Session() as s:
     #     # lots = ['22000043270000000069','22000039810000000035','22000039810000000082','22000039810000000082',
     #     #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
     #     #         '22000059140000000015','22000039810000000058']
-    #     lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
+    #     # lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
+    #     lots = ['22000039810000000023']
     #     with open('tmp.txt', 'w') as logf:
     #         pass
     #         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
@@ -1007,4 +1009,4 @@ if __name__ == '__main__':
     #         pgconn.close()
 
     
-    # test
+    # # test

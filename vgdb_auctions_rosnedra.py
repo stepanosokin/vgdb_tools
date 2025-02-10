@@ -1253,7 +1253,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 message += '\n---------------------------\n---------------------------'
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
                 message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "
-                message += f"Приказ от {hcs_block['order_date']}; "
+                message += f'<a href="{hcs_block['source_url']}">Приказ от {hcs_block['order_date']}</a>; '
                 message += f"{hcs_block_name}; "
                 message += f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
                 if hcs_block.get('regions'):
