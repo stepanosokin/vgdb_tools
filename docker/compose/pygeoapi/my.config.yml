@@ -305,6 +305,7 @@ resources:
     #     type: process
     #     processor:
     #         name: HelloWorld
+    #
     
     license_blocks_rfgf_hcs_active:
         type: collection
