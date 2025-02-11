@@ -271,7 +271,8 @@ def update_events_ssh_pg(ext_pgdsn_path, local_pgdsn_path, table, ssh_host='', s
                         latest_t = 0
                         dataresult = cur.fetchall()
                         if dataresult:
-                            latest_t = dataresult[0][0]
+                            if dataresult[0][0]:
+                                latest_t = dataresult[0][0]
                         today_events = [x for x in today_events if x[8] > latest_t]
                         if today_events:
                             values_to_insert = "(" + "), (".join([str(x[0]) + ", " + str(x[1]) + ", " + str(x[2]) + ", " + str(x[3]) + ", " + str(x[4]) + ", " + str(x[5]) + ", '" + str(x[6]).replace('\'', '\"') + "', '" + str(x[7]) + "', " + str(x[8]) for x in today_events]) + ")"
@@ -287,16 +288,6 @@ def update_events_ssh_pg(ext_pgdsn_path, local_pgdsn_path, table, ssh_host='', s
                     pgconn.close()
             ssh_conn = None
     return result
-        
-
-
-
-
-
-
-
-
-    
 
 
 def shrink_events_pg(dsn):
