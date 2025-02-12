@@ -1253,7 +1253,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 message += '\n---------------------------\n---------------------------'
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
                 message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "
-                message += f"<a href={chr(34) + hcs_block['source_url'] + chr(34)}\">Приказ от {hcs_block['order_date']}</a>; "
+                message += f"<a href={chr(34) + hcs_block['source_url'] + chr(34)}>Приказ от {hcs_block['order_date']}</a>; "
                 message += f"{hcs_block_name}; "
                 message += f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
                 if hcs_block.get('regions'):
@@ -1662,30 +1662,30 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     
-    # pgconn = psycopg2.connect(dsn)
-    # lastdt_result = get_latest_order_date_from_synology(dsn)
-    # if lastdt_result[0]:
-    #     # startdt = lastdt_result[1] + timedelta(days=1)
-    #     startdt = datetime.strptime('2025-01-01', '%Y-%m-%d')
-    #     # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
-    #     enddt = datetime.now()
-    #     clear_folder('rosnedra_auc')
-    #     download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-    #                        folder='rosnedra_auc', bot_info=bot_info)
-    #     if download:
-    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
+    pgconn = psycopg2.connect(dsn)
+    lastdt_result = get_latest_order_date_from_synology(dsn)
+    if lastdt_result[0]:
+        # startdt = lastdt_result[1] + timedelta(days=1)
+        startdt = datetime.strptime('2025-02-10', '%Y-%m-%d')
+        # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
+        enddt = datetime.now()
+        clear_folder('rosnedra_auc')
+        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+                           folder='rosnedra_auc', bot_info=bot_info)
+        if download:
+            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
             
-    #         # if parse:
-    #         #     pass
-    #         #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-    #         #     if update:
-    #         #         pass
-    #         #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
-    # pgconn.close()
+            # if parse:
+            #     pass
+            #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+            #     if update:
+            #         pass
+            #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+    pgconn.close()
 
-    update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
-    pass
+    # update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
+    # pass
 
 
     # # заполнение столбца rosnedra.license_blocks_rosnedra_orders.resources_parsed
