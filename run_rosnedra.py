@@ -30,10 +30,10 @@ with open('bot_info_vgdb_bot_toAucGroup.json', 'r', encoding='utf-8') as f:
     report_bot_info = (jdata['token'], jdata['chatid'])
 
 # # This is telegram credentials to send message to teams
-with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+with open('2025_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
     blocks_nr_ne_webhook = f.read().replace('\n', '')
 
-with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
+with open('2025_blocks_np.webhook', 'r', encoding='utf-8') as f:
     blocks_np_webhook = f.read().replace('\n', '')
 
 with open('.egssh', 'r', encoding='utf-8') as f:

@@ -21,8 +21,8 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
     # report_bot_info = (jdata['token'], jdata['chatid'])
 
 # # This is telegram credentials to send message to teams
-with open('2024_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
-    nr_ne_webhook_2023 = f.read().replace('\n', '')
+with open('2025_blocks_nr_ne.webhook', 'r', encoding='utf-8') as f:
+    nr_ne_webhook_2025 = f.read().replace('\n', '')
 
 with open('.egssh', 'r', encoding='utf-8') as f:
     egssh = json.load(f)
@@ -32,7 +32,7 @@ with open('.mapbox_token', encoding='utf-8') as mbtkf:
 
 refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
                  report_bot_info=report_bot_info, 
-                 webhook=nr_ne_webhook_2023, 
+                 webhook=nr_ne_webhook_2025, 
                  mapbox_token=mb_token, 
                  webhostssh='.regrussh')
 
@@ -45,7 +45,7 @@ refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info,
 
 refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
                  report_bot_info=report_bot_info, 
-                 webhook=nr_ne_webhook_2023, 
+                 webhook=nr_ne_webhook_2025, 
                  mapbox_token=mb_token, 
                  webhostssh='.regrussh')
 
