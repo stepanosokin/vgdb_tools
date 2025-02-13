@@ -49,7 +49,8 @@ if lastdt_result[0]:
     # clear any previous results from folder
     clear_folder('rosnedra_auc')
     # # download newly announced Rosnedra orders since last loaded to database
-    if download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info):
+    # if search_download_orders(start=startdt, end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=bot_info):
+    if docs_download_orders(start=startdt, end=datetime.now(), folder='rosnedra_auc', bot_info=bot_info, npages=5):
     # if True:
         # # parse the blocks from order announcements to geopackage
         if parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',

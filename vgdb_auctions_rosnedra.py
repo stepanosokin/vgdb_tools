@@ -111,7 +111,164 @@ def rus_month_genitive_to_nominative(i_string):
     return i_string
 
 
-def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=('token', 'id')):
+def docs_download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), folder='rosnedra_auc', bot_info=('token', 'id'), npages=None, to_telegram=True):
+    success = False
+    current_directory = os.getcwd()
+    logdateformat = '%Y-%m-%d %H:%M:%S'
+    log_file = os.path.join(current_directory, folder, 'logfile.txt')
+    with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
+        message = 'AuctionBlocksUpdater: Download Docs data from Rosnedra started!'
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        if to_telegram:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        url = 'https://rosnedra.gov.ru/activity/documents/prikazy-rosnedr/'
+        headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'ru - RU, ru;q = 0.9, en - US;q = 0.8, en;q = 0.7, en - GB;q = 0.6',
+            'Connection': 'keep-alive',
+            'DNT': '1'
+        }
+        results_downloaded = 0
+        status_code, orders_result = smart_http_request(s, url=url, method='get', headers=headers, verify=False)
+        if not(orders_result) or status_code != 200:
+            message = 'RosnedraBlocksUpdater: Initial request to www.rosnedra.gov.ru docs failed, please check your params'
+            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+            if to_telegram:
+                send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        else:
+            first_soup = BeautifulSoup(orders_result.text, 'html.parser')
+            pagination = first_soup.find(attrs={'class': 'pagination'})
+            last_page_link = pagination.find(attrs={'class': 'link__icon last'})
+            pass
+            num_pages = re.findall(r'PAGEN_1=(\d+)', last_page_link['href'])
+            if not num_pages:
+                message = 'RosnedraBlocksUpdater: orders pages number not found'
+                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                if to_telegram:
+                    send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                success = False
+            else:
+                orders_result_number = 0
+                num_pages = int(num_pages[0])
+                url = 'https://rosnedra.gov.ru/activity/documents/prikazy-rosnedr/'
+                # for page in range(1, num_pages + 1):
+                if npages:
+                    num_pages = npages
+                for page in range(1, num_pages + 1):
+                # for page in range(1, 6):
+                    params = {
+                        'PAGEN_1': str(page)
+                    }
+                    resp_code, page_result = smart_http_request(s, url=url, method='get', headers=headers, params=params, verify=False)
+                    if not page_result or resp_code != 200:
+                        message = f'Request to www.rosnedra.gov.ru orders page {str(page)} failed, please check your params'
+                        logf.write(f"{datetime.now().strftime(logdateformat)} Result #{orders_result_number}. {message}\n")
+                        if to_telegram:
+                            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                    else:
+                        cur_orders_result_soup = BeautifulSoup(page_result.text, 'html.parser')
+                        for orders_result_item in cur_orders_result_soup.find(attrs={'class': 'content__section'}).find_all(attrs={'class': 'news-item__inline'}):
+                            orders_result_number += 1
+                            locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
+                            orders_result_link = orders_result_item.find('a')
+                            order_date_match = re.search(r'Приказ +Роснедр +от +(\d{1,2}\.\d{1,2}\.\d{2,4})', orders_result_link.text)
+                            if order_date_match:
+                                order_date_list = [int(x) for x in order_date_match[1].split('.')]
+                                order_date = datetime(*order_date_list[::-1])
+                                if start <= order_date <= end:
+                                    name = orders_result_link.text.strip()
+                                    orderurl = f"https://rosnedra.gov.ru{orders_result_link['href']}"
+                                    pass
+                                    status_code, order_page_result = smart_http_request(s, url=orderurl, method='get', tries=10, verify=False)
+                                    if status_code == 200:
+                                        cur_order_page_result_soup = BeautifulSoup(order_page_result.text, 'html.parser')
+                                        cur_content_tags = cur_order_page_result_soup.find(attrs={'class': 'textgraph'})
+                                        cur_h1_tags = cur_order_page_result_soup.find_all('h1')
+                                        is_order = False
+                                        if cur_h1_tags:
+                                            for h1_tag in cur_h1_tags:
+                                                if re.search(r'[Пп]риказ Роснедр.*[Оо]б утверждении [Пп]еречня участков недр', ' '.join(h1_tag.text.split())):
+                                                # if 'Приказ Роснедр от' in ' '.join(h1_tag.text.split()):
+                                                    is_order = True
+                                                    announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
+                                                    pass
+                                        if cur_content_tags and is_order:
+                                            final_directory = os.path.join(current_directory, folder)
+                                            final_directory = os.path.join(final_directory, f"{str(orders_result_number)}_{order_date.strftime('%Y%m%d')}")
+                                            if os.path.exists(final_directory):
+                                                shutil.rmtree(final_directory, ignore_errors=True)
+                                            os.makedirs(final_directory)
+                                            results_downloaded += 1
+                                            metadata_dict = {}
+                                            metadata_dict['url'] = orderurl
+                                            metadata_dict['announce_date'] = order_date.strftime('%Y-%m-%d')
+                                            metadata_dict['name'] = name
+                                            metadata_dict['order_date'] = order_date.strftime('%Y-%m-%d')
+                                            for order_doc_tag in cur_content_tags.find_all('a'):
+                                                curl = f"https://www.rosnedra.gov.ru{order_doc_tag['href']}"
+                                                cname = order_doc_tag.text
+                                                cname = cname.replace('.xlsx', '')
+                                                cname = cname.replace('.xls', '')
+                                                if len(cname) > 50:
+                                                    cname = cname[:46]
+                                                error_code, dresult = smart_http_request(s, url=curl, method='get', tries=10)
+                                                if error_code != 200:
+                                                    message = f"AuctionBlocksUpdater: Result #{str(orders_result_number)}_{order_date.strftime('%Y%m%d')}. Request to download resource {curl} from page {orderurl} failed, please check your params"
+                                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                    if to_telegram:
+                                                        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+                                                if error_code == 200:
+                                                    success = True
+                                                    try:
+                                                        with open(os.path.join(final_directory, f"{cname.replace(chr(34), '').rstrip()}.{curl.split('.')[-1]}"), 'wb') as f:
+                                                            f.write(dresult.content)
+                                                    except:
+                                                        pass
+                                            for order_doc_p_tag in cur_content_tags.find_all('p'):
+                                                if re.search(r'срок.*приема', order_doc_p_tag.text.lower()):
+                                                    deadlinestr = order_doc_p_tag.text
+                                                    deadlinestr = " ".join(deadlinestr.replace('\xa0', ' ').split())
+                                                    if platform.system() == 'Windows':
+                                                        deadlinestr = rus_month_genitive_to_nominative(deadlinestr.lower())
+                                                    else:
+                                                        deadlinestr = deadlinestr.lower()
+                                                    deadline = None
+                                                    deadlinematch = re.search(r'срок приема заявок: до(?P<time> \d{1,2}[\.:]\d{1,2})?(?P<tzone> \(местное время\))? (?P<day>\d{1,2}) (?P<month>[а-я]{3,8}) (?P<year>\d{4})', deadlinestr)
+                                                    if deadlinematch:
+                                                        deadlinegroups = deadlinematch.groupdict()
+                                                        if all([deadlinegroups[x] for x in ['day', 'month', 'year']]):
+                                                            deadline = datetime.strptime(' '.join([deadlinegroups[x] for x in ['year', 'month', 'day']]), '%Y %B %d')
+                                                            pass
+                                                    if not deadline:
+                                                        deadline = datetime(1970, 1, 1)
+                                                        message = f"AuctionBlocksUpdater: Result #{orders_result_number}_{order_date.strftime('%Y%m%d')}. Could not parse application deadline from {orderurl}, used the 1970-01-01. Please check the page content"
+                                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                        if to_telegram:
+                                                            send_to_telegram(s, logf, bot_info=bot_info,
+                                                                            message=message,
+                                                                            logdateformat=logdateformat)
+                                                    metadata_dict['deadline'] = deadline.strftime('%Y-%m-%d')
+                                                    pass
+                                            with open(os.path.join(final_directory, 'result_metadata.json'), "w", encoding='utf-8') as outfile:
+                                                json.dump(metadata_dict, outfile, ensure_ascii=False)
+                                        else:
+                                            message = f"AuctionBlocksUpdater: Result #{orders_result_number}_{order_date.strftime('%Y%m%d')}. Attempt to parse items page {orderurl} failed, please check the page content"
+                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                            if to_telegram:
+                                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                                logdateformat=logdateformat)
+                                        orders_result_number += 1
+        locale.setlocale(locale.LC_ALL, locale='')
+        message = f"AuctionBlocksUpdater: Rosnedra orders download from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} run successfully. " \
+                  f"{results_downloaded} results downloaded."
+        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+        if to_telegram:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        return success
+
+
+def search_download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(), search_string='Об утверждении Перечня участков недр', folder='rosnedra_auc', bot_info=('token', 'id')):
     '''
     This function downloads license blocks auctions announcement data from www.rosnedra.gov.ru website
     and saves it to the hierarchy of folders. It OVERWRITES the folder given in the 'folder' parameter.
@@ -149,7 +306,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
     # open the logfile and start a requests session
     with open(log_file, 'a', encoding='utf-8') as logf, requests.Session() as s:
 
-        message = 'AuctionBlocksUpdater: Download data from Rosnedra started!'
+        message = 'AuctionBlocksUpdater: Search&Download data from Rosnedra started!'
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
         send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         # create url string for the main search request
@@ -191,7 +348,7 @@ def download_orders(start=datetime(year=2023, month=1, day=1), end=datetime.now(
         
         if (not search_result) or status_code != 200:
             # if something went wrong, write a line to ligfile
-            message = 'AuctionBlocksUpdater: Initial request to www.rosnedra.gov.ru failed, please check your params'
+            message = 'RosnedraBlocksUpdater: Initial request to www.rosnedra.gov.ru search failed, please check your params'
             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
             send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         else:
@@ -679,14 +836,14 @@ def download_auc_results(start=datetime(year=2022, month=1, day=1), end=datetime
 
 def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                              bot_info=('token', 'id'), report_bot_info=('token', 'id'),
-                             blocks_np_webhook='', blocks_nr_ne_webhook='', dsn=None):
+                             blocks_np_webhook='', blocks_nr_ne_webhook='', dsn=None, to_telegram=True):
     '''
-    This function takes a folder with data downloaded from rosnedra.gov.ru by the download_orders function,
+    This function takes a folder with data downloaded from rosnedra.gov.ru by the download_ function,
     parses license blocks coordinates and attributes from excel files and stores it into geopackage.
     ATTENTION this function will OVERWRITE the geopackage given in the gpkg parameter!
     This function requires datetime, osgeo.ogr, osgeo.osr, locale, os, fnmatch, shutil, platform, pandas as pd, json,
     vgdb_general.send_to_telegram.
-    :param folder: name of the folder with the results of download_orders function at the same location with the script;
+    :param folder: name of the folder with the results of download_ function at the same location with the script;
     :param gpkg: name of the geopackage to store the parsed results, OVERWRITING the file if it exists;
     :param bot_info: tuple containing two strings. This is the credentials to use to send log messages to a Telegram chat from a telegram bot. First string is a telegram token of a bot, second string is an id of a chat to send messages to. You can create a bot using @BotFather. To obtain chat id you need to send a message to the bot, then go to https://api.telegram.org/bot<Bot Token>/getUpdates page and look for something like "chat":{"id": 1234567 ...}. The id parameter is the chat id.
     :param blocks_np_webhook: URL of MS Teams webhook to send messages about parsed NP licenses;
@@ -709,7 +866,8 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         # send message to log
         message = 'AuctionBlocksUpdater: Rosnedra data parsing started!'
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        if to_telegram:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         # create a full path to the result geopackage
         gpkg_path = os.path.join(directory, gpkg)
         # create GSK-2011 CRS from proj string, using GOST 32453-2017 parameters
@@ -791,7 +949,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
             # loop through all excel files in the current folder. Usually it is 1 excel file.
             for filename in fnmatch.filter(files, '*.xls*'):
                 # load current item metadata from result_metadata.json file in the current folder. The file is created by
-                # download_orders function.
+                # download_ function.
                 with open(os.path.join(path, 'result_metadata.json'), 'r', encoding='utf-8') as jf:
                     meta_dict = json.load(jf)
                 # create a fullpath to the current excel file
@@ -998,8 +1156,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                         except:
                                             message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
                                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                            send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                            logdateformat=logdateformat)
+                                            if to_telegram:
+                                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                                logdateformat=logdateformat)
                                     if pgconn:
                                         cur_block_geom_wkb = cur_block_geom.ExportToWkb()
                                         sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
@@ -1015,8 +1174,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                             except:
                                                 message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
                                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                                logdateformat=logdateformat)
+                                                if to_telegram:
+                                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                                    logdateformat=logdateformat)
                                         pgconn.close()
                                 
                                 rn_guid = ''
@@ -1146,8 +1306,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                             except:
                                 message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                 logdateformat=logdateformat)
+                                if to_telegram:
+                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                    logdateformat=logdateformat)
                         if pgconn:
                             cur_block_geom_wkb = cur_block_geom.ExportToWkb()
                             sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
@@ -1163,8 +1324,9 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                 except:
                                     message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
                                     logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                    send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                     logdateformat=logdateformat)
+                                    if to_telegram:
+                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                        logdateformat=logdateformat)
                             pgconn.close()
                     rn_guid = ''
                     order_date = datetime.strptime(attrs_dict.get('order_date'), "%Y-%m-%d")
@@ -1260,18 +1422,20 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                     message += f"Регионы: {hcs_block['regions']}; "
                 # message += f"{hcs_block['source_url']}" + '\n'
             # message += '\n'.join([str(x['resource_type']) + '; Приказ от ' + x['order_date'] + '; ' + x['name'].replace('\n', ' ') + '; Срок подачи заявки: ' + (x['appl_deadline'] or 'Неизвестен') + '; ' for x in new_hcs_blocks_list])
-            test = send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
-            if pdf_files_list:
-                for pdf_path in pdf_files_list:
-                    send_to_telegram(s, logf, bot_info=report_bot_info, message='Приказ:', logdateformat=logdateformat, document=pdf_path)
-            if excel_files_list:
-                for excel_path in excel_files_list:
-                    send_to_telegram(s, logf, bot_info=report_bot_info, message='Приложение к приказу:', logdateformat=logdateformat, document=excel_path)
+            if to_telegram:
+                test = send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
+                if pdf_files_list:
+                    for pdf_path in pdf_files_list:
+                        send_to_telegram(s, logf, bot_info=report_bot_info, message='Приказ:', logdateformat=logdateformat, document=pdf_path)
+                if excel_files_list:
+                    for excel_path in excel_files_list:                    
+                        send_to_telegram(s, logf, bot_info=report_bot_info, message='Приложение к приказу:', logdateformat=logdateformat, document=excel_path)
 
         # finally, send a message to the log describing how many block have we totally parsed
         message = f"AuctionBlocksUpdater: downloaded Rosnedra orders data parsed successfully. {blocks_parsed} blocks parsed."
         logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-        send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
+        if to_telegram:
+            send_to_telegram(s, logf, bot_info=bot_info, message=message, logdateformat=logdateformat)
         return success
 
 
@@ -1662,29 +1826,34 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     
-    pgconn = psycopg2.connect(dsn)
-    lastdt_result = get_latest_order_date_from_synology(dsn)
-    if lastdt_result[0]:
-        # startdt = lastdt_result[1] + timedelta(days=1)
-        startdt = datetime.strptime('2025-02-10', '%Y-%m-%d')
-        # enddt = datetime.strptime('2025-01-21', '%Y-%m-%d')
-        enddt = datetime.now()
-        clear_folder('rosnedra_auc')
-        download = download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-                           folder='rosnedra_auc', bot_info=bot_info)
-        if download:
-            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn)
-            
-            # if parse:
-            #     pass
-            #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-            #     if update:
-            #         pass
-            #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
-    pgconn.close()
+    # pgconn = psycopg2.connect(dsn)
+    # lastdt_result = get_latest_order_date_from_synology(dsn)
+    # if lastdt_result[0]:
+    #     # startdt = lastdt_result[1] + timedelta(days=1)
+    #     startdt = datetime.strptime('2021-01-01', '%Y-%m-%d')
+    #     enddt = datetime.strptime('2021-12-31', '%Y-%m-%d')
+    #     # enddt = datetime.now()
+    #     clear_folder('rosnedra_auc')
+        
+    #     # download = search_download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+    #     #                    folder='rosnedra_auc', bot_info=bot_info)
+        
+    #     download = docs_download_orders(start=startdt, end=enddt, folder='rosnedra_auc', bot_info=bot_info, npages=None, to_telegram=False)
 
-    # update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
+        
+    #     if download:
+    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn, to_telegram=False)
+            
+    #     #     # if parse:
+    #     #     #     pass
+    #     #     #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+    #     #     #     if update:
+    #     #     #         pass
+    #     #     #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+    # pgconn.close()
+
+    update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
     # pass
 
 
