@@ -1439,7 +1439,7 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         return success
 
 
-def get_latest_order_date_from_synology(dsn):
+def get_latest_order_date_from_synology(dsn, field='order_date'):
     '''
     This function returns the latest Rosnedra order announce date recorded to the \n
     rosnedra.license_blocks_rosnedra_orders table inside the specified database.
@@ -1454,7 +1454,8 @@ def get_latest_order_date_from_synology(dsn):
         try:
             pgconn = psycopg2.connect(dsn)
             with pgconn.cursor() as cur:
-                cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
+                # cur.execute("SELECT max(announce_date) as latest_announce_date FROM rosnedra.license_blocks_rosnedra_orders")
+                cur.execute(f"SELECT max({field}) as latest_date FROM rosnedra.license_blocks_rosnedra_orders")
                 ldate = cur.fetchall()[0][0]
                 ldatetime = datetime(ldate.year, ldate.month, ldate.day)
                 result = True
@@ -1826,34 +1827,34 @@ if __name__ == '__main__':
     with open('2024_blocks_np.webhook', 'r', encoding='utf-8') as f:
         blocks_np_webhook = f.read().replace('\n', '')
     
-    # pgconn = psycopg2.connect(dsn)
-    # lastdt_result = get_latest_order_date_from_synology(dsn)
-    # if lastdt_result[0]:
-    #     # startdt = lastdt_result[1] + timedelta(days=1)
-    #     startdt = datetime.strptime('2021-01-01', '%Y-%m-%d')
-    #     enddt = datetime.strptime('2021-12-31', '%Y-%m-%d')
-    #     # enddt = datetime.now()
-    #     clear_folder('rosnedra_auc')
+    pgconn = psycopg2.connect(dsn)
+    lastdt_result = get_latest_order_date_from_synology(dsn, field='order_date')
+    if lastdt_result[0]:
+        startdt = lastdt_result[1] + timedelta(days=1)
+        # startdt = datetime.strptime('2021-01-01', '%Y-%m-%d')
+        # enddt = datetime.strptime('2021-12-31', '%Y-%m-%d')
+        enddt = datetime.now()
+        clear_folder('rosnedra_auc')
         
-    #     # download = search_download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
-    #     #                    folder='rosnedra_auc', bot_info=bot_info)
+        # download = search_download_orders(start=startdt, end=enddt, search_string='Об утверждении Перечня участков недр',
+        #                    folder='rosnedra_auc', bot_info=bot_info)
         
-    #     download = docs_download_orders(start=startdt, end=enddt, folder='rosnedra_auc', bot_info=bot_info, npages=None, to_telegram=False)
+        download = docs_download_orders(start=startdt, end=enddt, folder='rosnedra_auc', bot_info=bot_info, npages=1, to_telegram=True)
 
         
-    #     if download:
-    #         parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
-    #                                     bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn, to_telegram=False)
+        if download:
+            parse = parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
+                                        bot_info=bot_info, report_bot_info=report_bot_info, dsn=dsn, to_telegram=True)
             
-    #     #     # if parse:
-    #     #     #     pass
-    #     #     #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
-    #     #     #     if update:
-    #     #     #         pass
-    #     #     #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
-    # pgconn.close()
+        #     # if parse:
+        #     #     pass
+        #     #     update = update_postgres_table(gdalpgcs, folder='rosnedra_auc', bot_info=bot_info)
+        #     #     if update:
+        #     #         pass
+        #     #         synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, bot_info=bot_info)
+    pgconn.close()
 
-    update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
+    # update = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=report_bot_info)
     # pass
 
 
