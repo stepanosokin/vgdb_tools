@@ -889,23 +889,24 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
         out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbPolygon)
         # out_layer = gdatasource.CreateLayer('license_blocks_rosnedra_orders', srs=wgs84_crs, geom_type=ogr.wkbMultiPolygon)
         # create a list of fieldnames for license blocks
-        field_names = ['resource_type',
-                       'name',
-                       'area_km',
-                       'reserves_predicted_resources',
-                       'exp_protocol',
-                       'usage_type',
-                       'lend_type',
-                       'planned_terms_conditions',
-                       'source_name',
-                       'source_url',
-                       'order_date',
-                       'announce_date',
-                       'appl_deadline',
-                       'regions', 
-                       'rn_guid', 
-                       'resources_parsed', 
-                       'rfgf_gos_reg_num']
+        field_names = [
+            'resource_type',
+            'name',
+            'area_km',
+            'reserves_predicted_resources',
+            'exp_protocol',
+            'usage_type',
+            'lend_type',
+            'planned_terms_conditions',
+            'source_name',
+            'source_url',
+            'order_date',
+            'announce_date',
+            'appl_deadline',
+            'regions',
+            'rn_guid',
+            'resources_parsed', 
+            'rfgf_gos_reg_num']
         # create a list of field types for license blocks. The order must match the field_names list.
         field_types = [ogr.OFTString, ogr.OFTString, ogr.OFTReal, ogr.OFTString, ogr.OFTString, ogr.OFTString,
                        ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTString, ogr.OFTDate, ogr.OFTDate,
@@ -1038,10 +1039,16 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                                 excel_col_nums['reserves_predicted_resources'] = ncol
                             if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
                                 excel_col_nums['exp_protocol'] = ncol
-                            if 'длягеологическогоизучениянедр,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                            if all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени', 'разведк', 'добыч']]):
                                 usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
-                            elif 'длягеологическогоизучениянедр' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                            elif all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени']]):
                                 usage_type_value = 'геологическое изучение недр'
+                            # if 'длягеологическогоизучениянедр,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                            #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                            # elif 'дляразведкиидобычи,атакжегеологическогоизучения,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():                                
+                            #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                            # elif 'длягеологическогоизучениянедр' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                            #     usage_type_value = 'геологическое изучение недр'
                             if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
                                 excel_col_nums['usage_type'] = ncol
                             if 'формапредоставленияучастканедрвпольз' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
