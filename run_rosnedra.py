@@ -43,7 +43,7 @@ with open('.egssh', 'r', encoding='utf-8') as f:
 # pgconn = psycopg2.connect(dsn)
 # with psycopg2.connect(dsn) as pgconn:
 update1, update2 = False, False
-lastdt_result = get_latest_order_date_from_synology(dsn)
+lastdt_result = get_latest_order_date_from_synology(dsn, field='order_date')
 if lastdt_result[0]:
     startdt = lastdt_result[1] + timedelta(days=1)
     # clear any previous results from folder

@@ -572,25 +572,31 @@ if __name__ == '__main__':
         egssh = json.load(f)
 
 
-    # synchro_schema(['wialon'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_schema(['culture'], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['gps_tracks', 'waypoints'])],
     #               local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('culture', ['parcels_planning'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_table([('dm', ['contracts', 'parcels_to_contracts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    synchro_table([('wialon', ['wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('culture', ['parcels'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_table([('dm', ['contracts', 'parcels_to_contracts', 'companies'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_table([('wialon', ['wialon_evts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
 
-    # # new seismic 2d
-    # synchro_table([('dm', ['datasets_to_geometries', 'companies', 'links', 'processings', 'surveys', 'reports', 'links_to_datasets', 
-    #                        'reports_to_surveys', 'seismic_datasets', 'contracts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
-    # synchro_layer([('dm', ['seismic_lines_processed_2d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
-    #               ssh_user=egssh["user"], bot_info=bot_info)
+    # new seismic 2d
+    synchro_table([('dm', ['datasets_to_geometries', 'companies', 'links', 'processings', 'surveys', 'reports', 'links_to_datasets', 
+                           'reports_to_surveys', 'seismic_datasets', 'contracts'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    synchro_layer([('dm', ['seismic_lines_processed_2d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
+                  ssh_user=egssh["user"], bot_info=bot_info)
     
     # # # new seismic 3d
     # synchro_table([('dm', ['datasets_to_geometries', 'companies', 'links', 'processings', 'surveys', 'reports', 'links_to_datasets', 
     #                        'reports_to_surveys', 'seismic_datasets'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
     # synchro_layer([('dm', ['seismic_pols_processed_3d'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
+    #               ssh_user=egssh["user"], bot_info=bot_info)
+    
+    
+    # # new well
+    # synchro_table([('dm', ['well_attributes', 'well_attribute_names', 'links'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # synchro_layer([('dm', ['wells'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"],
     #               ssh_user=egssh["user"], bot_info=bot_info)
 
     
