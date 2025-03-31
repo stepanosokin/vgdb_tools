@@ -172,7 +172,8 @@ def docs_download_orders(start=datetime(year=2023, month=1, day=1), end=datetime
                             orders_result_number += 1
                             locale.setlocale(locale.LC_ALL, locale='ru_RU.UTF-8')
                             orders_result_link = orders_result_item.find('a')
-                            order_date_match = re.search(r'Приказ +Роснедр +от +(\d{1,2}\.\d{1,2}\.\d{2,4})', orders_result_link.text)
+                            # order_date_match = re.search(r'Приказ +Роснедр +от +(\d{1,2}\.\d{1,2}\.\d{2,4})', orders_result_link.text)
+                            order_date_match = re.search(r'Приказ.+от +(\d{1,2}\.\d{1,2}\.\d{2,4})', orders_result_link.text)
                             if order_date_match:
                                 order_date_list = [int(x) for x in order_date_match[1].split('.')]
                                 order_date = datetime(*order_date_list[::-1])
@@ -188,7 +189,8 @@ def docs_download_orders(start=datetime(year=2023, month=1, day=1), end=datetime
                                         is_order = False
                                         if cur_h1_tags:
                                             for h1_tag in cur_h1_tags:
-                                                if re.search(r'[Пп]риказ Роснедр.*[Оо]б утверждении [Пп]еречня участков недр', ' '.join(h1_tag.text.split())):
+                                                # if re.search(r'[Пп]риказ Роснедр.*[Оо]б утверждении [Пп]еречня участков недр', ' '.join(h1_tag.text.split())):
+                                                if re.search(r'[Пп]риказ.*[Оо]б утверждении [Пп]еречня участков недр', ' '.join(h1_tag.text.split())):
                                                 # if 'Приказ Роснедр от' in ' '.join(h1_tag.text.split()):
                                                     is_order = True
                                                     announcement = " ".join(h1_tag.text.replace('\xa0', ' ').split())
@@ -1003,262 +1005,268 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
 
                     # loop through the rows in the current excel spreadsheet
                     for nrow in range(nrows):
-                        # loop through the columns in the current row
-                        for ncol in range(ncols):
-                            # now we start to update the column numbers in the excel_col_nums dictionary.
-                            # first, we look for the keyword 'град' inside a cell, presuming that all excel files have
-                            # a header for coordinate columns with this word. We also presume that the coordinates
-                            # are given either in 6 columns GSK-2011 only or in 6 columns GSK-2011 first and in other CRS
-                            # in next 6 columns.
-                            # So if we've found 'град' keyword in a cell, we decide that we are on the first column containing
-                            # coordinates which is degrees latitude in GSK-2011.
-                            if 'град' in str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '') \
-                                    and 'мин' in str(df.iloc[nrow, ncol + 1]).replace(' ', '').replace('\n', '') \
-                                    and excel_col_nums['y_d'] == 0:
-                                # start populating excel column numbers in our dictionary
-                                excel_col_nums['y_d'] = ncol
-                                excel_col_nums['y_m'] = ncol + 1
-                                excel_col_nums['y_s'] = ncol + 2
-                                excel_col_nums['x_d'] = ncol + 3
-                                excel_col_nums['x_m'] = ncol + 4
-                                excel_col_nums['x_s'] = ncol + 5
-                                # we presume that a column before coordinates contains point number
-                                excel_col_nums['point_num'] = ncol - 1
-                                # and we also presume that previous column contains license block area
-                                excel_col_nums['area_km'] = ncol - 2
+                        
+                        try:
+                        
+                            # loop through the columns in the current row
+                            for ncol in range(ncols):
+                                # now we start to update the column numbers in the excel_col_nums dictionary.
+                                # first, we look for the keyword 'град' inside a cell, presuming that all excel files have
+                                # a header for coordinate columns with this word. We also presume that the coordinates
+                                # are given either in 6 columns GSK-2011 only or in 6 columns GSK-2011 first and in other CRS
+                                # in next 6 columns.
+                                # So if we've found 'град' keyword in a cell, we decide that we are on the first column containing
+                                # coordinates which is degrees latitude in GSK-2011.
+                                if 'град' in str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '') \
+                                        and 'мин' in str(df.iloc[nrow, ncol + 1]).replace(' ', '').replace('\n', '') \
+                                        and excel_col_nums['y_d'] == 0:
+                                    # start populating excel column numbers in our dictionary
+                                    excel_col_nums['y_d'] = ncol
+                                    excel_col_nums['y_m'] = ncol + 1
+                                    excel_col_nums['y_s'] = ncol + 2
+                                    excel_col_nums['x_d'] = ncol + 3
+                                    excel_col_nums['x_m'] = ncol + 4
+                                    excel_col_nums['x_s'] = ncol + 5
+                                    # we presume that a column before coordinates contains point number
+                                    excel_col_nums['point_num'] = ncol - 1
+                                    # and we also presume that previous column contains license block area
+                                    excel_col_nums['area_km'] = ncol - 2
 
-                                excel_col_nums['block_num'] = ncol - 5
+                                    excel_col_nums['block_num'] = ncol - 5
 
-                            # now we start checking if the cell contains a fieldname keywords. If we find a keyword in a cell,
-                            # then we use its column number to put into excel_col_nums dictionary
-                            if str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '').lower() == 'видполезногоископаемого' and excel_col_nums['resource_type'] == 0:
-                                excel_col_nums['resource_type'] = ncol
-                            if 'наименованиеучастканедр' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['name'] == 0:
-                                excel_col_nums['name'] = ncol
-                            if 'ресурсы' in str(df.iloc[nrow, ncol]).replace('\n', '').lower() and excel_col_nums['reserves_predicted_resources'] == 0:
-                                excel_col_nums['reserves_predicted_resources'] = ncol
-                            if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
-                                excel_col_nums['exp_protocol'] = ncol
-                            if all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени', 'разведк', 'добыч']]):
-                                usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
-                            elif all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени']]):
-                                usage_type_value = 'геологическое изучение недр'
-                            # if 'длягеологическогоизучениянедр,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
-                            #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
-                            # elif 'дляразведкиидобычи,атакжегеологическогоизучения,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():                                
-                            #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
-                            # elif 'длягеологическогоизучениянедр' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
-                            #     usage_type_value = 'геологическое изучение недр'
-                            if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
-                                excel_col_nums['usage_type'] = ncol
-                            if 'формапредоставленияучастканедрвпольз' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
-                                excel_col_nums['lend_type'] = ncol
-                            if 'планируемыесрокипроведения' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['planned_terms_conditions'] == 0:
-                                excel_col_nums['planned_terms_conditions'] = ncol
+                                # now we start checking if the cell contains a fieldname keywords. If we find a keyword in a cell,
+                                # then we use its column number to put into excel_col_nums dictionary
+                                if str(df.iloc[nrow, ncol]).replace(' ', '').replace('\n', '').lower() == 'видполезногоископаемого' and excel_col_nums['resource_type'] == 0:
+                                    excel_col_nums['resource_type'] = ncol
+                                if 'наименованиеучастканедр' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['name'] == 0:
+                                    excel_col_nums['name'] = ncol
+                                if 'ресурсы' in str(df.iloc[nrow, ncol]).replace('\n', '').lower() and excel_col_nums['reserves_predicted_resources'] == 0:
+                                    excel_col_nums['reserves_predicted_resources'] = ncol
+                                if 'протокол' in str(df.iloc[nrow, ncol]).replace('\n','').lower() and excel_col_nums['exp_protocol'] == 0:
+                                    excel_col_nums['exp_protocol'] = ncol
+                                if all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени', 'разведк', 'добыч']]):
+                                    usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                                elif all([x in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() for x in ['геологическо', 'изучени']]):
+                                    usage_type_value = 'геологическое изучение недр'
+                                # if 'длягеологическогоизучениянедр,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                                #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                                # elif 'дляразведкиидобычи,атакжегеологическогоизучения,разведкиидобычиполезныхископаемых' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():                                
+                                #     usage_type_value = 'геологическое изучение недр, разведка и добыча полезных ископаемых'
+                                # elif 'длягеологическогоизучениянедр' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower():
+                                #     usage_type_value = 'геологическое изучение недр'
+                                if 'видпользованиянедрами' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower() and excel_col_nums['usage_type'] == 0:
+                                    excel_col_nums['usage_type'] = ncol
+                                if 'формапредоставленияучастканедрвпольз' in str(df.iloc[nrow, ncol]).replace('\n','').replace(' ','').lower()  and excel_col_nums['lend_type'] == 0:
+                                    excel_col_nums['lend_type'] = ncol
+                                if 'планируемыесрокипроведения' in str(df.iloc[nrow, ncol]).replace('\n', '').replace(' ', '').lower() and excel_col_nums['planned_terms_conditions'] == 0:
+                                    excel_col_nums['planned_terms_conditions'] = ncol
 
-                        # as a result, after looping through first several rows of the excel, we will have
-                        # excel_col_nums dictionary populated with excel column numbers for each field, or zeros
-                        # if a field keywords haven't been found
+                            # as a result, after looping through first several rows of the excel, we will have
+                            # excel_col_nums dictionary populated with excel column numbers for each field, or zeros
+                            # if a field keywords haven't been found
 
-                        # at each row, we populate point_n and y_d variables with values in accordance with excel_col_nums
-                        point_n = df.iloc[nrow, excel_col_nums['point_num']]
-                        y_d = df.iloc[nrow, excel_col_nums['y_d']]
-                        # if we have a point with number 1 OR if we have text in point_n column,
-                        # then we are at a new ring's first point row.
-                        if str(point_n) == '1' or (cur_ring.GetPointCount() > 2 and not str(y_d).isdigit()):
-                            # if we're not on the first ring,
-                            if ring_id > 0:
-                                # and if we have at least 3 points in a current ring,
-                                if cur_ring.GetPointCount() > 2:
-                                    # then we close the current ring
-                                    cur_ring.CloseRings()
-                                    # and add it to current block's geometry
-                                    cur_block_geom.AddGeometry(cur_ring)
-                            # iterate the ring id inside the current excel
-                            ring_id += 1
-                            # and create next current ring
-                            cur_ring = ogr.Geometry(ogr.wkbLinearRing)
-                        # now we check if we are at a block's first row.
-                        # We check that a block number column has some value, and that the row has digital coordinates
+                            # at each row, we populate point_n and y_d variables with values in accordance with excel_col_nums
+                            point_n = df.iloc[nrow, excel_col_nums['point_num']]
+                            y_d = df.iloc[nrow, excel_col_nums['y_d']]
+                            # if we have a point with number 1 OR if we have text in point_n column,
+                            # then we are at a new ring's first point row.
+                            if str(point_n) == '1' or (cur_ring.GetPointCount() > 2 and not str(y_d).isdigit()):
+                                # if we're not on the first ring,
+                                if ring_id > 0:
+                                    # and if we have at least 3 points in a current ring,
+                                    if cur_ring.GetPointCount() > 2:
+                                        # then we close the current ring
+                                        cur_ring.CloseRings()
+                                        # and add it to current block's geometry
+                                        cur_block_geom.AddGeometry(cur_ring)
+                                # iterate the ring id inside the current excel
+                                ring_id += 1
+                                # and create next current ring
+                                cur_ring = ogr.Geometry(ogr.wkbLinearRing)
+                            # now we check if we are at a block's first row.
+                            # We check that a block number column has some value, and that the row has digital coordinates
 
-                        if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' \
-                            and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 \
-                            and excel_col_nums['point_num'] > 0 \
-                            and str(df.iloc[nrow, excel_col_nums['point_num']]) \
-                            and str(df.iloc[nrow, excel_col_nums['point_num']]) != 'nan':
-                            # and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() \
-                            # and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                            if str(df.iloc[nrow, excel_col_nums['block_num']]) != 'nan' \
+                                and len(str(df.iloc[nrow, excel_col_nums['block_num']])) > 0 \
+                                and excel_col_nums['point_num'] > 0 \
+                                and str(df.iloc[nrow, excel_col_nums['point_num']]) \
+                                and str(df.iloc[nrow, excel_col_nums['point_num']]) != 'nan':
+                                # and str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '').replace('.', '').isdigit() \
+                                # and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
 
-                            # if this is not the first block,
-                            if block_id > 0:
-                                # if we have at least 3 points in a current ring,
-                                if cur_ring.GetPointCount() > 2:
-                                    # then we close the current ring,
-                                    cur_ring.CloseRings()
-                                    # add the current ring to the current block geometry,
-                                    cur_block_geom.AddGeometry(cur_ring)
-                                # then we close all rings in current block,
-                                cur_block_geom.CloseRings()
-                                # make coordinate transformation from GSK-2011 to WGS-84,
-                                cur_block_geom.Transform(transform_gsk_to_wgs)
-                                # create a new feature for the layer
-                                feature = ogr.Feature(featureDefn)
-                                # and set the feature's geometry to the current block's geometry.
-                                feature.SetGeometry(cur_block_geom)
-                                # add an item to the list of new blocks for telegram report
-                                new_blocks_list.append(attrs_dict)
-                                # next we populate the feature's attributes with current block attribute values
-                                for f_name, f_val in zip(field_names, field_vals):
-                                    if f_name == 'appl_deadline' and f_val:
-                                        # # this was a failed attempt to store the local order time within deadline field
-                                        # tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(),
-                                        #                     lat=cur_block_geom.Centroid().GetY())
-                                        # f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
-                                        # f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
-                                        # tzinfo = ZoneInfo(tz)
-                                        # os.environ['TZ'] = tz
-                                        # time.tzset()
-                                        # windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
-                                        # os.environ['TZ'] = windows_timezone
-                                        # os.system(f"tzutil /s \"{windows_timezone}\"")
-                                        feature.SetField(f_name, f_val)
-                                    else:
-                                        feature.SetField(f_name, f_val)
-                                # iterate the parsed blocks counter
-                                blocks_parsed += 1
+                                # if this is not the first block,
+                                if block_id > 0:
+                                    # if we have at least 3 points in a current ring,
+                                    if cur_ring.GetPointCount() > 2:
+                                        # then we close the current ring,
+                                        cur_ring.CloseRings()
+                                        # add the current ring to the current block geometry,
+                                        cur_block_geom.AddGeometry(cur_ring)
+                                    # then we close all rings in current block,
+                                    cur_block_geom.CloseRings()
+                                    # make coordinate transformation from GSK-2011 to WGS-84,
+                                    cur_block_geom.Transform(transform_gsk_to_wgs)
+                                    # create a new feature for the layer
+                                    feature = ogr.Feature(featureDefn)
+                                    # and set the feature's geometry to the current block's geometry.
+                                    feature.SetGeometry(cur_block_geom)
+                                    # add an item to the list of new blocks for telegram report
+                                    new_blocks_list.append(attrs_dict)
+                                    # next we populate the feature's attributes with current block attribute values
+                                    for f_name, f_val in zip(field_names, field_vals):
+                                        if f_name == 'appl_deadline' and f_val:
+                                            # # this was a failed attempt to store the local order time within deadline field
+                                            # tz = tf.timezone_at(lng=cur_block_geom.Centroid().GetX(),
+                                            #                     lat=cur_block_geom.Centroid().GetY())
+                                            # f_val_dt = datetime.strptime(f_val, '%Y-%m-%d %H:%M')
+                                            # f_val_dt = f_val_dt.replace(tzinfo=ZoneInfo(tz))
+                                            # tzinfo = ZoneInfo(tz)
+                                            # os.environ['TZ'] = tz
+                                            # time.tzset()
+                                            # windows_timezone = f"{tz[tz.find('/') + 1:]} Standard Time"
+                                            # os.environ['TZ'] = windows_timezone
+                                            # os.system(f"tzutil /s \"{windows_timezone}\"")
+                                            feature.SetField(f_name, f_val)
+                                        else:
+                                            feature.SetField(f_name, f_val)
+                                    # iterate the parsed blocks counter
+                                    blocks_parsed += 1
 
-                                #####################################################################
-                                # if pgconn:
-                                #     cur_block_geom_wkb = cur_block_geom.ExportToWkb()
-                                #     sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
-                                #     regions = ''
-                                #     with pgconn:
-                                #         try:
-                                #             with pgconn.cursor() as cur:
-                                #                 cur.execute(sql, [cur_block_geom_wkb])
-                                #                 regions = ', '.join([x[0] for x in cur.fetchall()])
-                                #             if regions:
-                                #                 attrs_dict['regions'] = regions
-                                #                 feature.SetField('regions', regions)
-                                #         except:
-                                #             message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
-                                #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                #             send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                #                              logdateformat=logdateformat)
-                                if dsn:
-                                    i = 1
-                                    pgconn = None
-                                    while not pgconn and i <= 10:
-                                        i += 1
-                                        message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
-                                        logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                        # send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                        #                 logdateformat=logdateformat)
-                                        try:
-                                            pgconn = psycopg2.connect(dsn)
-                                            message = f"Подключение к БД для парсинга участка установлено"
+                                    #####################################################################
+                                    # if pgconn:
+                                    #     cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                                    #     sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                                    #     regions = ''
+                                    #     with pgconn:
+                                    #         try:
+                                    #             with pgconn.cursor() as cur:
+                                    #                 cur.execute(sql, [cur_block_geom_wkb])
+                                    #                 regions = ', '.join([x[0] for x in cur.fetchall()])
+                                    #             if regions:
+                                    #                 attrs_dict['regions'] = regions
+                                    #                 feature.SetField('regions', regions)
+                                    #         except:
+                                    #             message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                    #             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                    #             send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                    #                              logdateformat=logdateformat)
+                                    if dsn:
+                                        i = 1
+                                        pgconn = None
+                                        while not pgconn and i <= 10:
+                                            i += 1
+                                            message = f"Подключение к БД для парсинга участка (попытка {str(i - 1)})..."
                                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                                             # send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                             #                 logdateformat=logdateformat)
-                                        except:
-                                            message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
-                                            logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
-                                            if to_telegram:
-                                                send_to_telegram(s, logf, bot_info=bot_info, message=message,
-                                                                logdateformat=logdateformat)
-                                    if pgconn:
-                                        cur_block_geom_wkb = cur_block_geom.ExportToWkb()
-                                        sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
-                                        regions = ''
-                                        with pgconn:
                                             try:
-                                                with pgconn.cursor() as cur:
-                                                    cur.execute(sql, [cur_block_geom_wkb])
-                                                    regions = ', '.join([x[0] for x in cur.fetchall()])
-                                                if regions:
-                                                    attrs_dict['regions'] = regions
-                                                    feature.SetField('regions', regions)
+                                                pgconn = psycopg2.connect(dsn)
+                                                message = f"Подключение к БД для парсинга участка установлено"
+                                                logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                # send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                #                 logdateformat=logdateformat)
                                             except:
-                                                message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                                message = f"Ошибка подключения к БД при парсинге участка (попытка {str(i - 1)})"
                                                 logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                                                 if to_telegram:
                                                     send_to_telegram(s, logf, bot_info=bot_info, message=message,
                                                                     logdateformat=logdateformat)
-                                        pgconn.close()
-                                
-                                rn_guid = ''
-                                order_date = datetime.strptime(attrs_dict.get('order_date'), "%Y-%m-%d")
-                                if order_date:
-                                    rn_guid += order_date.strftime("%Y%m%d")
-                                source_name = attrs_dict.get('source_name')
-                                if source_name:
-                                    rn_guid += source_name.split()[5].replace('"', '').zfill(3)
-                                
-                                rn_guid += str(nextgid).zfill(6)
-                                nextgid += 1
-                                attrs_dict['rn_guid'] = rn_guid
-                                feature.SetField('rn_guid', rn_guid)
-                                pass
-
-                                if attrs_dict.get('reserves_predicted_resources'):                                    
-                                    parsed_resources = parse_resources(str(attrs_dict['reserves_predicted_resources']))
-                                    if parsed_resources:
-                                        feature.SetField('resources_parsed', json.dumps(parsed_resources, ensure_ascii=False))
+                                        if pgconn:
+                                            cur_block_geom_wkb = cur_block_geom.ExportToWkb()
+                                            sql = '''select region from hse."субъекты_россии" where st_intersects(geom, st_geomfromwkb(%s, 4326));'''
+                                            regions = ''
+                                            with pgconn:
+                                                try:
+                                                    with pgconn.cursor() as cur:
+                                                        cur.execute(sql, [cur_block_geom_wkb])
+                                                        regions = ', '.join([x[0] for x in cur.fetchall()])
+                                                    if regions:
+                                                        attrs_dict['regions'] = regions
+                                                        feature.SetField('regions', regions)
+                                                except:
+                                                    message = f"Ошибка пространственного запроса региона. Приказ {attrs_dict['source_url']}, Участок {attrs_dict['name']}"
+                                                    logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
+                                                    if to_telegram:
+                                                        send_to_telegram(s, logf, bot_info=bot_info, message=message,
+                                                                        logdateformat=logdateformat)
+                                            pgconn.close()
+                                    
+                                    rn_guid = ''
+                                    order_date = datetime.strptime(attrs_dict.get('order_date'), "%Y-%m-%d")
+                                    if order_date:
+                                        rn_guid += order_date.strftime("%Y%m%d")
+                                    source_name = attrs_dict.get('source_name')
+                                    if source_name:
+                                        rn_guid += source_name.split()[5].replace('"', '').zfill(3)
+                                    
+                                    rn_guid += str(nextgid).zfill(6)
+                                    nextgid += 1
+                                    attrs_dict['rn_guid'] = rn_guid
+                                    feature.SetField('rn_guid', rn_guid)
                                     pass
 
-                                #####################################################################
+                                    if attrs_dict.get('reserves_predicted_resources'):                                    
+                                        parsed_resources = parse_resources(str(attrs_dict['reserves_predicted_resources']))
+                                        if parsed_resources:
+                                            feature.SetField('resources_parsed', json.dumps(parsed_resources, ensure_ascii=False))
+                                        pass
 
-                                # and add a new feature to the layer.
-                                out_layer.CreateFeature(feature)
-                                # and function is a success if we've stored at least 1 feature
-                                success = True
-                            # now we iterate the block_id inside the current excel
-                            block_id += 1
+                                    #####################################################################
 
-                            # # This is again more failed attempts to parse the local deadline time
-                            # if meta_dict.get('deadline') != None:
-                            #     deadlinedt = datetime.strptime(meta_dict.get('deadline'), '%Y-%m-%d %H:%M')
-                            #     pass
-                            # else:
-                            #     deadlinedt = meta_dict.get('deadline')
-                            #     pass
+                                    # and add a new feature to the layer.
+                                    out_layer.CreateFeature(feature)
+                                    # and function is a success if we've stored at least 1 feature
+                                    success = True
+                                # now we iterate the block_id inside the current excel
+                                block_id += 1
 
-                            # assuming that we are at the new block's first row, we store the block's attribute values
-                            # to our field_vals list in the correct order
-                            field_vals = [
-                                df.iloc[nrow, excel_col_nums['resource_type']],
-                                df.iloc[nrow, excel_col_nums['name']],
-                                float(str(df.iloc[nrow, excel_col_nums['area_km']]).replace(',', '.')),
-                                df.iloc[nrow, excel_col_nums['reserves_predicted_resources']],
-                                df.iloc[nrow, excel_col_nums['exp_protocol']],
-                                usage_type_value or df.iloc[nrow, excel_col_nums['usage_type']],
-                                df.iloc[nrow, excel_col_nums['lend_type']],
-                                df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
-                                meta_dict['name'],
-                                meta_dict['url'],
-                                # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
-                                meta_dict['order_date'],
-                                meta_dict['announce_date'],
-                                # as not all orders contain deadlines, so we use get method to receive None if there is no one.
-                                meta_dict.get('deadline')
-                            ]
-                            # create a dict with attributes for the telegram report
-                            attrs_dict = dict(zip(field_names, field_vals))
-                            # create a new current block geometry
-                            cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
-                            # and set the ring_id value to 1.
-                            ring_id = 1
+                                # # This is again more failed attempts to parse the local deadline time
+                                # if meta_dict.get('deadline') != None:
+                                #     deadlinedt = datetime.strptime(meta_dict.get('deadline'), '%Y-%m-%d %H:%M')
+                                #     pass
+                                # else:
+                                #     deadlinedt = meta_dict.get('deadline')
+                                #     pass
 
-                        # now we check that we have coordinates in the current row, read them, convert and add to the current ring
-                        y_s = df.iloc[nrow, excel_col_nums['y_s']]
-                        if str(y_s).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
-                            y = float(str(df.iloc[nrow, excel_col_nums['y_d']]).replace(',', '.')) + \
-                                float(str(df.iloc[nrow, excel_col_nums['y_m']]).replace(',', '.')) / 60 + \
-                                float(str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '.')) / 3600
-                            x = float(str(df.iloc[nrow, excel_col_nums['x_d']]).replace(',', '.')) + \
-                                float(str(df.iloc[nrow, excel_col_nums['x_m']]).replace(',', '.')) / 60 + \
-                                float(str(df.iloc[nrow, excel_col_nums['x_s']]).replace(',', '.')) / 3600
-                            cur_ring.AddPoint(x, y)
+                                # assuming that we are at the new block's first row, we store the block's attribute values
+                                # to our field_vals list in the correct order
+                                field_vals = [
+                                    df.iloc[nrow, excel_col_nums['resource_type']],
+                                    df.iloc[nrow, excel_col_nums['name']],
+                                    float(str(df.iloc[nrow, excel_col_nums['area_km']]).replace(',', '.')),
+                                    df.iloc[nrow, excel_col_nums['reserves_predicted_resources']],
+                                    df.iloc[nrow, excel_col_nums['exp_protocol']],
+                                    usage_type_value or df.iloc[nrow, excel_col_nums['usage_type']],
+                                    df.iloc[nrow, excel_col_nums['lend_type']],
+                                    df.iloc[nrow, excel_col_nums['planned_terms_conditions']],
+                                    meta_dict['name'],
+                                    meta_dict['url'],
+                                    # datetime.strptime(path[-8:], '%Y%m%d').strftime('%Y-%m-%d')
+                                    meta_dict['order_date'],
+                                    meta_dict['announce_date'],
+                                    # as not all orders contain deadlines, so we use get method to receive None if there is no one.
+                                    meta_dict.get('deadline')
+                                ]
+                                # create a dict with attributes for the telegram report
+                                attrs_dict = dict(zip(field_names, field_vals))
+                                # create a new current block geometry
+                                cur_block_geom = ogr.Geometry(ogr.wkbPolygon)
+                                # and set the ring_id value to 1.
+                                ring_id = 1
+
+                            # now we check that we have coordinates in the current row, read them, convert and add to the current ring
+                            y_s = df.iloc[nrow, excel_col_nums['y_s']]
+                            if str(y_s).replace(',', '').replace('.', '').isdigit() and str(df.iloc[nrow, excel_col_nums['y_s']]) != 'nan':
+                                y = float(str(df.iloc[nrow, excel_col_nums['y_d']]).replace(',', '.')) + \
+                                    float(str(df.iloc[nrow, excel_col_nums['y_m']]).replace(',', '.')) / 60 + \
+                                    float(str(df.iloc[nrow, excel_col_nums['y_s']]).replace(',', '.')) / 3600
+                                x = float(str(df.iloc[nrow, excel_col_nums['x_d']]).replace(',', '.')) + \
+                                    float(str(df.iloc[nrow, excel_col_nums['x_m']]).replace(',', '.')) / 60 + \
+                                    float(str(df.iloc[nrow, excel_col_nums['x_s']]).replace(',', '.')) / 3600
+                                cur_ring.AddPoint(x, y)
+                            
+                        except:
+                            pass
 
                 # now we add the last block read from file to the layer.
                 # if we've read at least one block,
@@ -1838,8 +1846,8 @@ if __name__ == '__main__':
     lastdt_result = get_latest_order_date_from_synology(dsn, field='order_date')
     if lastdt_result[0]:
         startdt = lastdt_result[1] + timedelta(days=1)
-        # startdt = datetime.strptime('2021-01-01', '%Y-%m-%d')
-        # enddt = datetime.strptime('2021-12-31', '%Y-%m-%d')
+        # startdt = datetime.strptime('2025-03-27', '%Y-%m-%d')
+        # enddt = datetime.strptime('2025-03-28', '%Y-%m-%d')
         enddt = datetime.now()
         clear_folder('rosnedra_auc')
         
