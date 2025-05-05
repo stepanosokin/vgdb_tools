@@ -147,8 +147,9 @@ def parse_rfgf_blocks(json_file, gpkg_file='d_r.gpkg', layer_name='l_b', folder=
                         try:
                             record_has_geom, geom = parse_geometry(json_data['result']['data']['values'][8][i], 0.1)
                         except:
-                            message = f"LicenseBlockUpdater: Attempt to parse license block geometry failed, record # {i + 1}"
-                            log_message(s, logf, bot_info, message)
+                            pass
+                            # message = f"LicenseBlockUpdater: Attempt to parse license block geometry failed, record # {i + 1}"
+                            # log_message(s, logf, bot_info, message)
 
                         # If the record has valid multipolygon geometry:
                         if record_has_geom:
@@ -288,11 +289,26 @@ def parse_geometry(source_geom, coords_threshold):
         record_has_geometry = True
         multipol_of_pols.AddGeometry(pol_of_rings)
 
+    # c_type_1 = ogr.wkbMultiPolygon
+    # g_type_1 = multipol_of_pols.GetGeometryType()
+    
     if not multipol_of_pols.IsValid():
+        pass
         try:
-            multipol_of_pols = multipol_of_pols.MakeValid()
+            valid_geom = multipol_of_pols.MakeValid()
+            if valid_geom:
+                multipol_of_pols = valid_geom
+            else:
+                record_has_geometry = False          
         except:
             pass
+    
+        if record_has_geometry:
+            # c_type_2 = ogr.wkbMultiPolygon
+            # g_type_2 = multipol_of_pols.GetGeometryType()
+            if multipol_of_pols.GetGeometryType() != ogr.MultiPolygon25D:
+                pass
+                # record_has_geometry = False
     
     return (record_has_geometry, multipol_of_pols)
 
@@ -504,16 +520,21 @@ if __name__ == '__main__':
     with open('.egssh', 'r', encoding='utf-8') as f:
         egssh = json.load(f)
 
-    # download the license blocks data from Rosgeolfond
-    if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
-        pass
-        # parse the blocks from downloaded json
-        if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
-            pass
-        #     # update license blocks on server
-        #     if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
-        #         synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+    # # download the license blocks data from Rosgeolfond
+    # if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
+    #     pass
+    #     # parse the blocks from downloaded json
+    #     if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+    #         pass
+    #     #     # update license blocks on server
+    #     #     if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+    #     #         synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
     # check_license_border_along_region('СВЕ03821НР', local_pgdsn)
     
     #synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+
+    # if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+    #     pass
+    # if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+    #     pass
