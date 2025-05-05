@@ -292,22 +292,26 @@ def parse_geometry(source_geom, coords_threshold):
     # c_type_1 = ogr.wkbMultiPolygon
     # g_type_1 = multipol_of_pols.GetGeometryType()
     
-    if not multipol_of_pols.IsValid():
-        pass
-        try:
-            valid_geom = multipol_of_pols.MakeValid()
-            if valid_geom:
-                multipol_of_pols = valid_geom
-            else:
-                record_has_geometry = False          
-        except:
+    try:
+        if not multipol_of_pols.IsValid():
             pass
-    
-        if record_has_geometry:
-            # c_type_2 = ogr.wkbMultiPolygon
-            # g_type_2 = multipol_of_pols.GetGeometryType()
-            if multipol_of_pols.GetGeometryType() != ogr.MultiPolygon25D:
+            try:
+                valid_geom = multipol_of_pols.MakeValid()
+                if valid_geom:
+                    multipol_of_pols = valid_geom
+                else:
+                    # record_has_geometry = False          
+                    pass
+            except:
                 pass
+    except:
+        pass
+    
+        # if record_has_geometry:
+        #     # c_type_2 = ogr.wkbMultiPolygon
+        #     # g_type_2 = multipol_of_pols.GetGeometryType()
+        #     if multipol_of_pols.GetGeometryType() != ogr.MultiPolygon25D:
+        #         pass
                 # record_has_geometry = False
     
     return (record_has_geometry, multipol_of_pols)
