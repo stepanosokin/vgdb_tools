@@ -288,6 +288,12 @@ def parse_geometry(source_geom, coords_threshold):
         record_has_geometry = True
         multipol_of_pols.AddGeometry(pol_of_rings)
 
+    if not multipol_of_pols.IsValid():
+        try:
+            multipol_of_pols = multipol_of_pols.MakeValid()
+        except:
+            pass
+    
     return (record_has_geometry, multipol_of_pols)
 
 
@@ -436,6 +442,26 @@ def dms_to_dec(dms_coords):
     return dec_coords
 
 
+def check_license_border_along_region(gos_reg_num, pgdsn):
+    license_blocks_rfgf = 'rfgf.license_blocks_rfgf_test'
+    
+    i = 1
+    pgconn = None
+    while not pgconn and i <= 10:
+        try:
+            i += 1
+            pgconn = psycopg2.connect(pgdsn)
+        except:
+            pass
+    if pgconn:
+        with pgconn.cursor(cursor_factory=psycopg2.extras.DictCursor) as dictcur:
+            sql = f"select * from {license_blocks_rfgf} where gos_reg_num = '{gos_reg_num}';"
+            dictcur.execute(sql)
+            license_row = dictcur.fetchall()[0]
+
+            sql = f"select st_distance"
+            pass
+        pgconn.close()
 
 
 if __name__ == '__main__':
@@ -479,11 +505,15 @@ if __name__ == '__main__':
         egssh = json.load(f)
 
     # download the license blocks data from Rosgeolfond
-    if download_rfgf_blocks('rfgf_request_noFilter_100.json', 'rfgf_result_100.json', bot_info=bot_info):
+    if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
         pass
         # parse the blocks from downloaded json
-        if parse_rfgf_blocks('rfgf_result_100.json', bot_info=bot_info):
+        if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
             pass
         #     # update license blocks on server
         #     if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
         #         synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+
+    # check_license_border_along_region('СВЕ03821НР', local_pgdsn)
+    
+    #synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
