@@ -294,14 +294,13 @@ def parse_geometry(source_geom, coords_threshold):
     
     try:
         if not multipol_of_pols.IsValid():
-            pass
             try:
                 valid_geom = multipol_of_pols.MakeValid()
-                if valid_geom:
+                # gdal geometry types list: https://github.com/OSGeo/gdal/blob/8943200d5fac69f0f995fc11af7e7e3696823b37/gdal/ogr/ogr_core.h#L314-L402
+                if valid_geom and valid_geom.GetGeometryType() in [ogr.MultiPolygon25D, ogr.MultiPolygon]:
                     multipol_of_pols = valid_geom
                 else:
-                    record_has_geometry = False          
-                    pass
+                    record_has_geometry = False
             except:
                 pass
     except:
@@ -538,7 +537,9 @@ if __name__ == '__main__':
     
     #synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
-    # if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+    # if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
     #     pass
+    if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+        pass
     # if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
     #     pass
