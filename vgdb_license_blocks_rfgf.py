@@ -300,7 +300,7 @@ def parse_geometry(source_geom, coords_threshold):
                 if valid_geom:
                     multipol_of_pols = valid_geom
                 else:
-                    # record_has_geometry = False          
+                    record_has_geometry = False          
                     pass
             except:
                 pass
