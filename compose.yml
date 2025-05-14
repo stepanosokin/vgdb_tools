@@ -1,8 +1,9 @@
 services:
   vgdb-bot:
-    build:
-      context: .
-      dockerfile: ./vgdb_bot/Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: ./vgdb_bot/Dockerfile
+    image: stepanosokin/vgdb-bot
     volumes:
       - ./.pgdsn:/app/vgdb_tools/vgdb_bot/.pgdsn
       - ./.ext_pgdsn:/app/vgdb_tools/vgdb_bot/.ext_pgdsn
