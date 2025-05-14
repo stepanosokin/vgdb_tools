@@ -3,3 +3,13 @@ services:
     build:
       context: .
       dockerfile: ./vgdb_bot/Dockerfile
+    volumes:
+      - ./.pgdsn:/app/vgdb_tools/vgdb_bot/.pgdsn
+      - ./.ext_pgdsn:/app/vgdb_tools/vgdb_bot/.ext_pgdsn
+      - ./bot_info_vgdb_bot_toAucGroup.json:/app/vgdb_tools/vgdb_bot/bot_info_vgdb_bot_toAucGroup.json
+      - ./bot_info_vgdb_bot_toStepan.json:/app/vgdb_tools/vgdb_bot/bot_info_vgdb_bot_toStepan.json
+      - ./.pggdal:/app/vgdb_tools/vgdb_bot/.pggdal
+      - ./license_blocks_general.webhook:/app/vgdb_tools/vgdb_bot/license_blocks_general.webhook
+      - ./2024_blocks_nr_ne.webhook:/app/vgdb_tools/vgdb_bot/2024_blocks_nr_ne.webhook
+      - ./2024_blocks_np.webhook:/app/vgdb_tools/vgdb_bot/2024_blocks_np.webhook
+      - ./.egssh:/app/vgdb_tools/vgdb_bot/.egssh

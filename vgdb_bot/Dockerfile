@@ -22,15 +22,15 @@ RUN pip install --upgrade pandas --break-system-packages
 RUN pip install --upgrade openpyxl --break-system-packages
 RUN pip install --upgrade xlrd --break-system-packages
 
-COPY .pgdsn .
-COPY .ext_pgdsn .
-COPY bot_info_vgdb_bot_toAucGroup.json .
-COPY bot_info_vgdb_bot_toStepan.json .
-COPY .pggdal .
-COPY license_blocks_general.webhook .
-COPY 2024_blocks_nr_ne.webhook .
-COPY 2024_blocks_np.webhook .
-COPY .egssh .
+# COPY .pgdsn .
+# COPY .ext_pgdsn .
+# COPY bot_info_vgdb_bot_toAucGroup.json .
+# COPY bot_info_vgdb_bot_toStepan.json .
+# COPY .pggdal .
+# COPY license_blocks_general.webhook .
+# COPY 2024_blocks_nr_ne.webhook .
+# COPY 2024_blocks_np.webhook .
+# COPY .egssh .
 COPY vgdb_torgi_gov_ru.py .
 COPY vgdb_license_blocks_rfgf.py .
 COPY synchro_evergis.py .
@@ -41,6 +41,16 @@ COPY vgdb_bot.py .
 RUN mkdir rosnedra_auc
 RUN mkdir rfgf_blocks
 RUN mkdir torgi_gov_ru
+RUN touch .pgdsn
+RUN touch .ext_pgdsn .
+RUN touch bot_info_vgdb_bot_toAucGroup.json
+RUN touch bot_info_vgdb_bot_toStepan.json
+RUN touch .pggdal
+RUN touch license_blocks_general.webhook
+RUN touch 2024_blocks_nr_ne.webhook
+RUN touch 2024_blocks_np.webhook
+RUN touch .egssh
+
 
 RUN chmod 777 /app/vgdb_tools/vgdb_bot/rosnedra_auc
 RUN chmod 777 /app/vgdb_tools/vgdb_bot/rfgf_blocks
