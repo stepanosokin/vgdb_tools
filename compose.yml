@@ -1,0 +1,5 @@
+services:
+  vgdb-bot:
+    build:
+      context: .
+      dockerfile: ./vgdb_bot/Dockerfile
