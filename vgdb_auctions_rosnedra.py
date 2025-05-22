@@ -1429,9 +1429,21 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
             for j, hcs_block in enumerate(new_hcs_blocks_list): 
                 message += '\n---------------------------\n---------------------------'
                 hcs_block_name = ' '.join(hcs_block['name'].replace('\n', ' ').split())
-                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "
-                message += f"<a href={chr(34) + hcs_block['source_url'] + chr(34)}>Приказ от {hcs_block['order_date']}</a>; "
-                message += f"{hcs_block_name}; "
+                message += '\n' + f"({str(j + 1)}) {str(hcs_block['resource_type'])}; "                
+                message += f"<a href={chr(34) + hcs_block['source_url'] + chr(34)}>Приказ от {hcs_block['order_date']}"
+                order_number_list = re.findall(r'[Пп]риказ.*№ *(\d{1,3})', hcs_block['source_name'])
+                if order_number_list:                    
+                    message += f" № {order_number_list[0]}"
+                message += '</a>; '    
+                message += f"{hcs_block_name}"
+                usage_type_short = None
+                if re.search(r'разведк', hcs_block['usage_type'], re.I):
+                    usage_type_short = 'НР/НЭ'
+                elif re.search(r'геологическ', hcs_block['usage_type'], re.I):
+                    usage_type_short = 'НП'
+                if usage_type_short:
+                    message += f", {usage_type_short}" 
+                message += '; '
                 message += f"Срок подачи заявки: {(hcs_block['appl_deadline'] or 'Неизвестен')}; "
                 if hcs_block.get('regions'):
                     message += f"Регионы: {hcs_block['regions']}; "
@@ -1845,8 +1857,8 @@ if __name__ == '__main__':
     pgconn = psycopg2.connect(dsn)
     lastdt_result = get_latest_order_date_from_synology(dsn, field='order_date')
     if lastdt_result[0]:
-        startdt = lastdt_result[1] + timedelta(days=1)
-        # startdt = datetime.strptime('2025-03-27', '%Y-%m-%d')
+        # startdt = lastdt_result[1] + timedelta(days=1)
+        startdt = datetime.strptime('2025-05-15', '%Y-%m-%d')
         # enddt = datetime.strptime('2025-03-28', '%Y-%m-%d')
         enddt = datetime.now()
         clear_folder('rosnedra_auc')
