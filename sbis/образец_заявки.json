@@ -1,0 +1,2807 @@
+[
+    52880,
+    null,
+    "Оплата по счету №-0000294 от 13.05.2025г.",
+    123075,
+    null,
+    null,
+    "2025-05-14",
+    1805,
+    235,
+    "1005",
+    "0b1c2872-2705-4ce5-9793-9d31320d8e1b",
+    257,
+    257,
+    236,
+    false,
+    null,
+    null,
+    null,
+    247,
+    null,
+    7,
+    [
+        true,
+        true,
+        true,
+        null,
+        false,
+        null,
+        null,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    ],
+    "Прочие производственные расходы Манжеты для обслуживания насосных агрегатов НД 100/250",
+    null,
+    137808.00,
+    null,
+    null,
+    "\"Операционные расходы\"=>\"0\",\"Зап-Интинский ЛУ\"=>\"0\",\"Процедуры продления лицензий\"=>\"0\",\"Получение займов\"=>\"0\",\"Строительство шлейфов\"=>\"0\",\"vat_from_docs\"=>\"True\",\"Донголюкский ЛУ\"=>\"0\",\"json_ft_id\"=>\"2025051412ac2353ab97ff4a1287b21eb5ef1ae173+0acacff41f40-196ced35d37-966ffa580a4e47c84324a2830c1291ac\",\"Обустройство скважин и площадок\"=>\"100\",\"Административные расходы\"=>\"0\",\"vvd_ids\"=>\"['74366']\",\"КРС: расконсервация скважин\"=>\"0\",\"Проект11\"=>\"0\",\"date_ft\"=>\"2025-05-14 12-44-40\",\"Закупка основного оборудования\"=>\"0\",\"ПДНалог.РучныеПоля\"=>\"\"",
+    1805,
+    "ТМЗ, ООО",
+    "\"Контрагент\"",
+    "7103504130",
+    257,
+    "Абрамов А.О.",
+    "ООО \"ТПГК\"",
+    "1104011175",
+    "ООО \"ТПГК\"",
+    0,
+    null,
+    null,
+    "240",
+    true,
+    "Заявка на оплату",
+    "",
+    "ЗаявкаНаОплату",
+    null,
+    [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    ],
+    137808.00,
+    52880,
+    null,
+    null,
+    null,
+    "\"Контрагент\"",
+    null,
+    "[[\"p\",{\"version\":\"2\"},\"Манжеты для обслуживания насосных агрегатов НД 100/250\"]]",
+    "[[\"p\",{\"version\":\"2\"},\"Манжеты для обслуживания насосных агрегатов НД 100/250\"]]",
+    5,
+    7,
+    22968.00,
+    "Оплата по счету №-0000294 от 13.05.2025г. в т.ч. НДС (20%) 22968-00 руб.",
+    667,
+    null,
+    null,
+    114,
+    269,
+    3,
+    "Прочие производственные расходы",
+    "ad595de1-adf3-45f7-b25d-2bd752403f0b?hmac=453937138049f74eaadf37f425571bc122750d93",
+    "cca3f238-4166-11e3-905f-005056b70b39",
+    161017,
+    null,
+    137808.00,
+    null,
+    2,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    "40702810566060003033",
+    1805,
+    null,
+    "ТУЛЬСКОЕ ОТДЕЛЕНИЕ N8604 ПАО СБЕРБАНК",
+    "047003608",
+    "40702810566060003033",
+    1805,
+    null,
+    "ТУЛЬСКОЕ ОТДЕЛЕНИЕ N8604 ПАО СБЕРБАНК",
+    "047003608",
+    "ООО \"ТПГК\"",
+    null,
+    null,
+    null,
+    null,
+    null,
+    [
+        true
+    ],
+    null,
+    null,
+    null,
+    235,
+    "ООО \"ТПГК\"",
+    null,
+    false,
+    "Счет 294.pdf?73154??Счет 294.pdf????????0??0????false?0",
+    "",
+    true,
+    "c",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+        "f": 1,
+        "d": [
+            "52880",
+            "0b1c2872-2705-4ce5-9793-9d31320d8e1b",
+            false,
+            false,
+            null,
+            "ЗаявкаНаОплату",
+            null,
+            0,
+            {
+                "f": 2,
+                "d": [
+                    "Заявка на оплату",
+                    "ЗаявкаНаОплату",
+                    "",
+                    {
+                        "f": 3,
+                        "d": [
+                            false,
+                            true,
+                            null,
+                            true,
+                            [
+                                "flag",
+                                "plus"
+                            ],
+                            false,
+                            false,
+                            false,
+                            true,
+                            true,
+                            false,
+                            false,
+                            true,
+                            false,
+                            false,
+                            false,
+                            [
+                                "Лицо1",
+                                "Лицо2",
+                                "Дата",
+                                "ДокументНашаОрганизация",
+                                "ПлатежныеДокументы.Сумма",
+                                "ПлатежныеДокументы.Кошелек",
+                                "ПлатежныеДокументы.Сумма2",
+                                "ПлатежныеДокументы.Операция",
+                                "ПДНалог.СчетУчета",
+                                "ПДНалог.КБК",
+                                "ПДНалог.ТипПлатежа",
+                                "ПДНалог.ОбособленноеПодразделение",
+                                "ПДНалог.Начислять",
+                                "ПДНалог.Патент",
+                                "Лицо1.Договор.@Документ",
+                                "Лицо2.Договор.@Документ",
+                                "ДокументРасширение.Параметры.АвансНУ",
+                                "ДокументРасширение.Параметры.АвансНУ.ДоходПатент",
+                                "ДокументРасширение.Параметры.АвансНУ.ДоходУСН",
+                                "ДокументРасширение.Сумма",
+                                "Ведомость",
+                                "ПользовательскийКурс",
+                                "ДокументРасширение.КодВалюта",
+                                "SourceOfFinancing",
+                                "TargetOfFinancing",
+                                "AccountGroup",
+                                "split.full"
+                            ],
+                            true,
+                            true,
+                            false,
+                            true,
+                            {
+                                "helpUrl": "https://saby.ru/help/account/application_for_payment/create"
+                            },
+                            null,
+                            null,
+                            false
+                        ],
+                        "s": [
+                            {
+                                "n": "showOnControlsReady",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "readWithLinkedDocs",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "maximized",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "newTimeline",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "allowedMarks",
+                                "t": {
+                                    "n": "Массив",
+                                    "t": "Текст"
+                                }
+                            },
+                            {
+                                "n": "sendingLetters",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "allowDelayedNumberGeneration",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "allowSwitchMode",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "complementaryFieldsInRegistry",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "needNumeration",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "focusAttachmentsTabForPassesWithSigning",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "checkUniqueness",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "crumbs",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "canViewWithoutAuth",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "needCloneApprovalStage",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "significantChangesOnlyViaInterrupt",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "significantFields",
+                                "t": {
+                                    "n": "Массив",
+                                    "t": "Текст"
+                                }
+                            },
+                            {
+                                "n": "allowAdaptive",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "canSuspend",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "limit",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "repeat",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "help",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "page",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "postingComponent",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "allowCRMEvents",
+                                "t": "Логическое"
+                            }
+                        ],
+                        "_type": "record"
+                    },
+                    "[{\"Presentation\":\"e803c939-f055-40c0-bf99-33e1c084c28e\",\"Config\":{\"Settings\":[]}}]",
+                    [
+                        {
+                            "customTypes": {
+                                "accountObject": {
+                                    "baseType": "lookup",
+                                    "editorOptions": {
+                                        "placeholder": "Введите объект учета"
+                                    },
+                                    "editorTemplateName": "AccountingOperation/editors:AccountObject",
+                                    "itemsSettings": {
+                                        "methodName": "ListWithIterator",
+                                        "objectName": "AccountObject"
+                                    },
+                                    "showInFilter": false,
+                                    "typeName": "Объекты учета"
+                                },
+                                "courseOfAction": {
+                                    "baseType": "lookup",
+                                    "editorOptions": {
+                                        "placeholder": "Выберите направление деятельности"
+                                    },
+                                    "editorTemplateName": "AccountingOperation/editors:CourseOfAction",
+                                    "itemsSettings": {
+                                        "methodName": "ListWithIterator",
+                                        "objectName": "CourseOfAction"
+                                    },
+                                    "showInFilter": false,
+                                    "typeName": "Направления деятельности"
+                                }
+                            },
+                            "description": "Добавляйте поля и группы полей на документ",
+                            "id": "8e3214a1-64c9-45a8-9038-155047ba11b1",
+                            "name": "Дополнительные поля",
+                            "settings": {
+                                "allowSeparateTab": true,
+                                "allowUseInFilter": true
+                            }
+                        }
+                    ],
+                    false,
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "Название",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ТипДокумента",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ПодТипДокумента",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Настройки",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "НастройкаКарточкиДокумента",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ДопПоля",
+                        "t": "JSON-объект"
+                    },
+                    {
+                        "n": "Сконвертированный",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ВводитьДанныеТитулов",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 4,
+                "d": [
+                    "488804f5-95c5-4283-9452-d66268e286c4",
+                    123075,
+                    null,
+                    "Заявка на оплату",
+                    0,
+                    false,
+                    {
+                        "f": 5,
+                        "d": [
+                            "e803c939-f055-40c0-bf99-33e1c084c28e",
+                            "",
+                            false,
+                            4,
+                            null,
+                            "MoneyWS4/dialogs/application:Document",
+                            "",
+                            {
+                                "binding": {
+                                    "destroy": "Документ.УдалитьДокументы",
+                                    "format": "ЗаявкаНаОплату.Список",
+                                    "query": "ЗаявкаНаОплату.Список",
+                                    "read": "ПрочитатьДляУчастника"
+                                },
+                                "endpoint": {
+                                    "contract": "ЗаявкаНаОплату"
+                                },
+                                "keyProperty": "@Документ",
+                                "model": "MoneyWS4/dialogs/application:Model",
+                                "options": {},
+                                "readMetaData": {
+                                    "ИмяОбъекта": "ЗаявкаНаОплату"
+                                }
+                            },
+                            [
+                                {
+                                    "key": "moneyAttachmentsPreloader",
+                                    "module": "Payments/preloaders:AttachmentsPreloader",
+                                    "params": {
+                                        "docId": 52880
+                                    }
+                                },
+                                {
+                                    "dependencies": [
+                                        "EDO3/dataLoader:Document"
+                                    ],
+                                    "key": "riskMeterDataLoad",
+                                    "module": "Payments/preloaders:RiskMeter",
+                                    "params": {
+                                        "docId": 52880
+                                    }
+                                },
+                                {
+                                    "key": "MainTabPreloader",
+                                    "module": "Payments/preloaders:MainTabPreloader"
+                                }
+                            ],
+                            false,
+                            null,
+                            null,
+                            false,
+                            null,
+                            null,
+                            null,
+                            "payment-requests",
+                            null,
+                            null,
+                            ""
+                        ],
+                        "s": [
+                            {
+                                "n": "Идентификатор",
+                                "t": "UUID"
+                            },
+                            {
+                                "n": "ИмяДиалога",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "ВнешниеОбработчики",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "РежимОткрытия",
+                                "t": {
+                                    "n": "Перечисляемое",
+                                    "s": {
+                                        "null": null,
+                                        "0": "В новой вкладке",
+                                        "1": "В новом диалоге",
+                                        "2": "В той же вкладке",
+                                        "3": "В той же области",
+                                        "4": "Во всплывающей панели"
+                                    },
+                                    "sl": {
+                                        "null": null,
+                                        "0": "В новой вкладке",
+                                        "1": "В новом диалоге",
+                                        "2": "В той же вкладке",
+                                        "3": "В той же области",
+                                        "4": "Во всплывающей панели"
+                                    }
+                                }
+                            },
+                            {
+                                "n": "Входящий",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "template",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "modelCreator",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "source",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "dialogDataLoaders",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "disableVirtualSend",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "agentData",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "passageConfig",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "allowSiteTemplate",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "applicationId",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "externalConfig",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "popupConfig",
+                                "t": "JSON-объект"
+                            },
+                            {
+                                "n": "page",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "pageId",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "configSection",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "НастройкиДиалога",
+                                "t": "Строка"
+                            }
+                        ],
+                        "_type": "record"
+                    },
+                    null,
+                    null,
+                    false,
+                    null,
+                    null,
+                    {
+                        "8e3214a1-64c9-45a8-9038-155047ba11b1": [
+                            {
+                                "@group": null,
+                                "caption": "Административные расходы",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "4222d665-796c-4687-9958-5db1453279b4",
+                                "kind": null,
+                                "name": "Административные расходы",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Донголюкский ЛУ",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "3678371f-9532-4945-afe7-535df73e8a52",
+                                "kind": null,
+                                "name": "Донголюкский ЛУ",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Закупка основного оборудования",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "4c6e4bf1-3041-4855-bdd1-631f2e099d5c",
+                                "kind": null,
+                                "name": "Закупка основного оборудования",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Зап-Интинский ЛУ",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "d2158dd9-53c8-4345-baff-92c6976d0621",
+                                "kind": null,
+                                "name": "Зап-Интинский ЛУ",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "КРС: расконсервация скважин",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "aae078dc-3bca-4a7c-936b-699b7dd1b2be",
+                                "kind": null,
+                                "name": "КРС: расконсервация скважин",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Обустройство скважин и площадок",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "461cee83-508c-43b1-9776-ca1026deef86",
+                                "kind": null,
+                                "name": "Обустройство скважин и площадок",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Операционные расходы",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "7e77bef6-1304-4520-afac-a70a60a53881",
+                                "kind": null,
+                                "name": "Операционные расходы",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Получение займов",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "c6fe9e53-7bb3-4eed-8ae3-2bfbf0e42287",
+                                "kind": null,
+                                "name": "Получение займов",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Процедуры продления лицензий",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "ac97421c-af96-45ba-9dc0-cb329b90a020",
+                                "kind": null,
+                                "name": "Процедуры продления лицензий",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Строительство шлейфов",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "bb73b21f-575b-4769-b1ed-4538121569c7",
+                                "kind": null,
+                                "name": "Строительство шлейфов",
+                                "readOnly": false,
+                                "required": true,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            },
+                            {
+                                "@group": null,
+                                "caption": "Прочее",
+                                "color": "",
+                                "copy": false,
+                                "customData": null,
+                                "editorOptions": {
+                                    "placeholder": ""
+                                },
+                                "group": null,
+                                "hint": null,
+                                "icon": null,
+                                "id": "28f96250-9d21-45cc-9b3b-57ce7fe94fab",
+                                "kind": null,
+                                "name": "Проект11",
+                                "readOnly": false,
+                                "required": false,
+                                "showInFilter": false,
+                                "type": "number",
+                                "value": "",
+                                "valueValidationCondition": null,
+                                "visibilityCondition": null
+                            }
+                        ]
+                    },
+                    false,
+                    0,
+                    null,
+                    true,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    false,
+                    false,
+                    null,
+                    null,
+                    "toolbar",
+                    null,
+                    null
+                ],
+                "s": [
+                    {
+                        "n": "Идентификатор",
+                        "t": "UUID"
+                    },
+                    {
+                        "n": "ПервичныйКлюч",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "ИдентификаторРодителя",
+                        "t": "UUID"
+                    },
+                    {
+                        "n": "Название",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Тип",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Инсталляционный",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ВизуальноеПредставление",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "Цвет",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "ИдВидаРабот",
+                        "t": "UUID"
+                    },
+                    {
+                        "n": "СогласованиеСрока",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "МожноСменить",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПредустановленныеУчастники",
+                        "t": {
+                            "n": "Массив",
+                            "t": "Текст"
+                        }
+                    },
+                    {
+                        "n": "ДопПоля",
+                        "t": "JSON-объект"
+                    },
+                    {
+                        "n": "ПроверкаУсловныхДопПолей",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "УчетЗатратВремени",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Команды",
+                        "t": "Выборка"
+                    },
+                    {
+                        "n": "ПрикреплениеВложений",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Color",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "SiteTemplateData",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "PassageButtonViewMode",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "IsPassageButtonSet",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "IsToolbarSet",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "IsTabsSet",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "IsComplementaryFieldsSet",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ОписаниеРегламента",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ПроверкаУсловныхОжДоков",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "InstructionsViewMode",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Debit",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Credit",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 6,
+                "d": [
+                    {
+                        "f": 7,
+                        "d": [
+                            7,
+                            null,
+                            null,
+                            null,
+                            false,
+                            {
+                                "f": 8,
+                                "d": [
+                                    "Абрамов А.О.",
+                                    "Абрамов А.О.",
+                                    [
+                                        {
+                                            "depCounter": null,
+                                            "depId": null,
+                                            "depTitle": null,
+                                            "fullName": "Абрамов Артем Олегович",
+                                            "id": "257",
+                                            "isChief": false,
+                                            "personId": "79506770-79be-432e-a122-24533ef9b469",
+                                            "photoId": "ad595de1-adf3-45f7-b25d-2bd752403f0b",
+                                            "privatePersonId": 257,
+                                            "structureType": null
+                                        }
+                                    ],
+                                    "ООО \"ТПГК\"",
+                                    257,
+                                    "Главный механик",
+                                    236,
+                                    null,
+                                    null,
+                                    null,
+                                    0,
+                                    null
+                                ],
+                                "s": [
+                                    {
+                                        "n": "ФИО",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "ФИОКраткое",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "ДанныеФото",
+                                        "t": "JSON-объект"
+                                    },
+                                    {
+                                        "n": "Подразделение",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "Лицо",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Должность",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "ИдПодразделения",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Клиент",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "КолЧел",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Уволен",
+                                        "t": "Дата"
+                                    },
+                                    {
+                                        "n": "Пол",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Логотип",
+                                        "t": "Строка"
+                                    }
+                                ],
+                                "_type": "record"
+                            },
+                            null,
+                            null,
+                            null,
+                            null,
+                            {
+                                "f": 9,
+                                "d": [
+                                    120105,
+                                    "Согласование",
+                                    null,
+                                    null,
+                                    "2025-05-14 12:47:31.823174+03",
+                                    null,
+                                    null,
+                                    null,
+                                    false,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    {
+                                        "f": 8,
+                                        "d": [
+                                            [
+                                                "Мухин А.В.",
+                                                null,
+                                                [
+                                                    {
+                                                        "depCounter": null,
+                                                        "depId": null,
+                                                        "depTitle": null,
+                                                        "fullName": "Мухин Александр Владимирович",
+                                                        "id": "31911",
+                                                        "isChief": false,
+                                                        "personId": "c9a7ff7f-79c3-4cf9-b349-ea5d2966d870",
+                                                        "photoId": "b336b185-ebce-4c3b-8d0e-0c7d1188c8c1",
+                                                        "privatePersonId": 31911,
+                                                        "structureType": null
+                                                    }
+                                                ],
+                                                "Администрация ТПГК",
+                                                31911,
+                                                "Главный инженер",
+                                                716,
+                                                null,
+                                                null,
+                                                null,
+                                                0,
+                                                null
+                                            ]
+                                        ],
+                                        "_type": "recordset"
+                                    },
+                                    null,
+                                    {
+                                        "f": 10,
+                                        "d": [
+                                            "Согласовать",
+                                            1,
+                                            "2025-05-15 08:50:02.519879+03",
+                                            {
+                                                "f": 11,
+                                                "d": [],
+                                                "s": [
+                                                    {
+                                                        "n": "Название",
+                                                        "t": "Строка"
+                                                    }
+                                                ],
+                                                "_type": "recordset"
+                                            }
+                                        ],
+                                        "s": [
+                                            {
+                                                "n": "Название",
+                                                "t": "Строка"
+                                            },
+                                            {
+                                                "n": "Статус",
+                                                "t": "Число целое"
+                                            },
+                                            {
+                                                "n": "Окончание",
+                                                "t": "Дата и время"
+                                            },
+                                            {
+                                                "n": "СледующиеЭтапы",
+                                                "t": "Выборка"
+                                            }
+                                        ],
+                                        "_type": "record"
+                                    },
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null
+                                ],
+                                "s": [
+                                    {
+                                        "n": "Идентификатор",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Название",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "Инструкция",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "Комментарий",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "Начало",
+                                        "t": "Дата и время"
+                                    },
+                                    {
+                                        "n": "НачалоЭтапа",
+                                        "t": "Дата и время"
+                                    },
+                                    {
+                                        "n": "ДатаРедакции",
+                                        "t": "Дата и время"
+                                    },
+                                    {
+                                        "n": "Срок",
+                                        "t": "Дата и время"
+                                    },
+                                    {
+                                        "n": "ТребуетсяОтметкаВремени",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "РазрешеноРедактировать",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "Просмотрен",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "РежимРедактирования",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "РежимРедактированияВложений",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "Исполнители",
+                                        "t": "Выборка"
+                                    },
+                                    {
+                                        "n": "Коллаж",
+                                        "t": "Выборка"
+                                    },
+                                    {
+                                        "n": "Действие",
+                                        "t": "Запись"
+                                    },
+                                    {
+                                        "n": "ДоступныеДействия",
+                                        "t": "Выборка"
+                                    },
+                                    {
+                                        "n": "ВозможноПодписание",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "ОтЧегоЗависятПереходы",
+                                        "t": {
+                                            "n": "Массив",
+                                            "t": "Текст"
+                                        }
+                                    },
+                                    {
+                                        "n": "Цвет",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "ТипЭтапа",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "ИдЭтапа",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "УидЭтапа",
+                                        "t": "UUID"
+                                    },
+                                    {
+                                        "n": "PassageButtonViewMode",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "IsPassageButtonSet",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "СписокВложений",
+                                        "t": "Выборка"
+                                    },
+                                    {
+                                        "n": "ВводДанныхТитула",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "ВводПолучателяГруза",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "НайденПоСобытию",
+                                        "t": "Логическое"
+                                    },
+                                    {
+                                        "n": "ИнициаторСогласования",
+                                        "t": "Запись"
+                                    },
+                                    {
+                                        "n": "КомментарийСогласования",
+                                        "t": "Строка"
+                                    },
+                                    {
+                                        "n": "ИдентификаторСогласования",
+                                        "t": "Число целое"
+                                    },
+                                    {
+                                        "n": "СписокВложенийСогласования",
+                                        "t": "Выборка"
+                                    }
+                                ],
+                                "_type": "record"
+                            }
+                        ],
+                        "s": [
+                            {
+                                "n": "СостояниеКраткое",
+                                "t": "Число целое"
+                            },
+                            {
+                                "n": "ПредусмотренаОбработка",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ДоступноПрохождение",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Делегирован",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Приостановлен",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Ответственный",
+                                "t": "Запись"
+                            },
+                            {
+                                "n": "ТекущееСостояние",
+                                "t": "Запись"
+                            },
+                            {
+                                "n": "Напоминание",
+                                "t": "Запись"
+                            },
+                            {
+                                "n": "АктивныйЭтап",
+                                "t": "Запись"
+                            },
+                            {
+                                "n": "ПредыдущийЭтап",
+                                "t": "Запись"
+                            },
+                            {
+                                "n": "ПоследнийЗначимыйЭтап",
+                                "t": "Запись"
+                            }
+                        ],
+                        "_type": "record"
+                    },
+                    {
+                        "f": 12,
+                        "d": [
+                            true,
+                            [],
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            false,
+                            null,
+                            {
+                                "f": 8,
+                                "d": [],
+                                "_type": "recordset"
+                            },
+                            0
+                        ],
+                        "s": [
+                            {
+                                "n": "Просмотрен",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "НаКонтроле",
+                                "t": {
+                                    "n": "Массив",
+                                    "t": "Число целое"
+                                }
+                            },
+                            {
+                                "n": "ЕстьСообщения",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ЕстьИнструкции",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "СозданАвтоматически",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Архивирован",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Неизменяемый",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "СРасхождениями",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ЗакрытОтИзменений",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ЕстьПериодичность",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ЕстьПлановыеСобытия",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "СписокНаКонтроле",
+                                "t": "Выборка"
+                            },
+                            {
+                                "n": "KPIState",
+                                "t": "Число целое"
+                            }
+                        ],
+                        "_type": "record"
+                    }
+                ],
+                "s": [
+                    {
+                        "n": "Обработка",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "Прочее",
+                        "t": "Запись"
+                    }
+                ],
+                "_type": "record"
+            },
+            null,
+            null,
+            null,
+            {
+                "f": 13,
+                "d": [
+                    true,
+                    true,
+                    false,
+                    false,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    false,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "s": [
+                    {
+                        "n": "Просмотр",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Редактирование",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "РедактированиеНаФазе",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "РедактированиеЗаДругих",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ЗапускВОбработку",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Удаление",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Проведение",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПометкаФлагомВажности",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПометкаПлюсом",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПометкаЦветом",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ЗакрытиеОтИзменений",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Администратор",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Аннулирование",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПрерываниеДокументооборота",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Обработка",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Копирование",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Восстановление",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "СменаОтветственного",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ЗакрытиеОтИзмененийРедактирование",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПометкаПлюсомРедактирование",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПрикреплениеВложений",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ПросмотрЛенты",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            null,
+            {
+                "f": 14,
+                "d": [
+                    false,
+                    false,
+                    0,
+                    null,
+                    [
+                        {
+                            "@ColorMark": null,
+                            "Code": 12719114,
+                            "Name": "Красные",
+                            "ObjectMarkBitNumber": 50
+                        },
+                        {
+                            "@ColorMark": null,
+                            "Code": 2723388,
+                            "Name": "Зеленые",
+                            "ObjectMarkBitNumber": 51
+                        },
+                        {
+                            "@ColorMark": null,
+                            "Code": 2450090,
+                            "Name": "Синие",
+                            "ObjectMarkBitNumber": 52
+                        },
+                        {
+                            "@ColorMark": null,
+                            "Code": 15114521,
+                            "Name": "Желтые",
+                            "ObjectMarkBitNumber": 53
+                        }
+                    ],
+                    "",
+                    false,
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "Важный",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Плюс",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Цвет",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Бит",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Стили",
+                        "t": "JSON-объект"
+                    },
+                    {
+                        "n": "Подсказка",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Заметки",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ЛичныеЗаметки",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            null,
+            {
+                "Административные расходы": "0",
+                "Донголюкский ЛУ": "0",
+                "Закупка основного оборудования": "0",
+                "Зап-Интинский ЛУ": "0",
+                "КРС: расконсервация скважин": "0",
+                "Обустройство скважин и площадок": "100",
+                "Операционные расходы": "0",
+                "Получение займов": "0",
+                "Проект11": "0",
+                "Процедуры продления лицензий": "0",
+                "Строительство шлейфов": "0"
+            },
+            {},
+            null,
+            null,
+            null,
+            null,
+            null
+        ],
+        "s": [
+            {
+                "n": "ИдО",
+                "t": "Строка"
+            },
+            {
+                "n": "ИдентификаторПереписки",
+                "t": "Строка"
+            },
+            {
+                "n": "Удален",
+                "t": "Логическое"
+            },
+            {
+                "n": "Черновик",
+                "t": "Логическое"
+            },
+            {
+                "n": "СохранятьВсегда",
+                "t": "Логическое"
+            },
+            {
+                "n": "ИмяОбъекта",
+                "t": "Строка"
+            },
+            {
+                "n": "КоличествоСообщений",
+                "t": "Число целое"
+            },
+            {
+                "n": "КоличествоОснований",
+                "t": "Число целое"
+            },
+            {
+                "n": "ТипДокумента",
+                "t": "Запись"
+            },
+            {
+                "n": "Регламент",
+                "t": "Запись"
+            },
+            {
+                "n": "Состояние",
+                "t": "Запись"
+            },
+            {
+                "n": "СписокВложений",
+                "t": "Выборка"
+            },
+            {
+                "n": "КоличествоВложений",
+                "t": "Число целое"
+            },
+            {
+                "n": "СвязанныеДокументы",
+                "t": "Выборка"
+            },
+            {
+                "n": "РазрешенныеДействия",
+                "t": "Запись"
+            },
+            {
+                "n": "ПользовательскиеПараметры",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "Пометки",
+                "t": "Запись"
+            },
+            {
+                "n": "НазванияПометок",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "ЗначенияДопПолей",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "НовыеЗначенияДопПолей",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "ИдентификаторГруппы",
+                "t": "Строка"
+            },
+            {
+                "n": "Стилизация",
+                "t": "Запись"
+            },
+            {
+                "n": "АЯ",
+                "t": "Выборка"
+            },
+            {
+                "n": "ЗапретЗапросаПочтыАЯ",
+                "t": "Логическое"
+            },
+            {
+                "n": "ИдРолей",
+                "t": {
+                    "n": "Массив",
+                    "t": "Текст"
+                }
+            }
+        ],
+        "_type": "record"
+    },
+    {
+        "f": 15,
+        "d": [
+            null,
+            null,
+            null,
+            137808.00,
+            null,
+            {},
+            {},
+            null,
+            null,
+            {
+                "f": 16,
+                "d": [
+                    [
+                        257,
+                        "Абрамов А.О.",
+                        "ООО \"ТПГК\"",
+                        236,
+                        "ad595de1-adf3-45f7-b25d-2bd752403f0b?hmac=453937138049f74eaadf37f425571bc122750d93"
+                    ]
+                ],
+                "s": [
+                    {
+                        "n": "Лицо",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "ФИО",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Подразделение",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ИдПодразделения",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "ФотоИд",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "recordset"
+            },
+            {
+                "f": 17,
+                "d": [
+                    "\"ТПГК\"",
+                    ""
+                ],
+                "s": [
+                    {
+                        "n": "Голова",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Филиал",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 11,
+                "d": [
+                    "Заявка на оплату"
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 18,
+                "d": [
+                    "ТМЗ",
+                    1805,
+                    null,
+                    null,
+                    0
+                ],
+                "s": [
+                    {
+                        "n": "Название",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ИдО",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Адрес",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Геометка",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Тип",
+                        "t": {
+                            "n": "Перечисляемое",
+                            "s": {
+                                "null": null,
+                                "0": "Контрагент",
+                                "1": "ЧастноеЛицо",
+                                "2": "Сотрудник",
+                                "3": "СтруктураПредприятия",
+                                "4": "Кошелек"
+                            },
+                            "sl": {
+                                "null": null,
+                                "0": "Контрагент",
+                                "1": "ЧастноеЛицо",
+                                "2": "Сотрудник",
+                                "3": "СтруктураПредприятия",
+                                "4": "Кошелек"
+                            }
+                        }
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 19,
+                "d": [
+                    "",
+                    null,
+                    null
+                ],
+                "s": [
+                    {
+                        "n": "Название",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ИдО",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Тип",
+                        "t": {
+                            "n": "Перечисляемое",
+                            "s": {
+                                "null": null,
+                                "0": "Контрагент",
+                                "1": "Физик",
+                                "2": "Сотрудник",
+                                "3": "Подразделение",
+                                "4": "Кандидат"
+                            },
+                            "sl": {
+                                "null": null,
+                                "0": "Контрагент",
+                                "1": "Физик",
+                                "2": "Сотрудник",
+                                "3": "Подразделение",
+                                "4": "Кандидат"
+                            }
+                        }
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 11,
+                "d": [
+                    "\"ТПГК\""
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 19,
+                "d": [
+                    "Прочие производственные расходы ",
+                    null,
+                    null
+                ],
+                "_type": "record"
+            },
+            null,
+            null,
+            "",
+            null,
+            null,
+            "Оплата по счету №-0000294 от 13.05.2025г. в т.ч. НДС (20%) 22968-00 руб. Манжеты для обслуживания насосных агрегатов НД 100/250",
+            null,
+            "[[\"span\", {\"class\": \"money-payments__purpose\", \"title\": \" Оплата по счету №-0000294 от 13.05.2025г. в т.ч. НДС (20%) 22968-00 руб. Манжеты для обслуживания насосных агрегатов НД 100/250\", \"version\": \"2\"}, \"Оплата по счету №-0000294 от 13.05.2025г. в т.ч. НДС (20%) 22968-00 руб. Манжеты для обслуживания насосных агрегатов НД 100/250\"]]",
+            {
+                "remoteOpening": false
+            }
+        ],
+        "s": [
+            {
+                "n": "@Событие",
+                "t": "Число целое"
+            },
+            {
+                "n": "Веха",
+                "t": "Строка"
+            },
+            {
+                "n": "Срок",
+                "t": "Дата и время"
+            },
+            {
+                "n": "Сумма",
+                "t": {
+                    "n": "Деньги",
+                    "p": 2
+                }
+            },
+            {
+                "n": "Валюта",
+                "t": "Строка"
+            },
+            {
+                "n": "НастройкиОтображения",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "SearchResult",
+                "t": "JSON-объект"
+            },
+            {
+                "n": "ПериодДатаНачала",
+                "t": "Дата"
+            },
+            {
+                "n": "ПериодДатаКонца",
+                "t": "Дата"
+            },
+            {
+                "n": "Сотрудник",
+                "t": "Выборка"
+            },
+            {
+                "n": "НашаОрганизация",
+                "t": "Запись"
+            },
+            {
+                "n": "Регламент",
+                "t": "Запись"
+            },
+            {
+                "n": "Заголовок1",
+                "t": "Запись"
+            },
+            {
+                "n": "Заголовок2",
+                "t": "Запись"
+            },
+            {
+                "n": "Заголовок3",
+                "t": "Запись"
+            },
+            {
+                "n": "Заголовок4",
+                "t": "Запись"
+            },
+            {
+                "n": "КомментарийЗаголовка",
+                "t": "Строка"
+            },
+            {
+                "n": "КомментарийОтветственного",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий1",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий2",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий3",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий4",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий5",
+                "t": "Строка"
+            },
+            {
+                "n": "Комментарий6",
+                "t": "Строка"
+            },
+            {
+                "n": "ПараметрыЗаписи",
+                "t": "JSON-объект"
+            }
+        ],
+        "_type": "record"
+    },
+    null,
+    null,
+    {
+        "f": 20,
+        "d": [
+            "BaseView",
+            -1,
+            true,
+            null,
+            false,
+            null,
+            null,
+            null,
+            {
+                "f": 21,
+                "d": [
+                    true,
+                    true,
+                    true,
+                    "Лицо1",
+                    "Укажите получателя",
+                    "Кому",
+                    "Кому",
+                    {
+                        "f": 22,
+                        "d": [
+                            true,
+                            false
+                        ],
+                        "s": [
+                            {
+                                "n": "AddresseeVisible",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "AccountVisible",
+                                "t": "Логическое"
+                            }
+                        ],
+                        "_type": "record"
+                    },
+                    {
+                        "f": 23,
+                        "d": [
+                            true,
+                            false,
+                            "ДоговорДок",
+                            false,
+                            null,
+                            null,
+                            null
+                        ],
+                        "s": [
+                            {
+                                "n": "Exists",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Required",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "Type",
+                                "t": "Строка"
+                            },
+                            {
+                                "n": "CanCreate",
+                                "t": "Логическое"
+                            },
+                            {
+                                "n": "ID",
+                                "t": "Число целое"
+                            },
+                            {
+                                "n": "State",
+                                "t": "Число целое"
+                            },
+                            {
+                                "n": "Caption",
+                                "t": "Строка"
+                            }
+                        ],
+                        "_type": "record"
+                    },
+                    [
+                        "Contractor",
+                        "PrivateFace",
+                        "Employee"
+                    ],
+                    true
+                ],
+                "s": [
+                    {
+                        "n": "Required",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Visibility",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Exists",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "FacePrefix",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Placeholder",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Label",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "LocalizedLabel",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Service",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "Loan",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "FaceType",
+                        "t": {
+                            "n": "Массив",
+                            "t": "Текст"
+                        }
+                    },
+                    {
+                        "n": "SimilarButtonVisibility",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 24,
+                "d": [
+                    false,
+                    true,
+                    true,
+                    "Лицо2",
+                    "Укажите получателя",
+                    "За кого",
+                    "За кого",
+                    {
+                        "f": 22,
+                        "d": [
+                            true,
+                            false
+                        ],
+                        "_type": "record"
+                    },
+                    {
+                        "f": 23,
+                        "d": [
+                            true,
+                            false,
+                            "ДоговорДок",
+                            false,
+                            null,
+                            null,
+                            null
+                        ],
+                        "_type": "record"
+                    },
+                    [
+                        "Contractor",
+                        "PrivateFace",
+                        "Employee"
+                    ],
+                    true
+                ],
+                "s": [
+                    {
+                        "n": "Required",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Visibility",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Exists",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "FacePrefix",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Placeholder",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Label",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "LocalizedLabel",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Service",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "Loan",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "FaceType",
+                        "t": {
+                            "n": "Массив",
+                            "t": "Текст"
+                        }
+                    },
+                    {
+                        "n": "Togglable",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 25,
+                "d": [
+                    true,
+                    false,
+                    "ДоговорДок",
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "Exists",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Required",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Type",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "CanCreate",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 26,
+                "d": [
+                    false,
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "Visible",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Required",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 27,
+                "d": [
+                    null,
+                    false,
+                    false,
+                    "Documents",
+                    [
+                        "Documents"
+                    ],
+                    false,
+                    null,
+                    null,
+                    false,
+                    null
+                ],
+                "s": [
+                    {
+                        "n": "Template",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "Required",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ignoreContractor",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "payType",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "baseDocType",
+                        "t": {
+                            "n": "Массив",
+                            "t": "Текст"
+                        }
+                    },
+                    {
+                        "n": "isPayroll",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ID",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "Data",
+                        "t": "Запись"
+                    },
+                    {
+                        "n": "isRefund",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "TemplatedAreaVisible",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 28,
+                "d": [
+                    true,
+                    true,
+                    null,
+                    null,
+                    null
+                ],
+                "s": [
+                    {
+                        "n": "UseVATControl",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ShowVATControl",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "PurposeText",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "VATText",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "DefaultPurposeText",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 29,
+                "d": [
+                    false,
+                    true,
+                    "[[\"p\",{\"version\":\"2\"},\"Манжеты для обслуживания насосных агрегатов НД 100/250\"]]",
+                    "[[\"p\",{\"version\":\"2\"},\"Манжеты для обслуживания насосных агрегатов НД 100/250\"]]"
+                ],
+                "s": [
+                    {
+                        "n": "TextAreaVisibility",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "ButtonVisibility",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "TextAreaText",
+                        "t": "Строка"
+                    },
+                    {
+                        "n": "ButtonText",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 30,
+                "d": [
+                    true,
+                    false,
+                    true,
+                    false,
+                    true,
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "Exists",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Visible",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "Togglable",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "AddresseeVisible",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "AddresseeTogglable",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "AddresseeRequired",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            5,
+            {
+                "f": 31,
+                "d": [
+                    null,
+                    null
+                ],
+                "s": [
+                    {
+                        "n": "ID",
+                        "t": "Число целое"
+                    },
+                    {
+                        "n": "НазваниеРасширенное",
+                        "t": "Строка"
+                    }
+                ],
+                "_type": "record"
+            },
+            {
+                "f": 32,
+                "d": [
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    true,
+                    true,
+                    true,
+                    false
+                ],
+                "s": [
+                    {
+                        "n": "PayrollSelectorButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "AddEmployeeButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "RepayButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "PayrollAttachButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "PayrollStateRow",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "DocumentAttachButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "DocumentStateRow",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "DocumentSelectorButton",
+                        "t": "Логическое"
+                    },
+                    {
+                        "n": "FillByLoansButton",
+                        "t": "Логическое"
+                    }
+                ],
+                "_type": "record"
+            },
+            null,
+            "₽",
+            false,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ],
+        "s": [
+            {
+                "n": "View",
+                "t": "Строка"
+            },
+            {
+                "n": "Type",
+                "t": "Число целое"
+            },
+            {
+                "n": "SimilarPaymentsVisibility",
+                "t": "Логическое"
+            },
+            {
+                "n": "OurOrgType",
+                "t": "Число целое"
+            },
+            {
+                "n": "isNewDocument",
+                "t": "Логическое"
+            },
+            {
+                "n": "AttachmentsVisible",
+                "t": "Логическое"
+            },
+            {
+                "n": "ButtonToolbarVisible",
+                "t": "Логическое"
+            },
+            {
+                "n": "AdditionalInfoVisible",
+                "t": "Логическое"
+            },
+            {
+                "n": "Face1",
+                "t": "Запись"
+            },
+            {
+                "n": "Face2",
+                "t": "Запись"
+            },
+            {
+                "n": "Loan",
+                "t": "Запись"
+            },
+            {
+                "n": "Comission",
+                "t": "Запись"
+            },
+            {
+                "n": "BaseDocument",
+                "t": "Запись"
+            },
+            {
+                "n": "PaymentPurpose",
+                "t": "Запись"
+            },
+            {
+                "n": "AdditionalInfo",
+                "t": "Запись"
+            },
+            {
+                "n": "ContractorAccount",
+                "t": "Запись"
+            },
+            {
+                "n": "Priority",
+                "t": "Число целое"
+            },
+            {
+                "n": "RefundPayDocument",
+                "t": "Запись"
+            },
+            {
+                "n": "ToolbarButtonConfig",
+                "t": "Запись"
+            },
+            {
+                "n": "CurrencyIcon",
+                "t": "Строка"
+            },
+            {
+                "n": "MainCurrencyIcon",
+                "t": "Строка"
+            },
+            {
+                "n": "ShowIncomeCode",
+                "t": "Логическое"
+            },
+            {
+                "n": "IncomeCodeRequired",
+                "t": "Логическое"
+            },
+            {
+                "n": "Sum2Name",
+                "t": "Строка"
+            },
+            {
+                "n": "SourceOfFinancing",
+                "t": "Запись"
+            },
+            {
+                "n": "OurCompanyRights",
+                "t": "Логическое"
+            },
+            {
+                "n": "ExtendedTaxFieldsVisible",
+                "t": "Логическое"
+            },
+            {
+                "n": "OrderForPayment",
+                "t": "Запись"
+            },
+            {
+                "n": "ExtendedFieldsVisible",
+                "t": "Логическое"
+            }
+        ],
+        "_type": "record"
+    },
+    null,
+    null,
+    null,
+    null,
+    137808.00,
+    0.00,
+    137808.00,
+    "Оплата поставщику",
+    "14.05.2025",
+    null,
+    false,
+    [
+        "Контрагент",
+        "Сотрудник",
+        "ЧастноеЛицо"
+    ],
+    [
+        "Documents"
+    ],
+    "не показывать",
+    true,
+    "CONTRACTORS",
+    0.00,
+    0.00
+]
