@@ -10,6 +10,7 @@ import paramiko
 from scp import SCPClient
 import locale
 import dateutil.parser
+import re
 
 
 def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_info=('token', 'chatid'), logfile='torgi_gov_ru/logfile.txt'):
@@ -230,7 +231,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                 cur.execute(sql)
                 result = cur.fetchall()
                 if result:
-                    fields_to_check = ['lotStatus', 'priceMin', 'priceFin', 'biddEndTime']
+                    fields_to_check = ['lotStatus', 'priceMin', 'priceFin', 'biddEndTime', 'lot_data']
                     changes = []
                     for field, val in lotcard_dict.items():
                         if type(val) == str and field != 'squareMR':
@@ -280,7 +281,8 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                         pgconn.commit()
                         lotcard_dict = dict(zip(list(lotcard_dict.keys()), [str(x).replace("'", "") for x in lotcard_dict.values()]))
                         message = ''
-                        chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "priceFin": 'Фин.цена', "biddEndTime": 'Заявки до'}
+                        chfieldsdict = {"lotStatus": 'Статус', "priceMin": 'Нач.цена', "priceFin": 'Фин.цена', "biddEndTime": 'Заявки до', "lot_data": 'Данные'}
+                        lotAttachments = []
                         for i, change in enumerate([x for x in list(changes) if x['field'] in fields_to_check]):
                             # logmessage = f"logging lotcard change: {change['id']} -> {change['field']} -> {str(change['new'])}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
@@ -296,26 +298,41 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     locale.setlocale(locale.LC_ALL, (''))
                                 message += ':'
                             val = change['new']
-                            if change['field'] == 'biddEndTime':
-                                if lotcard_dict.get('timeZoneOffset'):
-                                    offset = lotcard_dict['timeZoneOffset']
-                                    val = val + timedelta(minutes=int(offset))
-                                val = val.strftime('%d.%m.%Y %H:%M')
-                                if lotcard_dict.get('timeZoneName'):
-                                    tz = lotcard_dict['timeZoneName']
-                                    val += f' {tz}'
-                            elif change['field'] == 'lotStatus':
-                                message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
-                            elif change['field'] in ['priceMin']:
-                                locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
-                                message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
-                                locale.setlocale(locale.LC_ALL, (''))
-                            elif change['field'] in ['priceFin']:
-                                locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
-                                message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
-                                locale.setlocale(locale.LC_ALL, (''))
-                            else:
-                                message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
+                            
+                            if change['field'] != 'lot_data':
+                                if change['field'] == 'biddEndTime':
+                                    if lotcard_dict.get('timeZoneOffset'):
+                                        offset = lotcard_dict['timeZoneOffset']
+                                        val = val + timedelta(minutes=int(offset))
+                                    val = val.strftime('%d.%m.%Y %H:%M')
+                                    if lotcard_dict.get('timeZoneName'):
+                                        tz = lotcard_dict['timeZoneName']
+                                        val += f' {tz}'
+                                elif change['field'] == 'lotStatus':
+                                    message += f"\n{chfieldsdict[change['field']]}: {status_dict[str(val)]}"
+                                elif change['field'] in ['priceMin']:
+                                    locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                                    message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
+                                    locale.setlocale(locale.LC_ALL, (''))
+                                elif change['field'] in ['priceFin']:
+                                    locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                                    message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
+                                    locale.setlocale(locale.LC_ALL, (''))
+                                else:
+                                    message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
+                            elif change['field'] == 'lot_data':
+                                if change['new'].get('lotAttachments'):
+                                    for lotAttachment in change['new'].get('lotAttachments'):
+                                        if all([lotAttachment.get('fileId'), lotAttachment.get('fileName')]):
+                                            lotAttachments.append({"fileId": lotAttachment.get('fileId'), "fileName": lotAttachment.get('fileName')})
+                                            with requests.Session() as ts:
+                                                status, aresult = smart_http_request(ts, url=f"https://torgi.gov.ru/new/file-store/v1/{lotAttachment.get('fileId')}")
+                                                if status == 200:
+                                                    tpath = os.path.join('torgi_gov_ru', lotAttachment.get('fileName'))
+                                                    with open(tpath, 'wb') as af:
+                                                        af.write(aresult.content)
+                                                        pass
+                                # if change
                         if message:
                             message += f"; \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">Карточка лота</a>"
                             with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:                                
@@ -332,6 +349,11 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                     send_to_telegram(s, logf, bot_info=report_bot_info, message=message)                                
                                 else:
                                     log_message(s, logf, report_bot_info, message, to_telegram=True)
+                                if lotAttachments:
+                                    for lotAttachment in lotAttachments:
+                                        tpath = os.path.join('torgi_gov_ru', lotAttachment['fileName'])
+                                        if os.path.exists(tpath):
+                                            send_to_telegram(s, logf, bot_info=report_bot_info, message='Вложение:', document=tpath)
                                 # if generate_lot_mapbox_html(lot=lotcard_dict['id'], ofile=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm", token=mapbox_token):
                                 #     if send_to_telegram(s, logf, bot_info=report_bot_info, message='Откройте файл в браузере для отображения на карте', document=f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm"):
                                 #         os.remove(f"torgi_gov_ru/{str(lotcard_dict['miningSiteName_EA(N)'])}.htm")
@@ -372,7 +394,12 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 message = f"Найдена лицензия на участок УВС, ранее выставлявшийся на аукцион: " \
                                     f" \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">{lotcard_dict['lotName']}</a>"
                                 message += f"; \nСтатус аукциона: {status_dict.get(lotcard_dict.get('lotStatus'))}"
-                                message += f"; \nДата аукциона: {lotcard_dict.get('auctionStartDate').strftime('%Y-%m-%d')}"
+                                if isinstance(lotcard_dict.get('auctionStartDate'), str):
+                                    if re.search(r'\d{4}\-\d{2}\-\d{2}', lotcard_dict.get('auctionStartDate')):
+                                        datetext = re.search(r'\d{4}\-\d{2}\-\d{2}', lotcard_dict.get('auctionStartDate')).group(0)
+                                        message += f"; \nДата аукциона: {datetext}"
+                                else:
+                                    message += f"; \nДата аукциона: {lotcard_dict.get('auctionStartDate').strftime('%Y-%m-%d')}"
                                 message += f"; \nЛицензия: <a href=\"{blockdata.get('rfgf_link')}\">{new_rfgf_gos_reg_num}</a>"
                                 message += f"; \nНазвание: {blockdata.get('license_block_name')}"
                                 date_register = None
