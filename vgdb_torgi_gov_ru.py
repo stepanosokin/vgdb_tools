@@ -310,6 +310,10 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
                                 message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
                                 locale.setlocale(locale.LC_ALL, (''))
+                            elif change['field'] in ['priceFin']:
+                                locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+                                message += f"\n{chfieldsdict[change['field']]}: {locale.currency(float(val), grouping=True)}"
+                                locale.setlocale(locale.LC_ALL, (''))
                             else:
                                 message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
                         if message:
@@ -876,9 +880,6 @@ body { margin: 0; padding: 0; }
     return False
     
 
-
-
-
 def get_lot_on_mapbox_png(lot, ofile, token, size=400, padding=100):
     # https://docs.mapbox.com/api/maps/static-images/
     # Пример на перспективу - как встраивать MapBox в HTML. Может, можно такой вставить в Telegram сообщение?
@@ -982,11 +983,13 @@ if __name__ == '__main__':
     #     send_to_telegram(s, logf, bot_info=log_bot_info, message=message)
 
     
-    # refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
-    #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
     
-    # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
-    #                      webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
+    
+    refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+                         webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
+    
+    refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info, 
+                         webhook=vgdb_bot_tests_webhook, mapbox_token=mb_token, webhostssh='.vdsinassh')
 
     
     # # checking mapbox functions
@@ -995,7 +998,7 @@ if __name__ == '__main__':
     #     #         '22000043270000000036','22000039810000000072','22000039810000000072','22000039810000000083',
     #     #         '22000059140000000015','22000039810000000058']
     #     # lots = ['22000039810000000086', '22000039810000000087', '22000039810000000089']
-    #     lots = ['22000039810000000023']
+    #     lots = ['22000059140000000049']
     #     with open('tmp.txt', 'w') as logf:
     #         pass
     #         pgconn = psycopg2.connect(dsn, cursor_factory=DictCursor)
