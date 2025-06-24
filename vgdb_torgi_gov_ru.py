@@ -239,18 +239,23 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             val.replace("''", "'")
                         if field in ['lotNumber', 'licensePeriod_EA(N)']:
                             val = str(val)
-                        if field in ['biddEndTime', 'createDate']:
+                        if field in ['biddEndTime', 'createDate', 'auctionStartDate']:
                             val = datetime.strptime(val, '%Y-%m-%d %H:%M:%S')
                         if field in ['hasAppeals', 'isStopped', 'isAnnuled']:
                             val = json.loads(val.lower())
                         if field == 'lot_data':
                             val = json.loads(val)
+                        if field == 'priceMin':
+                            pass
+                            val = float(val)
 
                         dbval = result[0][field]
                         if field in ['squareMR', 'priceFin', 'priceMin']:
                             if dbval:
                                 dbval = float(dbval)
                                 val = float(val)
+                                if field == 'priceMin' and val != dbval:
+                                    pass
                             pass
                         if field != 'lot_data':
                             if val != dbval:
@@ -264,7 +269,13 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, message)
                     
-                    if changes:
+                    change_fields_except_lot_data = [x['field'] for x in changes]
+                    try:
+                        change_fields_except_lot_data.remove('lot_data')
+                    except:
+                        pass
+                    if changes and change_fields_except_lot_data:
+                    # if changes:
                         # print(changes)
                         if any([x['field'] != 'lot_data' for x in changes]):
                             updates = (0, 1)
@@ -332,6 +343,34 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                                     with open(tpath, 'wb') as af:
                                                         af.write(aresult.content)
                                                         pass
+                                if change['new'].get('noticeAttachments'):
+                                    for noticeAttachment in change['new'].get('noticeAttachments'):
+                                        if all([noticeAttachment.get('fileId'), noticeAttachment.get('fileName')]):
+                                            lotAttachments.append({"fileId": noticeAttachment.get('fileId'), "fileName": noticeAttachment.get('fileName')})
+                                            with requests.Session() as ts:
+                                                status, aresult = smart_http_request(ts, url=f"https://torgi.gov.ru/new/file-store/v1/{noticeAttachment.get('fileId')}")
+                                                if status == 200:
+                                                    tpath = os.path.join('torgi_gov_ru', noticeAttachment.get('fileName'))
+                                                    with open(tpath, 'wb') as af:
+                                                        af.write(aresult.content)
+                                                        pass
+                                if change['new'].get('protocols'):
+                                    for protocol in change['new'].get('protocols'):
+                                        purl = f"https://torgi.gov.ru/new/api/public/protocols/by-number/{str(protocol.get('protocolNumber'))}"
+                                        with requests.Session() as ps:
+                                            status, presult = smart_http_request(ps, url=purl)
+                                            if status == 200:
+                                                json_presult = presult.json()
+                                                if json_presult.get('attachments'):
+                                                    for prot_attachment in json_presult.get('attachments'):
+                                                        p_att_url = f"https://torgi.gov.ru/new/file-store/v1/{prot_attachment['fileId']}"
+                                                        pstatus, p_att_result = smart_http_request(ps, url=p_att_url)
+                                                        if pstatus == 200:
+                                                            lotAttachments.append({"fileId": prot_attachment['fileId'], "fileName": prot_attachment['fileName']})
+                                                            p_att_path = os.path.join('torgi_gov_ru', prot_attachment['fileName'])
+                                                            with open (p_att_path, 'wb') as p_at_f:
+                                                                p_at_f.write(p_att_result.content)
+                                                
                                 # if change
                         if message:
                             message += f"; \n<a href=\"https://torgi.gov.ru/new/public/lots/lot/{lotcard_dict['id']}/(lotInfo:info)?fromRec=false\">Карточка лота</a>"
