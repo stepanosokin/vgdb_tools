@@ -50,9 +50,36 @@ def download_lotcards(size=1000, log_bot_info=('token', 'chatid'), report_bot_in
                   log_message(s, logf, log_bot_info, message)
                   return False
             else:
-                  message = f"torgi_gov_ru: Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(list(response.json()['content']))} лотов"
-                  log_message(s, logf, log_bot_info, message)
-                  return response.json()['content']
+                lotcards = []
+                for id in [x['id'] for x in response.json()['content']]:
+                    url = f"https://torgi.gov.ru/new/api/public/lotcards/{id}"
+                    headers = {
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Encoding": "gzip, deflate, br, zstd",
+                        "Accept-Language": "ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7",
+                        "Connection": "keep-alive",
+                        "DNT": "1",
+                        "Referer": f"https://torgi.gov.ru/new/public/lots/lot/{id}",
+                        "Sec-Fetch-Dest": "empty",
+                        "Sec-Fetch-Mode": "cors",
+                        "Sec-Fetch-Site": "same-origin",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+                        "branchId": "null",
+                        "organizationId": "null",
+                        "sec-ch-ua": '"Chromium";v="130", "Microsoft Edge";v="130", "Not?A_Brand";v="99"'
+                        }
+                    status, result = smart_http_request(s, url=url, headers=headers)
+                    if status == 200:
+                        lotcards.append(result.json())
+                    
+                # message = f"torgi_gov_ru: Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(list(response.json()['content']))} лотов"
+                
+                message = f"torgi_gov_ru: Выполнена загрузка лотов на участки УВС с сайта torgi.gov.ru. Загружено {len(lotcards)} лотов"
+                
+                log_message(s, logf, log_bot_info, message)
+                
+                # return response.json()['content']
+                return lotcards
 
 
 def parse_lotcard(lotcard):
@@ -262,23 +289,35 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
                                 changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
                         else:
-                            if sorted([(k, v) for k, v in val.items()]) != sorted([(k, v) for k, v in dbval.items()]):
+                            # if sorted([(k, v) for k, v in val.items()]) != sorted([(k, v) for k, v in dbval.items()]):
+                            #     changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                            
+                            if any([
+                                sorted([x.get('fileId') for x in val.get('lotAttachments', [])]) != sorted([y.get('fileId') for y in dbval.get('lotAttachments', [])]), 
+                                sorted([z.get('fileId') for z in val.get('noticeAttachments', [])]) != sorted([t.get('fileId') for t in dbval.get('noticeAttachments', [])]), 
+                                sorted([w.get('protocolNumber') for w in val.get('protocols', [])]) != sorted([u.get('protocolNumber') for u in dbval.get('protocols', [])])
+                                    ]):
                                 changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                                
+                                
                             
                             # message = f"lotcard {result[0]['id']} change detected: {field} -> {val}"
                             # with open(logfile, 'a', encoding='utf-8') as logf, requests.Session() as s:
                             #     log_message(s, logf, log_bot_info, message)
                     
-                    change_fields_except_lot_data = [x['field'] for x in changes]
-                    try:
-                        change_fields_except_lot_data.remove('lot_data')
-                    except:
-                        pass
-                    if changes and change_fields_except_lot_data:
-                    # if changes:
+                    # change_fields_except_lot_data = [x['field'] for x in changes]
+                    # try:
+                    #     change_fields_except_lot_data.remove('lot_data')
+                    # except:
+                    #     pass
+                    # if changes and change_fields_except_lot_data:
+                    if changes:
                         # print(changes)
-                        if any([x['field'] != 'lot_data' for x in changes]):
-                            updates = (0, 1)
+                        
+                        # if any([x['field'] != 'lot_data' for x in changes]):
+                        #     updates = (0, 1)
+                        updates = (0, 1)
+                        
                         fields_to_update = []
                         values_to_insert = []
                         for change in list(changes):
@@ -311,6 +350,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                             val = change['new']
                             
                             if change['field'] != 'lot_data':
+                            # if True:
                                 if change['field'] == 'biddEndTime':
                                     if lotcard_dict.get('timeZoneOffset'):
                                         offset = lotcard_dict['timeZoneOffset']
@@ -332,6 +372,7 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 else:
                                     message += f"\n{chfieldsdict[change['field']]}: {str(val)}"
                             elif change['field'] == 'lot_data':
+                                message += f"\nНовые вложенные документы:"
                                 if change['new'].get('lotAttachments'):
                                     for lotAttachment in change['new'].get('lotAttachments'):
                                         if all([lotAttachment.get('fileId'), lotAttachment.get('fileName')]):
