@@ -296,7 +296,8 @@ def parse_geometry(source_geom, coords_threshold):
         if not multipol_of_pols.IsValid():
             try:
                 # valid_geom = multipol_of_pols.RemoveRepeatedPoints()
-                valid_geom = multipol_of_pols.MakeValid(["METHOD=STRUCTURE", "KEEP_COLLAPSED=NO"])
+                # valid_geom = multipol_of_pols.MakeValid(["METHOD=STRUCTURE", "KEEP_COLLAPSED=NO"]) # this method doesn't work
+                valid_geom = multipol_of_pols.MakeValid()
                 # gdal geometry types list: https://github.com/OSGeo/gdal/blob/8943200d5fac69f0f995fc11af7e7e3696823b37/gdal/ogr/ogr_core.h#L314-L402
                 if valid_geom and valid_geom.GetGeometryType() in [ogr.MultiPolygon25D, ogr.MultiPolygon]:
                     multipol_of_pols = valid_geom
