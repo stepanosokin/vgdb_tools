@@ -34,4 +34,5 @@ if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000
     if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
         # update license blocks on server
         if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
+            fix_selected_geometry()
             synchro_layer([('rfgf', ['license_blocks_rfgf'])], local_pgdsn, ext_pgdsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)

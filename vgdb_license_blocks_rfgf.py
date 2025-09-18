@@ -318,6 +318,21 @@ def parse_geometry(source_geom, coords_threshold):
     return (record_has_geometry, multipol_of_pols)
 
 
+def fix_selected_geometry(pgcs='.pgdsn'):
+    with open(pgcs, encoding='utf-8') as f:
+        pgdsn = f.read()
+    pgconn = psycopg2.connect(pgdsn)
+    cursor = pgconn.cursor()
+    sql = f"update rfgf.license_blocks_rfgf " \
+          f"set geom = ST_MakeValid(geom, 'method=structure') " \
+          f"where license_block_name ~* 'нововязовский';"
+    cursor.execute(sql)
+    pgconn.commit()
+    pgconn.close()
+
+    
+
+
 def update_postgres_table(gdalpgcs, folder='rfgf_blocks',  gpkg='d_r.gpkg', layer='l_b', bot_info=('token', 'chatid'), webhook='', where="license_block_name NOT LIKE '%Северо-Врангелевский%'"):
     current_directory = os.getcwd()
     logpath = os.path.join(current_directory, folder, 'logfile.txt')
@@ -540,7 +555,8 @@ if __name__ == '__main__':
 
     # if download_rfgf_blocks('rfgf_request_noFilter_300000.json', 'rfgf_result_300000.json', bot_info=bot_info):
     #     pass
-    if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
-        pass
+    # if parse_rfgf_blocks('rfgf_result_300000.json', bot_info=bot_info):
+    #     pass
     # if update_postgres_table(gdalpgcs, bot_info=bot_info, webhook=lb_general_webhook):
     #     pass
+    fix_selected_geometry()
