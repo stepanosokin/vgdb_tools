@@ -1,0 +1,34 @@
+[project]
+name = "vgdb-tools"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bs4>=0.0.2",
+    "fabric>=3.2.2",
+    "gdal==3.11",
+    "pandas>=3.0.0",
+    "paramiko>=4.0.0",
+    "psycopg2>=2.9.11",
+    "psycopg2-binary>=2.9.11",
+    "pymsteams>=0.2.5",
+    "requests>=2.32.5",
+    "scp>=0.15.0",
+    "selenium>=4.40.0",
+    "vgdb-general>=0.1.0",
+    "wialon>=1.1.5",
+]
+
+[tool.uv.sources]
+# Use your custom GDAL wheels
+gdal = [
+  { index = "gdal-wheels" }
+]
+vgdb-general = { git = "https://github.com/stepanosokin/vgdb_general.git" } 
+
+# Your custom wheels (backup)
+[[tool.uv.index]]
+name = "gdal-wheels"
+url = "https://gitlab.com/api/v4/projects/61637378/packages/pypi/simple"
+explicit = true
