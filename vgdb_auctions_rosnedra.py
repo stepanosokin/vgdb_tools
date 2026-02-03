@@ -940,7 +940,10 @@ def parse_blocks_from_orders(folder='rosnedra_auc', gpkg='rosnedra_result.gpkg',
                 with pgconn.cursor() as cur:
                     cur.execute(sql)
                     result = cur.fetchall()
-                nextgid = result[0][0] + 1
+                if result[0][0]:
+                    nextgid = result[0][0] + 1
+                else:
+                    nextgid = 1
                 pgconn.close()
 
         excel_files_list = []

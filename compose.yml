@@ -14,3 +14,14 @@ services:
       - ./2024_blocks_nr_ne.webhook:/app/vgdb_tools/vgdb_bot/2024_blocks_nr_ne.webhook
       - ./2024_blocks_np.webhook:/app/vgdb_tools/vgdb_bot/2024_blocks_np.webhook
       - ./.egssh:/app/vgdb_tools/vgdb_bot/.egssh
+
+  vgdb-db:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_DB: vgdb
+      POSTGRES_USER: vgdb
+      POSTGRES_PASSWORD: 123456
+    volumes:
+      - ./local_postgres:/var/lib/postgresql
+    ports:
+      - "5432:5432"
