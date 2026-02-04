@@ -60,6 +60,12 @@ def map_table_view(user, pwd, views, schema=None):
             print(r.content)
 
 
+def synchro_layer_by_vpn(schemas_tables, local_pgdsn, ext_pgdsn,
+                  bot_info=('token', 'id'), folder='evergis'):
+    pass
+    
+
+
 def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
                   ssh_host='', ssh_user='', bot_info=('token', 'id'), folder='evergis'):
 
@@ -183,6 +189,62 @@ def synchro_layer(schemas_tables, local_pgdsn, ext_pgdsn,
         return True
 
 
+def synchro_table_by_vpn(schemas_tables, local_pgpass, ext_pgpass,
+                        bot_info=('token', 'id'), folder='evergis', log=True):
+    my_env = os.environ.copy()
+    my_env["PGPASSFILE"] = '.local_pgpass'
+    with open(local_pgpass, encoding='utf-8') as f:
+        local_pgpass_str = f.read()
+        local_pgpass_dict = dict(zip(
+            ['host', 'port', 'dbname', 'user', 'password'],
+            local_pgpass_str.split(':')
+            ))
+    with open(ext_pgpass, encoding='utf-8') as f:
+        ext_pgpass_str = f.read()
+        ext_pgpass_dict = dict(zip(
+            ['host', 'port', 'dbname', 'user', 'password'],
+            ext_pgpass_str.split(':')
+            ))
+    for (schema, tables) in list(schemas_tables):
+        # each 'tables' is a list. loop through it now.
+        for table in tables:
+            my_env["PGPASSFILE"] = '.local_pgpass'
+            try:
+                result = subprocess.run(['docker', 'container', 'exec', 'vgdb_tools-vgdb-db-1', 'pg_dump', 
+                                         '-h', local_pgpass_dict['host'], '-p', local_pgpass_dict['port'],
+                                         '-d', local_pgpass_dict['dbname'], '-U', local_pgpass_dict['user'], 
+                                         '--inserts', '-t', f'{schema}.{table}', '--no-publications',
+                                         '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
+                                         f'/data/vgdb_5432_{schema}_{table}.dump'],
+                                         env=my_env)
+                status = result.returncode
+            except:
+                return False
+            if status != 0:
+                return False
+            my_env["PGPASSFILE"] = '.ext_pgpass'
+            try:
+                result = subprocess.run(['docker', 'container', 'exec', '-e', f'PGPASSWORD={ext_pgpass_dict["password"]}', 'vgdb_tools-vgdb-db-1', 'psql', 
+                                         '-U', ext_pgpass_dict['user'], '-h', ext_pgpass_dict['host'],
+                                         '-p', ext_pgpass_dict['port'], '-d', ext_pgpass_dict['dbname'],
+                                         '-w', '-c', f'DELETE FROM {schema}.{table}'], 
+                                        env=my_env)
+                status = result.returncode
+                result = subprocess.run(['docker', 'container', 'exec', '-e', f'PGPASSWORD={ext_pgpass_dict["password"]}', 'vgdb_tools-vgdb-db-1', 'psql', 
+                                         '-U', ext_pgpass_dict['user'], '-h', ext_pgpass_dict['host'],
+                                         '-p', ext_pgpass_dict['port'], '-d', ext_pgpass_dict['dbname'],
+                                         '-w', '-f', f'/data/vgdb_5432_{schema}_{table}.dump'], 
+                                        env=my_env)
+                status = result.returncode
+                pass
+            except:
+                return False
+            if result.returncode != 0:
+                return False
+            
+    pass
+
+
 def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                   ssh_host='', ssh_user='', bot_info=('token', 'id'), folder='evergis', log=True):
 
@@ -288,6 +350,12 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                             '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
                                             f'data/vgdb_5432_{schema}_{table}.dump'],
                                            env=my_env)
+                            # result = subprocess.run(['docker', 'container', 'exec', 'vgdb_tools-vgdb-db-1', pg_dump, '-h', local_pgdsn_dict['host'], '-p', local_pgdsn_dict['port'],
+                            #                 '-d', local_pgdsn_dict['dbname'], '-U',
+                            #                 local_pgdsn_dict['user'], '--inserts', '-t', f'{schema}.{table}', '--no-publications',
+                            #                 '--quote-all-identifiers', '-v', '-w', '-F', 'p', '-f',
+                            #                 f'/data/vgdb_5432_{schema}_{table}.dump'],
+                            #                env=my_env)
                             status = result.returncode
                         except:
                             if log:
@@ -367,6 +435,12 @@ def synchro_table(schemas_tables, local_pgdsn_path, ext_pgdsn_path,
                                              '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
                                              '-w', '-f', f'data/vgdb_5432_{schema}_{table}.dump'],
                                             env=my_env)
+                                        # result = subprocess.run(
+                                        #     ['docker', 'container', 'exec', 'vgdb_tools-vgdb-db-1', psql, '-U', new_ext_pgdsn_dict['user'], '-h', new_ext_pgdsn_dict['host'],
+                                        #      '-p', new_ext_pgdsn_dict['port'], '-d', new_ext_pgdsn_dict['dbname'],
+                                        #      '-w', '-f', f'/data/vgdb_5432_{schema}_{table}.dump'],
+                                        #     env=my_env)
+                                        
                                         status = result.returncode
                                     except Exception as err:
                                         if log:

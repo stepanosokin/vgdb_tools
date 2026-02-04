@@ -29,6 +29,9 @@ services:
       start_period: 20s
     volumes:
       - ./local_postgres:/var/lib/postgresql
+      - ./data:/data
+      - ./local_pgpass:/app/vgdb_tools/.local_pgpass
+      - ./ext_pgpass:/app/vgdb_tools/.ext_pgpass
     ports:
       - "5432:5432"
 
