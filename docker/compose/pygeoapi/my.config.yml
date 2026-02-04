@@ -42,6 +42,9 @@ server:
     # cors: true
     pretty_print: true
     limit: 10
+    limits:
+        default: 10
+        max: 50
     # templates:
       # path: /path/to/Jinja2/templates
       # static: /path/to/static/folder # css/js/img

@@ -1965,7 +1965,7 @@ $BODY$;
 
 
 CREATE OR REPLACE FUNCTION torgi_gov_ru.lotcard_get_rn_guid(
-  _gid integer)
+	_gid integer)
     RETURNS text
     LANGUAGE 'plpgsql'
     COST 100
@@ -1982,10 +1982,11 @@ begin
     for rosnedra_row in
       select * from rosnedra.license_blocks_rosnedra_orders r 
       where
-      TRIM(BOTH FROM replace((string_to_array(lower(r.name::text), chr(10)))[1], 'участок'::text, ''::text)) = 
-      TRIM(BOTH FROM replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(lower(lotcard_row."miningSiteName_EA(N)"::text), 'участок недрор'::text, ''::text), 'участок недрссс'::text, ''::text), 'участок недр'::text, ''::text), 'участок ндр'::text, ''::text), 'участке недр.п'::text, ''::text), 'архангельское месторождение'::text, 'архангельский (месторождение архангельское)'::text), '(месторождения: падимейское)'::text, ''::text), 'в пермском крае'::text, ''::text), 'лободинское месторождение (часть)'::text, 'лободинский'::text), 'участок'::text, ''::text), 'месторождение'::text, ''::text), '(месторождения: Кодачское, подготовленные структуры: Восточно-Кодачская)"  "Республика Коми"'::text, ''::text), chr(10), ''::text), chr(34), ''::text)) 
+      TRIM(BOTH FROM replace((string_to_array(lower(r.name::text), chr(10)))[1], 'участок'::text, ''::text)) ~* 
+      -- TRIM(BOTH FROM replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(lower(lotcard_row."miningSiteName_EA(N)"::text), 'участок недрор'::text, ''::text), 'участок недрссс'::text, ''::text), 'участок недр'::text, ''::text), 'участок ндр'::text, ''::text), 'участке недр.п'::text, ''::text), 'архангельское месторождение'::text, 'архангельский (месторождение архангельское)'::text), '(месторождения: падимейское)'::text, ''::text), 'в пермском крае'::text, ''::text), 'лободинское месторождение (часть)'::text, 'лободинский'::text), 'участок'::text, ''::text), 'месторождение'::text, ''::text), '(месторождения: Кодачское, подготовленные структуры: Восточно-Кодачская)"  "Республика Коми"'::text, ''::text), chr(10), ''::text), chr(34), ''::text)) 
+	  TRIM(BOTH FROM replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(lower(lotcard_row."miningSiteName_EA(N)"::text), 'участок недрор'::text, ''::text), 'участок недрссс'::text, ''::text), 'участок недр'::text, ''::text), 'участок ндр'::text, ''::text), 'участке недр.п'::text, ''::text), 'архангельское месторождение'::text, 'архангельский (месторождение архангельское)'::text), '(месторождения: падимейское)'::text, ''::text), 'в пермском крае'::text, ''::text), 'лободинское месторождение (часть)'::text, 'лободинский'::text), 'участок'::text, ''::text), 'месторождение'::text, ''::text), '(месторождения: Кодачское, подготовленные структуры: Восточно-Кодачская)"  "Республика Коми"'::text, ''::text), chr(10), ''::text), chr(34), ''::text), 'нефтяное', ''), 'ое ', ''), 'ая ', ''), '_', ' '))
       AND 
-      ((string_to_array(lotcard_row."resourceLocation_EA(N)"::text, ', '::text))[1] = ANY (string_to_array(r.regions::text, ', '::text)))
+      ((string_to_array(lotcard_row."resourceLocation_EA(N)"::text, ', '::text))[1] ~* ANY (string_to_array(r.regions::text, ', '::text)))
     loop
       if rosnedra_row.rn_guid IS NOT NULL then
         _result := rosnedra_row.rn_guid;
@@ -1995,6 +1996,7 @@ begin
   return _result;
 end;
 $BODY$;
+
 
 
 
@@ -2036,7 +2038,86 @@ CREATE INDEX IF NOT EXISTS license_blocks_rfgf_geom_gist
             USING GIST (geom);
             ANALYZE rfgf.license_blocks_rfgf;
 
+CREATE INDEX IF NOT EXISTS license_blocks_rfgf_gos_reg_num_idx
+    ON rfgf.license_blocks_rfgf USING btree
+    (gos_reg_num)
+    WITH (deduplicate_items=True);
+
+CREATE INDEX IF NOT EXISTS license_blocks_rosnedra_orders_rn_guid_idx
+    ON rosnedra.license_blocks_rosnedra_orders USING btree
+    (rn_guid)
+    WITH (deduplicate_items=True);
+
 CREATE INDEX IF NOT EXISTS rosnedra_orders_geom_gist
             ON rosnedra.license_blocks_rosnedra_orders
             USING GIST (geom);
             ANALYZE rosnedra.license_blocks_rosnedra_orders;
+
+			select max(gid) from torgi_gov_ru.lotcards
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION log_author_on_insert() RETURNS trigger
+   LANGUAGE plpgsql AS
+$$BEGIN 
+   NEW.created_user := current_user;
+   NEW.date_created := current_date;
+   RETURN NEW; 
+END;$$;
+
+CREATE OR REPLACE FUNCTION log_author_on_update() RETURNS trigger
+   LANGUAGE plpgsql AS
+$$BEGIN 
+   NEW.last_edited_user := current_user;
+   NEW.date_edited := current_date;
+   RETURN NEW; 
+END;$$;
+
+
+ALTER TABLE IF EXISTS rosnedra.license_blocks_rosnedra_orders
+    ADD COLUMN IF NOT EXISTS created_user character varying;
+
+ALTER TABLE IF EXISTS rosnedra.license_blocks_rosnedra_orders
+    ADD COLUMN IF NOT EXISTS date_created date;
+	
+ALTER TABLE IF EXISTS rosnedra.license_blocks_rosnedra_orders
+    ADD COLUMN IF NOT EXISTS last_edited_user character varying;
+
+ALTER TABLE IF EXISTS rosnedra.license_blocks_rosnedra_orders
+    ADD COLUMN IF NOT EXISTS date_edited date;
+
+
+CREATE TRIGGER log_creator 
+   BEFORE INSERT ON rosnedra.license_blocks_rosnedra_orders FOR EACH ROW 
+   EXECUTE PROCEDURE log_author_on_insert();
+
+
+CREATE TRIGGER log_editor 
+   BEFORE UPDATE ON rosnedra.license_blocks_rosnedra_orders FOR EACH ROW 
+   EXECUTE PROCEDURE log_author_on_update();
+
+
+ALTER TABLE IF EXISTS torgi_gov_ru.lotcards
+    ADD COLUMN IF NOT EXISTS created_user character varying;
+
+ALTER TABLE IF EXISTS torgi_gov_ru.lotcards
+    ADD COLUMN IF NOT EXISTS date_created date;
+	
+ALTER TABLE IF EXISTS torgi_gov_ru.lotcards
+    ADD COLUMN IF NOT EXISTS last_edited_user character varying;
+
+ALTER TABLE IF EXISTS torgi_gov_ru.lotcards
+    ADD COLUMN IF NOT EXISTS date_edited date;
+
+
+CREATE TRIGGER log_creator 
+   BEFORE INSERT ON torgi_gov_ru.lotcards FOR EACH ROW 
+   EXECUTE PROCEDURE log_author_on_insert();
+
+
+CREATE TRIGGER log_editor 
+   BEFORE UPDATE ON torgi_gov_ru.lotcards FOR EACH ROW 
+   EXECUTE PROCEDURE log_author_on_update();

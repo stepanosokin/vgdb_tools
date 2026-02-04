@@ -35,7 +35,7 @@ refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info,
                  report_bot_info=log_bot_info, 
                  webhook=nr_ne_webhook_2025, 
                  mapbox_token=mb_token, 
-                 webhostssh='.regrussh')
+                 webhostssh='.vdsinassh')
 
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
 #                  report_bot_info=report_bot_info, 
@@ -48,6 +48,6 @@ refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info,
                  report_bot_info=log_bot_info, 
                  webhook=nr_ne_webhook_2025, 
                  mapbox_token=mb_token, 
-                 webhostssh='.regrussh')
+                 webhostssh='.vdsinassh')
 
 # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)

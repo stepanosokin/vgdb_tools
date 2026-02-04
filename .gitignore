@@ -94,3 +94,8 @@ local_postgres/
 .pggdal.synology
 .local_pgpas.synology
 rosnedra_auc/
+rosnedra_auc/rosnedra_result.gpkg
+rfgf_blocks/logfile.txt
+rosnedra_auc/logfile.txt
+rosnedra_auc/rosnedra_result.gpkg
+rosnedra_auc/logfile.txt
