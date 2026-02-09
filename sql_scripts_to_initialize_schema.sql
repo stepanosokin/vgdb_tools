@@ -568,7 +568,6 @@ CREATE OR REPLACE VIEW rosnedra.license_rosnedra_orders_view
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."oil"."D1"[1]'::jsonpath)::text) AS oil_d1_units,
     jsonb_path_query_first(o.resources_parsed::jsonb, '$."oil"."D2"[0]'::jsonpath)::numeric AS oil_d2,
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."oil"."D2"[1]'::jsonpath)::text) AS oil_d2_units,
-
     jsonb_path_query_first(o.resources_parsed::jsonb, '$."gas"."A"[0]'::jsonpath)::numeric AS gas_a,
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."gas"."A"[1]'::jsonpath)::text) AS gas_a_units,
     jsonb_path_query_first(o.resources_parsed::jsonb, '$."gas"."B1"[0]'::jsonpath)::numeric AS gas_b1,
@@ -603,13 +602,11 @@ CREATE OR REPLACE VIEW rosnedra.license_rosnedra_orders_view
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."cond"."Dл"[1]'::jsonpath)::text) AS cond_dl_units,
     jsonb_path_query_first(o.resources_parsed::jsonb, '$."cond"."D1"[0]'::jsonpath)::numeric AS cond_d1,
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."cond"."D1"[1]'::jsonpath)::text) AS cond_d1_units,
-
     jsonb_path_query_first(o.resources_parsed::jsonb, '$."cond"."D2"[0]'::jsonpath)::numeric AS cond_d2,
     TRIM(BOTH '"'::text FROM jsonb_path_query_first(o.resources_parsed::jsonb, '$."cond"."D2"[1]'::jsonpath)::text) AS cond_d2_units
    FROM rosnedra.license_blocks_rosnedra_orders o
      LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = o.rn_guid::text
-  WHERE date_part('year'::text, o.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(o.resource_type::text) ~~ '%нефть%'::text OR lower(o.resource_type::text) ~~ '%газ%'::text OR lower(o.resource_type::text) ~~ '%конденсат%'::text OR o.resource_type::text = '1'::text);
-
+  WHERE date_part('year'::text, o.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (o.resource_type::text ~* 'углеводород'::text OR lower(o.resource_type::text) ~~ '%нефть%'::text OR lower(o.resource_type::text) ~~ '%газ%'::text OR lower(o.resource_type::text) ~~ '%конденсат%'::text OR o.resource_type::text = '1'::text);
 
 
 CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_active_v
@@ -633,7 +630,7 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_active_v
                     ELSE NULL::date
                 END AS appl_deadline,
                 CASE
-                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
+                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) OR regexp_like(lc."resourceTypeUse_EA(N)"::text, '.*разведк.*добыч.*'::text, 'is'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
                     ELSE 'геологическое изучение недр'::text
                 END AS usage_type,
                 CASE
@@ -645,7 +642,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_active_v
                     ELSE NULL::numeric
                 END AS oil_ab1c1,
                 CASE
-
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
                 END AS oil_b2c2,
@@ -670,7 +666,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_active_v
                     ELSE NULL::numeric
                 END AS cond_ab1c1,
                 CASE
-
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
                 END AS cond_b2c2,
@@ -712,63 +707,62 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_active_v
            FROM rosnedra.license_blocks_rosnedra_orders rn
              LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
              LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
+          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lc."createDate" >= rn.order_date OR lc."createDate" IS NULL))
         )
- SELECT rn_active.gid,
-    rn_active.name,
-    rn_active.regions,
-    rn_active.area_km,
-    rn_active.fields,
-    rn_active.structures,
-    rn_active.resource_type,
-    rn_active.planned_time,
-    rn_active.organizer,
-    rn_active.appl_deadline,
-
-    rn_active.usage_type,
-    rn_active.lend_type,
-    rn_active.oil_ab1c1,
-    rn_active.oil_b2c2,
-    rn_active.oil_d0,
-    rn_active.oil_dl,
-    rn_active.oil_d1,
-    rn_active.oil_d2,
-    rn_active.gas_ab1c1,
-    rn_active.gas_b2c2,
-    rn_active.gas_d0,
-    rn_active.gas_dl,
-    rn_active.gas_d1,
-    rn_active.gas_d2,
-    rn_active.cond_ab1c1,
-    rn_active.cond_b2c2,
-    rn_active.cond_d0,
-    rn_active.cond_dl,
-    rn_active.cond_d1,
-    rn_active.cond_d2,
-    rn_active.order_url,
-    rn_active.order_name,
-    rn_active.order_date,
-    rn_active.days_to_deadline,
-    rn_active.has_lot,
-    rn_active.auction_lot_status,
-    rn_active.auction_price_min,
-    rn_active.auction_price_fin,
-    rn_active.lot_url,
-    rn_active.auct_publish_datetime,
-    rn_active.auct_appl_end_datetime,
-    rn_active.auct_start_datetime,
-    rn_active.auct_create_date,
-    rn_active.auct_appl_end_date,
-    rn_active.auct_start_date,
-    rn_active.days_from_auct,
-    rn_active.rfgf_gos_reg_num,
-    rn_active.rfgf_license_user,
-    rn_active.rfgf_date_register,
-    rn_active.rfgf_date_stop,
-    rn_active.rfgf_url,
-    rn_active.geom
+ SELECT gid,
+    name,
+    regions,
+    area_km,
+    fields,
+    structures,
+    resource_type,
+    planned_time,
+    organizer,
+    appl_deadline,
+    usage_type,
+    lend_type,
+    oil_ab1c1,
+    oil_b2c2,
+    oil_d0,
+    oil_dl,
+    oil_d1,
+    oil_d2,
+    gas_ab1c1,
+    gas_b2c2,
+    gas_d0,
+    gas_dl,
+    gas_d1,
+    gas_d2,
+    cond_ab1c1,
+    cond_b2c2,
+    cond_d0,
+    cond_dl,
+    cond_d1,
+    cond_d2,
+    order_url,
+    order_name,
+    order_date,
+    days_to_deadline,
+    has_lot,
+    auction_lot_status,
+    auction_price_min,
+    auction_price_fin,
+    lot_url,
+    auct_publish_datetime,
+    auct_appl_end_datetime,
+    auct_start_datetime,
+    auct_create_date,
+    auct_appl_end_date,
+    auct_start_date,
+    days_from_auct,
+    rfgf_gos_reg_num,
+    rfgf_license_user,
+    rfgf_date_register,
+    rfgf_date_stop,
+    rfgf_url,
+    geom
    FROM rn_active
-  WHERE rn_active.usage_type ~* '.*разведк.*добыч.*'::text AND rn_active.rfgf_gos_reg_num IS NULL AND rn_active.has_lot AND (rn_active.auction_lot_status::text = ANY (ARRAY['APPLICATIONS_SUBMISSION'::character varying::text, 'PUBLISHED'::character varying::text])) AND date_part('year'::text, rn_active.order_date) = date_part('year'::text, now()) OR rn_active.usage_type !~* '.*разведк.*добыч.*'::text AND rn_active.rfgf_gos_reg_num IS NULL AND date_part('year'::text, rn_active.order_date) = date_part('year'::text, now()) AND rn_active.appl_deadline IS NOT NULL AND rn_active.days_to_deadline > 0;
+  WHERE usage_type ~* '.*разведк.*добыч.*'::text AND rfgf_gos_reg_num IS NULL AND has_lot AND (auction_lot_status::text = ANY (ARRAY['APPLICATIONS_SUBMISSION'::character varying::text, 'PUBLISHED'::character varying::text])) AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) OR usage_type !~* '.*разведк.*добыч.*'::text AND rfgf_gos_reg_num IS NULL AND date_part('year'::text, order_date) = date_part('year'::text, now()) AND appl_deadline IS NOT NULL AND days_to_deadline > 0;
 
 
 CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_all_v
@@ -804,7 +798,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_all_v
     jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D1"[0]'::jsonpath)::numeric AS oil_d1,
     jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D2"[0]'::jsonpath)::numeric AS oil_d2,
         CASE
-
             WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."A"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."B1"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."C1"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."A"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."B1"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."C1"[0]'::jsonpath)::numeric, 0::numeric)
             ELSE NULL::numeric
         END AS gas_ab1c1,
@@ -843,7 +836,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_all_v
         END AS auction_price_min,
         CASE
             WHEN lc."priceFin" IS NULL THEN ''::text
-
             ELSE concat(TRIM(BOTH FROM to_char(lc."priceFin", '999 999 999 999D99'::text)), ' ', chr(8381))
         END AS auction_price_fin,
     ('https://torgi.gov.ru/new/public/lots/lot/'::text || lc.id::text) || '/(lotInfo:info)?fromRec=false'::text AS lot_url,
@@ -863,7 +855,7 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_all_v
    FROM rosnedra.license_blocks_rosnedra_orders rn
      LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
      LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-  WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date);
+  WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date);
 
 
 CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_compl_v
@@ -886,7 +878,10 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_compl_v
                     WHEN lc."biddEndTime"::date IS NOT NULL THEN lc."biddEndTime"::date
                     ELSE NULL::date
                 END AS appl_deadline,
-            regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text) AS usage_type,
+                CASE
+                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) OR regexp_like(lc."resourceTypeUse_EA(N)"::text, '.*разведк.*добыч.*'::text, 'is'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
+                    ELSE 'геологическое изучение недр'::text
+                END AS usage_type,
                 CASE
                     WHEN rn.lend_type::text = ANY (ARRAY['1'::character varying::text, '2'::character varying::text, '3'::character varying::text, '4'::character varying::text, '5'::character varying::text, '6'::character varying::text, 'nan'::character varying::text]) THEN NULL::character varying
                     ELSE rn.lend_type
@@ -898,7 +893,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_compl_v
                 CASE
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
-
                 END AS oil_b2c2,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D0"[0]'::jsonpath)::numeric AS oil_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."Dл"[0]'::jsonpath)::numeric AS oil_dl,
@@ -927,7 +921,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_compl_v
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D0"[0]'::jsonpath)::numeric AS cond_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."Dл"[0]'::jsonpath)::numeric AS cond_dl,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D1"[0]'::jsonpath)::numeric AS cond_d1,
-
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D2"[0]'::jsonpath)::numeric AS cond_d2,
             rn.source_url AS order_url,
             rn.source_name AS order_name,
@@ -963,64 +956,63 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_compl_v
            FROM rosnedra.license_blocks_rosnedra_orders rn
              LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
              LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
+          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
         )
- SELECT rn_orders.gid,
-    rn_orders.name,
-    rn_orders.regions,
-    rn_orders.area_km,
-    rn_orders.fields,
-    rn_orders.structures,
-    rn_orders.resource_type,
-    rn_orders.planned_time,
-    rn_orders.organizer,
-    rn_orders.appl_deadline,
-    rn_orders.usage_type,
-    rn_orders.lend_type,
-    rn_orders.oil_ab1c1,
-    rn_orders.oil_b2c2,
-    rn_orders.oil_d0,
-    rn_orders.oil_dl,
-    rn_orders.oil_d1,
-    rn_orders.oil_d2,
-    rn_orders.gas_ab1c1,
-    rn_orders.gas_b2c2,
-    rn_orders.gas_d0,
-    rn_orders.gas_dl,
-    rn_orders.gas_d1,
-    rn_orders.gas_d2,
-    rn_orders.cond_ab1c1,
-    rn_orders.cond_b2c2,
-    rn_orders.cond_d0,
-    rn_orders.cond_dl,
-    rn_orders.cond_d1,
-    rn_orders.cond_d2,
-    rn_orders.order_url,
-    rn_orders.order_name,
-    rn_orders.order_date,
-    rn_orders.days_to_deadline,
-    rn_orders.has_lot,
-    rn_orders.auction_lot_status,
-    rn_orders.auction_price_min,
-    rn_orders.auction_price_fin,
-    rn_orders.lot_url,
-    rn_orders.auct_publish_datetime,
-    rn_orders.auct_appl_end_datetime,
-    rn_orders.auct_start_datetime,
-    rn_orders.auct_create_date,
-    rn_orders.auct_appl_end_date,
-
-    rn_orders.auct_start_date,
-    rn_orders.days_from_auct,
-    rn_orders.rfgf_gos_reg_num,
-    rn_orders.rfgf_license_user,
-    rn_orders.rfgf_date_register,
-    rn_orders.rfgf_date_stop,
-    rn_orders.rfgf_url,
-    rn_orders.geom
+ SELECT gid,
+    name,
+    regions,
+    area_km,
+    fields,
+    structures,
+    resource_type,
+    planned_time,
+    organizer,
+    appl_deadline,
+    usage_type,
+    lend_type,
+    oil_ab1c1,
+    oil_b2c2,
+    oil_d0,
+    oil_dl,
+    oil_d1,
+    oil_d2,
+    gas_ab1c1,
+    gas_b2c2,
+    gas_d0,
+    gas_dl,
+    gas_d1,
+    gas_d2,
+    cond_ab1c1,
+    cond_b2c2,
+    cond_d0,
+    cond_dl,
+    cond_d1,
+    cond_d2,
+    order_url,
+    order_name,
+    order_date,
+    days_to_deadline,
+    has_lot,
+    auction_lot_status,
+    auction_price_min,
+    auction_price_fin,
+    lot_url,
+    auct_publish_datetime,
+    auct_appl_end_datetime,
+    auct_start_datetime,
+    auct_create_date,
+    auct_appl_end_date,
+    auct_start_date,
+    days_from_auct,
+    rfgf_gos_reg_num,
+    rfgf_license_user,
+    rfgf_date_register,
+    rfgf_date_stop,
+    rfgf_url,
+    geom
    FROM rn_orders
-  WHERE rn_orders.usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rn_orders.has_lot AND ((rn_orders.auction_lot_status::text = ANY (ARRAY['SUCCEED'::character varying::text])) AND rn_orders.days_from_auct < 60 OR rn_orders.rfgf_gos_reg_num IS NOT NULL) OR rn_orders.usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rn_orders.rfgf_gos_reg_num IS NOT NULL;
-
+  WHERE usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) AND has_lot AND ((auction_lot_status::text = ANY (ARRAY['SUCCEED'::character varying::text])) AND days_from_auct < 60 OR rfgf_gos_reg_num IS NOT NULL) OR usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rfgf_gos_reg_num IS NOT NULL;
+  
 
 
 CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_determ_v
@@ -1043,7 +1035,10 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_determ_v
                     WHEN lc."biddEndTime"::date IS NOT NULL THEN lc."biddEndTime"::date
                     ELSE NULL::date
                 END AS appl_deadline,
-            regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text) AS usage_type,
+                CASE
+                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) OR regexp_like(lc."resourceTypeUse_EA(N)"::text, '.*разведк.*добыч.*'::text, 'is'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
+                    ELSE 'геологическое изучение недр'::text
+                END AS usage_type,
                 CASE
                     WHEN rn.lend_type::text = ANY (ARRAY['1'::character varying::text, '2'::character varying::text, '3'::character varying::text, '4'::character varying::text, '5'::character varying::text, '6'::character varying::text, 'nan'::character varying::text]) THEN NULL::character varying
                     ELSE rn.lend_type
@@ -1055,7 +1050,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_determ_v
                 CASE
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
-
                 END AS oil_b2c2,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D0"[0]'::jsonpath)::numeric AS oil_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."Dл"[0]'::jsonpath)::numeric AS oil_dl,
@@ -1084,7 +1078,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_determ_v
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D0"[0]'::jsonpath)::numeric AS cond_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."Dл"[0]'::jsonpath)::numeric AS cond_dl,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D1"[0]'::jsonpath)::numeric AS cond_d1,
-
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D2"[0]'::jsonpath)::numeric AS cond_d2,
             rn.source_url AS order_url,
             rn.source_name AS order_name,
@@ -1120,64 +1113,63 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_determ_v
            FROM rosnedra.license_blocks_rosnedra_orders rn
              LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
              LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
+          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
         )
- SELECT rn_orders.gid,
-    rn_orders.name,
-    rn_orders.regions,
-    rn_orders.area_km,
-    rn_orders.fields,
-    rn_orders.structures,
-    rn_orders.resource_type,
-    rn_orders.planned_time,
-    rn_orders.organizer,
-    rn_orders.appl_deadline,
-    rn_orders.usage_type,
-    rn_orders.lend_type,
-    rn_orders.oil_ab1c1,
-    rn_orders.oil_b2c2,
-    rn_orders.oil_d0,
-    rn_orders.oil_dl,
-    rn_orders.oil_d1,
-    rn_orders.oil_d2,
-    rn_orders.gas_ab1c1,
-    rn_orders.gas_b2c2,
-    rn_orders.gas_d0,
-    rn_orders.gas_dl,
-    rn_orders.gas_d1,
-    rn_orders.gas_d2,
-    rn_orders.cond_ab1c1,
-    rn_orders.cond_b2c2,
-    rn_orders.cond_d0,
-    rn_orders.cond_dl,
-    rn_orders.cond_d1,
-    rn_orders.cond_d2,
-    rn_orders.order_url,
-    rn_orders.order_name,
-    rn_orders.order_date,
-    rn_orders.days_to_deadline,
-    rn_orders.has_lot,
-    rn_orders.auction_lot_status,
-    rn_orders.auction_price_min,
-    rn_orders.auction_price_fin,
-    rn_orders.lot_url,
-    rn_orders.auct_publish_datetime,
-    rn_orders.auct_appl_end_datetime,
-    rn_orders.auct_start_datetime,
-    rn_orders.auct_create_date,
-    rn_orders.auct_appl_end_date,
-
-    rn_orders.auct_start_date,
-    rn_orders.days_from_auct,
-    rn_orders.rfgf_gos_reg_num,
-    rn_orders.rfgf_license_user,
-    rn_orders.rfgf_date_register,
-    rn_orders.rfgf_date_stop,
-    rn_orders.rfgf_url,
-    rn_orders.geom
+ SELECT gid,
+    name,
+    regions,
+    area_km,
+    fields,
+    structures,
+    resource_type,
+    planned_time,
+    organizer,
+    appl_deadline,
+    usage_type,
+    lend_type,
+    oil_ab1c1,
+    oil_b2c2,
+    oil_d0,
+    oil_dl,
+    oil_d1,
+    oil_d2,
+    gas_ab1c1,
+    gas_b2c2,
+    gas_d0,
+    gas_dl,
+    gas_d1,
+    gas_d2,
+    cond_ab1c1,
+    cond_b2c2,
+    cond_d0,
+    cond_dl,
+    cond_d1,
+    cond_d2,
+    order_url,
+    order_name,
+    order_date,
+    days_to_deadline,
+    has_lot,
+    auction_lot_status,
+    auction_price_min,
+    auction_price_fin,
+    lot_url,
+    auct_publish_datetime,
+    auct_appl_end_datetime,
+    auct_start_datetime,
+    auct_create_date,
+    auct_appl_end_date,
+    auct_start_date,
+    days_from_auct,
+    rfgf_gos_reg_num,
+    rfgf_license_user,
+    rfgf_date_register,
+    rfgf_date_stop,
+    rfgf_url,
+    geom
    FROM rn_orders
-  WHERE rn_orders.usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= date_part('year'::text, now()) AND rn_orders.has_lot AND ((rn_orders.auction_lot_status::text = ANY (ARRAY['DETERMINING_WINNER'::character varying::text])) OR (rn_orders.auction_lot_status::text = ANY (ARRAY['FAILED'::character varying::text])) AND rn_orders.days_from_auct < 60) OR rn_orders.usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rn_orders.rfgf_gos_reg_num IS NULL AND rn_orders.days_to_deadline > '-90'::integer AND rn_orders.days_to_deadline <= 0;
-
+  WHERE usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= date_part('year'::text, now()) AND has_lot AND ((auction_lot_status::text = ANY (ARRAY['DETERMINING_WINNER'::character varying::text])) OR (auction_lot_status::text = ANY (ARRAY['FAILED'::character varying::text])) AND days_from_auct < 60) OR usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rfgf_gos_reg_num IS NULL AND days_to_deadline > '-90'::integer AND days_to_deadline <= 0;
+  
 
 
 
@@ -1201,7 +1193,10 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_potent_v
                     WHEN lc."biddEndTime"::date IS NOT NULL THEN lc."biddEndTime"::date
                     ELSE NULL::date
                 END AS appl_deadline,
-            regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text) AS usage_type,
+                CASE
+                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) OR regexp_like(lc."resourceTypeUse_EA(N)"::text, '.*разведк.*добыч.*'::text, 'is'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
+                    ELSE 'геологическое изучение недр'::text
+                END AS usage_type,
                 CASE
                     WHEN rn.lend_type::text = ANY (ARRAY['1'::character varying::text, '2'::character varying::text, '3'::character varying::text, '4'::character varying::text, '5'::character varying::text, '6'::character varying::text, 'nan'::character varying::text]) THEN NULL::character varying
                     ELSE rn.lend_type
@@ -1213,7 +1208,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_potent_v
                 CASE
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
-
                 END AS oil_b2c2,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D0"[0]'::jsonpath)::numeric AS oil_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."Dл"[0]'::jsonpath)::numeric AS oil_dl,
@@ -1242,7 +1236,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_potent_v
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D0"[0]'::jsonpath)::numeric AS cond_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."Dл"[0]'::jsonpath)::numeric AS cond_dl,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D1"[0]'::jsonpath)::numeric AS cond_d1,
-
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D2"[0]'::jsonpath)::numeric AS cond_d2,
             rn.source_url AS order_url,
             rn.source_name AS order_name,
@@ -1278,64 +1271,62 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hcs_potent_v
            FROM rosnedra.license_blocks_rosnedra_orders rn
              LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
              LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
+          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
         )
- SELECT rn_orders.gid,
-    rn_orders.name,
-    rn_orders.regions,
-    rn_orders.area_km,
-    rn_orders.fields,
-    rn_orders.structures,
-    rn_orders.resource_type,
-    rn_orders.planned_time,
-    rn_orders.organizer,
-    rn_orders.appl_deadline,
-    rn_orders.usage_type,
-    rn_orders.lend_type,
-    rn_orders.oil_ab1c1,
-    rn_orders.oil_b2c2,
-    rn_orders.oil_d0,
-    rn_orders.oil_dl,
-    rn_orders.oil_d1,
-    rn_orders.oil_d2,
-    rn_orders.gas_ab1c1,
-    rn_orders.gas_b2c2,
-    rn_orders.gas_d0,
-    rn_orders.gas_dl,
-    rn_orders.gas_d1,
-    rn_orders.gas_d2,
-    rn_orders.cond_ab1c1,
-    rn_orders.cond_b2c2,
-    rn_orders.cond_d0,
-    rn_orders.cond_dl,
-    rn_orders.cond_d1,
-    rn_orders.cond_d2,
-    rn_orders.order_url,
-    rn_orders.order_name,
-    rn_orders.order_date,
-    rn_orders.days_to_deadline,
-    rn_orders.has_lot,
-    rn_orders.auction_lot_status,
-    rn_orders.auction_price_min,
-    rn_orders.auction_price_fin,
-    rn_orders.lot_url,
-    rn_orders.auct_publish_datetime,
-    rn_orders.auct_appl_end_datetime,
-    rn_orders.auct_start_datetime,
-    rn_orders.auct_create_date,
-    rn_orders.auct_appl_end_date,
-
-    rn_orders.auct_start_date,
-    rn_orders.days_from_auct,
-    rn_orders.rfgf_gos_reg_num,
-    rn_orders.rfgf_license_user,
-    rn_orders.rfgf_date_register,
-    rn_orders.rfgf_date_stop,
-    rn_orders.rfgf_url,
-    rn_orders.geom
+ SELECT gid,
+    name,
+    regions,
+    area_km,
+    fields,
+    structures,
+    resource_type,
+    planned_time,
+    organizer,
+    appl_deadline,
+    usage_type,
+    lend_type,
+    oil_ab1c1,
+    oil_b2c2,
+    oil_d0,
+    oil_dl,
+    oil_d1,
+    oil_d2,
+    gas_ab1c1,
+    gas_b2c2,
+    gas_d0,
+    gas_dl,
+    gas_d1,
+    gas_d2,
+    cond_ab1c1,
+    cond_b2c2,
+    cond_d0,
+    cond_dl,
+    cond_d1,
+    cond_d2,
+    order_url,
+    order_name,
+    order_date,
+    days_to_deadline,
+    has_lot,
+    auction_lot_status,
+    auction_price_min,
+    auction_price_fin,
+    lot_url,
+    auct_publish_datetime,
+    auct_appl_end_datetime,
+    auct_start_datetime,
+    auct_create_date,
+    auct_appl_end_date,
+    auct_start_date,
+    days_from_auct,
+    rfgf_gos_reg_num,
+    rfgf_license_user,
+    rfgf_date_register,
+    rfgf_date_stop,
+    rfgf_url,
+    geom
    FROM rn_orders
-  WHERE rn_orders.usage_type ~* '.*разведк.*добыч.*'::text AND rn_orders.rfgf_gos_reg_num IS NULL AND NOT rn_orders.has_lot AND date_part('year'::text, rn_orders.order_date) = date_part('year'::text, now());
-
+  WHERE usage_type ~* '.*разведк.*добыч.*'::text AND rfgf_gos_reg_num IS NULL AND NOT has_lot AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision);
 
 
 CREATE OR REPLACE VIEW rosnedra.rn_orders_hsc_fail_v
@@ -1358,7 +1349,10 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hsc_fail_v
                     WHEN lc."biddEndTime"::date IS NOT NULL THEN lc."biddEndTime"::date
                     ELSE NULL::date
                 END AS appl_deadline,
-            regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text) AS usage_type,
+                CASE
+                    WHEN regexp_like(lower(regexp_replace(rn.usage_type::text, '[\r\n]'::text, ' '::text, 'g'::text)), '.*разведк.*добыч.*'::text, 'i'::text) OR regexp_like(lc."resourceTypeUse_EA(N)"::text, '.*разведк.*добыч.*'::text, 'is'::text) THEN 'геологическое изучение недр, разведка и добыча полезных ископаемых'::text
+                    ELSE 'геологическое изучение недр'::text
+                END AS usage_type,
                 CASE
                     WHEN rn.lend_type::text = ANY (ARRAY['1'::character varying::text, '2'::character varying::text, '3'::character varying::text, '4'::character varying::text, '5'::character varying::text, '6'::character varying::text, 'nan'::character varying::text]) THEN NULL::character varying
                     ELSE rn.lend_type
@@ -1370,7 +1364,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hsc_fail_v
                 CASE
                     WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."B2"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."C2"[0]'::jsonpath)::numeric, 0::numeric)
                     ELSE NULL::numeric
-
                 END AS oil_b2c2,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D0"[0]'::jsonpath)::numeric AS oil_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."Dл"[0]'::jsonpath)::numeric AS oil_dl,
@@ -1399,7 +1392,6 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hsc_fail_v
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D0"[0]'::jsonpath)::numeric AS cond_d0,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."Dл"[0]'::jsonpath)::numeric AS cond_dl,
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D1"[0]'::jsonpath)::numeric AS cond_d1,
-
             jsonb_path_query_first(rn.resources_parsed::jsonb, '$."cond"."D2"[0]'::jsonpath)::numeric AS cond_d2,
             rn.source_url AS order_url,
             rn.source_name AS order_name,
@@ -1435,64 +1427,62 @@ CREATE OR REPLACE VIEW rosnedra.rn_orders_hsc_fail_v
            FROM rosnedra.license_blocks_rosnedra_orders rn
              LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
              LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
+          WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date)
         )
- SELECT rn_orders.gid,
-    rn_orders.name,
-    rn_orders.regions,
-    rn_orders.area_km,
-    rn_orders.fields,
-    rn_orders.structures,
-    rn_orders.resource_type,
-    rn_orders.planned_time,
-    rn_orders.organizer,
-    rn_orders.appl_deadline,
-    rn_orders.usage_type,
-    rn_orders.lend_type,
-    rn_orders.oil_ab1c1,
-    rn_orders.oil_b2c2,
-    rn_orders.oil_d0,
-    rn_orders.oil_dl,
-    rn_orders.oil_d1,
-    rn_orders.oil_d2,
-    rn_orders.gas_ab1c1,
-    rn_orders.gas_b2c2,
-    rn_orders.gas_d0,
-    rn_orders.gas_dl,
-    rn_orders.gas_d1,
-    rn_orders.gas_d2,
-    rn_orders.cond_ab1c1,
-    rn_orders.cond_b2c2,
-    rn_orders.cond_d0,
-    rn_orders.cond_dl,
-    rn_orders.cond_d1,
-    rn_orders.cond_d2,
-    rn_orders.order_url,
-    rn_orders.order_name,
-    rn_orders.order_date,
-    rn_orders.days_to_deadline,
-    rn_orders.has_lot,
-    rn_orders.auction_lot_status,
-    rn_orders.auction_price_min,
-    rn_orders.auction_price_fin,
-    rn_orders.lot_url,
-    rn_orders.auct_publish_datetime,
-    rn_orders.auct_appl_end_datetime,
-    rn_orders.auct_start_datetime,
-    rn_orders.auct_create_date,
-    rn_orders.auct_appl_end_date,
-
-    rn_orders.auct_start_date,
-    rn_orders.days_from_auct,
-    rn_orders.rfgf_gos_reg_num,
-    rn_orders.rfgf_license_user,
-    rn_orders.rfgf_date_register,
-    rn_orders.rfgf_date_stop,
-    rn_orders.rfgf_url,
-    rn_orders.geom
+ SELECT gid,
+    name,
+    regions,
+    area_km,
+    fields,
+    structures,
+    resource_type,
+    planned_time,
+    organizer,
+    appl_deadline,
+    usage_type,
+    lend_type,
+    oil_ab1c1,
+    oil_b2c2,
+    oil_d0,
+    oil_dl,
+    oil_d1,
+    oil_d2,
+    gas_ab1c1,
+    gas_b2c2,
+    gas_d0,
+    gas_dl,
+    gas_d1,
+    gas_d2,
+    cond_ab1c1,
+    cond_b2c2,
+    cond_d0,
+    cond_dl,
+    cond_d1,
+    cond_d2,
+    order_url,
+    order_name,
+    order_date,
+    days_to_deadline,
+    has_lot,
+    auction_lot_status,
+    auction_price_min,
+    auction_price_fin,
+    lot_url,
+    auct_publish_datetime,
+    auct_appl_end_datetime,
+    auct_start_datetime,
+    auct_create_date,
+    auct_appl_end_date,
+    auct_start_date,
+    days_from_auct,
+    rfgf_gos_reg_num,
+    rfgf_license_user,
+    rfgf_date_register,
+    rfgf_date_stop,
+    rfgf_url,
+    geom
    FROM rn_orders
-  WHERE rn_orders.usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rn_orders.has_lot AND (rn_orders.auction_lot_status::text = 'CANCELLED'::text OR rn_orders.auction_lot_status::text = 'FAILED'::text AND rn_orders.rfgf_gos_reg_num IS NULL AND rn_orders.days_from_auct >= 60 OR rn_orders.auction_lot_status::text = 'SUCCEED'::text AND rn_orders.days_from_auct >= 60 AND rn_orders.rfgf_gos_reg_num IS NULL) OR rn_orders.usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, rn_orders.order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rn_orders.rfgf_gos_reg_num IS NULL AND (rn_orders.days_to_deadline <= '-90'::integer OR rn_orders.appl_deadline IS NULL);
-
+  WHERE usage_type ~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) AND has_lot AND (auction_lot_status::text = 'CANCELLED'::text OR auction_lot_status::text = 'FAILED'::text AND rfgf_gos_reg_num IS NULL AND days_from_auct >= 60 OR auction_lot_status::text = 'SUCCEED'::text AND days_from_auct >= 60 AND rfgf_gos_reg_num IS NULL) OR usage_type !~* '.*разведк.*добыч.*'::text AND date_part('year'::text, order_date) >= (date_part('year'::text, now()) - 1::double precision) AND rfgf_gos_reg_num IS NULL AND (days_to_deadline <= '-90'::integer OR appl_deadline IS NULL);
 
 
 
@@ -1864,7 +1854,6 @@ CREATE OR REPLACE VIEW rosnedra.rosnedra_orders_short
     jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D1"[0]'::jsonpath)::numeric AS oil_d1,
     jsonb_path_query_first(rn.resources_parsed::jsonb, '$."oil"."D2"[0]'::jsonpath)::numeric AS oil_d2,
         CASE
-
             WHEN (COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."A"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."B1"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."C1"[0]'::jsonpath)::numeric, 0::numeric)) > 0::numeric THEN COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."A"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."B1"[0]'::jsonpath)::numeric, 0::numeric) + COALESCE(jsonb_path_query_first(rn.resources_parsed::jsonb, '$."gas"."C1"[0]'::jsonpath)::numeric, 0::numeric)
             ELSE NULL::numeric
         END AS gas_ab1c1,
@@ -1903,7 +1892,6 @@ CREATE OR REPLACE VIEW rosnedra.rosnedra_orders_short
         END AS auction_price_min,
         CASE
             WHEN lc."priceFin" IS NULL THEN ''::text
-
             ELSE concat(TRIM(BOTH FROM to_char(lc."priceFin", '999 999 999 999D99'::text)), ' ', chr(8381))
         END AS auction_price_fin,
     ('https://torgi.gov.ru/new/public/lots/lot/'::text || lc.id::text) || '/(lotInfo:info)?fromRec=false'::text AS lot_url,
@@ -1923,8 +1911,7 @@ CREATE OR REPLACE VIEW rosnedra.rosnedra_orders_short
    FROM rosnedra.license_blocks_rosnedra_orders rn
      LEFT JOIN torgi_gov_ru.lotcards lc ON lc.rn_guid::text = rn.rn_guid::text
      LEFT JOIN rfgf.license_blocks_rfgf rfgf ON rfgf.gos_reg_num::text = rn.rfgf_gos_reg_num::text
-  WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date);
-
+  WHERE date_part('year'::text, rn.order_date) >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND (rn.resource_type::text ~* 'углеводород'::text OR lower(rn.resource_type::text) ~~ '%нефть%'::text OR lower(rn.resource_type::text) ~~ '%газ%'::text OR lower(rn.resource_type::text) ~~ '%конденсат%'::text OR rn.resource_type::text = '1'::text) AND (lc."createDate" IS NULL OR date_part('year'::text, lc."createDate") >= (date_part('year'::text, CURRENT_DATE) - 1::double precision) AND lc."createDate" >= rn.order_date);
 
 
 
