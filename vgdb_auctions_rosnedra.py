@@ -1609,7 +1609,10 @@ def update_rfgf_gos_reg_num(pgcs, folder='rosnedra_auc', bot_info=None, report_b
                         if message and report_bot_info:
                             logf.write(f"{datetime.now().strftime(logdateformat)} {message}\n")
                             send_to_telegram(s, logf, bot_info=report_bot_info, message=message, logdateformat=logdateformat)
-            pgconn.commit()
+                pgconn.commit()
+                sql = "update rosnedra.license_blocks_rosnedra_orders set rfgf_gos_reg_num = rosnedra.get_rfgf_gos_reg_num(rn_guid) where rfgf_gos_reg_num is null;"
+                cur.execute(sql)
+                pgconn.commit()
             pgconn.close()
         return result
 

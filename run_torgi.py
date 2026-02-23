@@ -51,6 +51,6 @@ refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info,
                  webhostssh='.vdsinassh')
 
 # synchro_table([('torgi_gov_ru', ['lotcards'])], '.pgdsn', '.ext_pgdsn', ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=log_bot_info)
-synchro_table_by_vpn([('torgi_gov_ru', ['lotcards'])], '.local_pgpass', '.ext_pgpass', bot_info=log_bot_info)
+# synchro_table_by_vpn([('torgi_gov_ru', ['lotcards'])], '.local_pgpass', '.ext_pgpass', bot_info=log_bot_info)
 
 
