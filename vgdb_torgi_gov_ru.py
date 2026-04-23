@@ -285,20 +285,21 @@ def check_lotcard(pgconn, lotcard, table='torgi_gov_ru.lotcards', log_bot_info=(
                                 if field == 'priceMin' and val != dbval:
                                     pass
                             pass
-                        if field != 'lot_data':
-                            if val != dbval:
-                                # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
-                                changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
-                        else:
-                            # if sorted([(k, v) for k, v in val.items()]) != sorted([(k, v) for k, v in dbval.items()]):
-                            #     changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
-                            
-                            if any([
-                                sorted([x.get('fileId') for x in val.get('lotAttachments', [])]) != sorted([y.get('fileId') for y in dbval.get('lotAttachments', [])]), 
-                                sorted([z.get('fileId') for z in val.get('noticeAttachments', [])]) != sorted([t.get('fileId') for t in dbval.get('noticeAttachments', [])]), 
-                                sorted([w.get('protocolNumber') for w in val.get('protocols', [])]) != sorted([u.get('protocolNumber') for u in dbval.get('protocols', [])])
-                                    ]):
-                                changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                        if dbval:
+                            if field != 'lot_data':
+                                if val != dbval:
+                                    # changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": result[0][field], "new": val})
+                                    changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                            else:
+                                # if sorted([(k, v) for k, v in val.items()]) != sorted([(k, v) for k, v in dbval.items()]):
+                                #     changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
+                                
+                                if any([
+                                    sorted([x.get('fileId') for x in val.get('lotAttachments', [])]) != sorted([y.get('fileId') for y in dbval.get('lotAttachments', [])]), 
+                                    sorted([z.get('fileId') for z in val.get('noticeAttachments', [])]) != sorted([t.get('fileId') for t in dbval.get('noticeAttachments', [])]), 
+                                    sorted([w.get('protocolNumber') for w in val.get('protocols', [])]) != sorted([u.get('protocolNumber') for u in dbval.get('protocols', [])])
+                                        ]):
+                                    changes.append({"id": result[0]['id'], "lotName": lotcard_dict['lotName'][1:-1], "field": field, "old": dbval, "new": val})
                                 
                                 
                             

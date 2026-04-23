@@ -8,6 +8,7 @@ import json
 
 # read the postgres login credentials in dsn format from file
 with open('.pgdsn', encoding='utf-8') as dsnf:
+# with open('mapstore.pgdsn', encoding='utf-8') as dsnf:
     dsn = dsnf.read().replace('\n', '')
 
 # This is telegram credentials to send message to the 'VG Database Techinfo' group

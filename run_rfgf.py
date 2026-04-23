@@ -15,6 +15,7 @@ with open('bot_info_vgdb_bot_toStepan.json', 'r', encoding='utf-8') as f:
 
 # read the postgres login credentials for gdal from file
 with open('.pggdal', encoding='utf-8') as gdalf:
+# with open('mapstore.pggdal', encoding='utf-8') as gdalf:
     gdalpgcs = gdalf.read().replace('\n', '')
 
 with open('license_blocks_general.webhook', 'r', encoding='utf-8') as f:
@@ -24,6 +25,7 @@ with open('.ext_pgdsn', encoding='utf-8') as f:
     ext_pgdsn = f.read()
 
 with open('.pgdsn', encoding='utf-8') as f:
+# with open('mapstore.pgdsn', encoding='utf-8') as f:
     local_pgdsn = f.read()
 
 with open('.egssh', 'r', encoding='utf-8') as f:

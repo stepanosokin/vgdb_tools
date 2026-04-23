@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS torgi_gov_ru.lotcards
     rn_guid character varying COLLATE pg_catalog."default",
     rfgf_gos_reg_num character varying COLLATE pg_catalog."default",
     "auctionStartDate" timestamp without time zone
-)
+);
 
 
 CREATE SCHEMA IF NOT EXISTS rosnedra AUTHORIZATION vgdb;
@@ -2039,8 +2039,6 @@ CREATE INDEX IF NOT EXISTS rosnedra_orders_geom_gist
             ON rosnedra.license_blocks_rosnedra_orders
             USING GIST (geom);
             ANALYZE rosnedra.license_blocks_rosnedra_orders;
-
-			select max(gid) from torgi_gov_ru.lotcards
 
 
 

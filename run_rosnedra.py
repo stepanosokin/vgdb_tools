@@ -5,6 +5,7 @@ from synchro_evergis import *
 
 # read the postgres login credentials in dsn format from file
 with open('.pgdsn', encoding='utf-8') as dsnf:
+# with open('mapstore.pgdsn', encoding='utf-8') as dsnf:
     dsn = dsnf.read().replace('\n', '')
 
 with open('.ext_pgdsn', encoding='utf-8') as edsnf:
@@ -12,6 +13,7 @@ with open('.ext_pgdsn', encoding='utf-8') as edsnf:
 
 # read the postgres login credentials for gdal from file
 with open('.pggdal', encoding='utf-8') as gdalf:
+# with open('mapstore.pggdal', encoding='utf-8') as gdalf:
     gdalpgcs = gdalf.read().replace('\n', '')
 
 # # This is telegram credentials to send message to stepanosokin
