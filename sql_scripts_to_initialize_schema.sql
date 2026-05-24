@@ -182,6 +182,20 @@ CREATE TABLE IF NOT EXISTS rosnedra.license_blocks_rosnedra_orders
 );
 
 
+CREATE TABLE IF NOT EXISTS rosnedra.blocks_hcs_forecast
+(
+    gid SERIAL PRIMARY KEY,
+    year integer,
+    datestamp date,
+    region text,
+    block_name text,
+    source text,
+    url text,
+    resources_raw text,
+    resources_parsed json
+);
+
+
 CREATE OR REPLACE VIEW torgi_gov_ru.lotcards_spatial_all
  AS
  SELECT row_number() OVER (ORDER BY lc.gid) AS gid,
