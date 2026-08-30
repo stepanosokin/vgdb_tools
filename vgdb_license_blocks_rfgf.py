@@ -329,7 +329,7 @@ def fix_selected_geometry(pgcs='.pgdsn'):
     cursor.execute(sql)
     pgconn.commit()
     sql = f"update rfgf.license_blocks_rfgf " \
-          f"set geom = ST_Multi(ST_Collection_Extract(ST_MakeValid(geom), 3)) " \
+          f"set geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(geom), 3)) " \
           f"where NOT ST_IsValid(geom);"
     cursor.execute(sql)
     pgconn.commit()
