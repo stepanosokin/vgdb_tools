@@ -46,7 +46,7 @@ refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info,
 # refresh_lotcards(dsn=dsn, log_bot_info=log_bot_info, report_bot_info=report_bot_info)
 
 refresh_old_lotcards(dsn=dsn, log_bot_info=log_bot_info, 
-                 report_bot_info=log_bot_info, 
+                 report_bot_info=report_bot_info, 
                  webhook=nr_ne_webhook_2025, 
                  mapbox_token=mb_token, 
                  webhostssh='.vdsinassh')
