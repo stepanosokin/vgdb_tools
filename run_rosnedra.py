@@ -88,8 +88,8 @@ if lastdt_result[0]:
 update2 = update_rfgf_gos_reg_num(dsn, bot_info=bot_info, report_bot_info=bot_info)
 
 
-# if update1 or update2:
-#     synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
+if update1 or update2:
+    synchro_layer([('rosnedra', ['license_blocks_rosnedra_orders'])], dsn, ext_dsn, ssh_host=egssh["host"], ssh_user=egssh["user"], bot_info=bot_info)
 
 
 
